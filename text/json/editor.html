@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="description" content="使用 Svelte-JSONEditor 构建的 JSON 对比、展示与编辑工具，支持自适应暗色模式和混乱日志提取。">
   <title>JSON 对比编辑 - Svelte-JSONEditor</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/vanilla-jsoneditor/themes/jse-theme-dark.css">
   
   <style>
     :root {
@@ -420,9 +421,21 @@
       --jse-main-border: 1px solid rgba(255, 255, 255, 0.08);
       --jse-menu-background: #1e293b;
       --jse-menu-color: #f3f4f6;
+      --jse-menu-button-hover-bg: rgba(255, 255, 255, 0.08);
+      --jse-menu-selected-bg: #06b6d4;
+      --jse-menu-selected-color: #0f172a;
       --jse-navigation-background: #0f172a;
       --jse-active-background: rgba(6, 182, 212, 0.15);
       --jse-active-color: #06b6d4;
+      --jse-theme-color: #0e7490;
+      
+      /* Curated dark mode syntax highlighting colors */
+      --jse-key-color: #67e8f9;
+      --jse-value-color-string: #fdba74;
+      --jse-value-color-number: #86efac;
+      --jse-value-color-boolean: #a78bfa;
+      --jse-value-color-null: #94a3b8;
+      --jse-delimiter-color: #cbd5e1;
     }
 
     /* vanilla-jsoneditor Light Theme Integration overrides */
@@ -433,9 +446,61 @@
       --jse-main-border: 1px solid rgba(0, 0, 0, 0.08);
       --jse-menu-background: #e2e8f0;
       --jse-menu-color: #1e293b;
+      --jse-menu-button-hover-bg: rgba(0, 0, 0, 0.05);
+      --jse-menu-selected-bg: #0891b2;
+      --jse-menu-selected-color: #ffffff;
       --jse-navigation-background: #f1f5f9;
       --jse-active-background: rgba(6, 182, 212, 0.1);
       --jse-active-color: #0891b2;
+      --jse-theme-color: #0891b2;
+
+      /* Curated light mode syntax highlighting colors */
+      --jse-key-color: #0f766e;
+      --jse-value-color-string: #b45309;
+      --jse-value-color-number: #047857;
+      --jse-value-color-boolean: #7c3aed;
+      --jse-value-color-null: #64748b;
+      --jse-delimiter-color: #334155;
+    }
+
+    /* Custom overrides for vanilla-jsoneditor internal elements */
+    .jse-menu {
+      background-color: var(--jse-menu-background) !important;
+      border-bottom: var(--jse-main-border) !important;
+    }
+
+    .jse-menu button, 
+    .jse-menu span, 
+    .jse-menu div:not(.jse-context-menu) {
+      color: var(--jse-menu-color) !important;
+    }
+
+    .jse-menu button:hover {
+      background-color: var(--jse-menu-button-hover-bg) !important;
+    }
+
+    .jse-menu svg {
+      stroke: var(--jse-menu-color) !important;
+      fill: var(--jse-menu-color);
+    }
+
+    /* Selected/active items inside the menu */
+    .jse-menu .jse-selected,
+    .jse-menu button.jse-selected {
+      background-color: var(--jse-menu-selected-bg) !important;
+    }
+    
+    .jse-menu .jse-selected,
+    .jse-menu .jse-selected *,
+    .jse-menu button.jse-selected,
+    .jse-menu button.jse-selected * {
+      color: var(--jse-menu-selected-color) !important;
+    }
+
+    .jse-menu .jse-selected svg,
+    .jse-menu button.jse-selected svg {
+      stroke: var(--jse-menu-selected-color) !important;
+      fill: var(--jse-menu-selected-color) !important;
     }
 
     /* Fullscreen Mode Styles */
