@@ -178,6 +178,86 @@
       line-height: 1.6;
     }
 
+    .frequent-card {
+      position: relative;
+      min-height: 100%;
+      border: 1px solid #d0d7de;
+      border-radius: 10px;
+      background: #fff;
+      overflow: hidden;
+      transition: border-color 150ms ease, box-shadow 150ms ease, transform 150ms ease;
+    }
+
+    .frequent-card:hover {
+      transform: translateY(-2px);
+      border-color: #0969da;
+      box-shadow: 0 8px 24px rgba(31, 35, 40, 0.1);
+    }
+
+    .frequent-card .nav-card {
+      min-height: 100%;
+      border: 0;
+      border-radius: 0;
+      box-shadow: none;
+    }
+
+    .frequent-card .nav-card:hover {
+      transform: none;
+      border-color: transparent;
+      box-shadow: none;
+    }
+
+    .frequent-card__count {
+      position: absolute;
+      z-index: 2;
+      top: 0;
+      right: 0;
+      min-width: 26px;
+      padding: 4px 8px;
+      border-radius: 0 9px 0 9px;
+      color: #0969da;
+      background: #ddf4ff;
+      font: 700 0.75rem "Cascadia Code", Consolas, monospace;
+      text-align: center;
+    }
+
+    .frequent-card__remove {
+      position: absolute;
+      z-index: 2;
+      right: 0;
+      bottom: 0;
+      width: 28px;
+      height: 28px;
+      padding: 0;
+      border: 0;
+      border-radius: 9px 0 0 0;
+      color: #8c959f;
+      background: transparent;
+      font: 400 1.3rem/1 system-ui, sans-serif;
+      cursor: pointer;
+      opacity: 0.45;
+      transition: color 150ms ease, background 150ms ease, opacity 150ms ease;
+    }
+
+    .frequent-card:hover .frequent-card__remove,
+    .frequent-card__remove:focus-visible {
+      opacity: 1;
+    }
+
+    .frequent-card__remove:hover {
+      color: #cf222e;
+      background: #ffebe9;
+    }
+
+    .frequent-empty {
+      margin: 0;
+      padding: 18px 20px;
+      border: 1px dashed #d0d7de;
+      border-radius: 10px;
+      color: #57606a;
+      font-size: 0.9rem;
+    }
+
     .status {
       color: #57606a;
       text-align: center;
@@ -243,6 +323,31 @@
         color: #8b949e;
       }
 
+      .frequent-card {
+        border-color: #30363d;
+        background: #0d1117;
+      }
+
+      .frequent-card:hover {
+        border-color: #58a6ff;
+        box-shadow: 0 8px 24px rgba(0, 0, 0, 0.25);
+      }
+
+      .frequent-card__count {
+        color: #58a6ff;
+        background: #1f2937;
+      }
+
+      .frequent-card__remove:hover {
+        color: #ff7b72;
+        background: #2d1619;
+      }
+
+      .frequent-empty {
+        border-color: #30363d;
+        color: #8b949e;
+      }
+
       .status {
         color: #8b949e;
       }
@@ -276,6 +381,7 @@
   <script src="https://cdn.jsdelivr.net/npm/marked@15.0.7/marked.min.js"></script>
   <script>
     const { createApp } = Vue;
+    const FREQUENT_TOOLS_KEY = "dev-tools:frequent";
 
     createApp({
       data() {
@@ -305,6 +411,104 @@
         }
       },
       methods: {
+        readFrequentTools() {
+          try {
+            const value = JSON.parse(localStorage.getItem(FREQUENT_TOOLS_KEY));
+            return value && typeof value === "object" ? value : {};
+          } catch (error) {
+            console.warn("常用工具记录读取失败", error);
+            return {};
+          }
+        },
+        writeFrequentTools(tools) {
+          localStorage.setItem(FREQUENT_TOOLS_KEY, JSON.stringify(tools));
+        },
+        recordTool(tool) {
+          const tools = this.readFrequentTools();
+          const current = tools[tool.href];
+
+          tools[tool.href] = {
+            href: tool.href,
+            title: tool.title,
+            description: tool.description,
+            count: current ? current.count + 1 : 1
+          };
+          this.writeFrequentTools(tools);
+        },
+        createToolLink(tool, onClick) {
+          const card = document.createElement("a");
+          const content = document.createElement("span");
+          const title = document.createElement("span");
+          const detail = document.createElement("span");
+
+          card.className = "nav-card";
+          card.href = tool.href;
+          content.className = "nav-card__content";
+          title.className = "nav-card__title";
+          title.textContent = tool.title;
+          detail.className = "nav-card__description";
+          detail.textContent = tool.description;
+          content.append(title, detail);
+          card.append(content);
+
+          if (onClick) {
+            card.addEventListener("click", onClick);
+          }
+
+          return card;
+        },
+        renderFrequentTools(container) {
+          const group = document.createElement("section");
+          const heading = document.createElement("h3");
+          const grid = document.createElement("div");
+          const tools = Object.values(this.readFrequentTools())
+            .sort((left, right) => right.count - left.count);
+
+          group.className = "navigation-group";
+          group.dataset.frequentGroup = "";
+          heading.textContent = "常用";
+          grid.className = "navigation-group__grid";
+          group.append(heading, grid);
+
+          if (!tools.length) {
+            const empty = document.createElement("p");
+            empty.className = "frequent-empty";
+            empty.textContent = "点击下面的工具后，它会出现在这里。";
+            grid.appendChild(empty);
+          }
+
+          tools.forEach(tool => {
+            const wrapper = document.createElement("article");
+            const count = document.createElement("span");
+            const remove = document.createElement("button");
+            const link = this.createToolLink(tool, () => {
+              this.recordTool(tool);
+            });
+
+            wrapper.className = "frequent-card";
+            count.className = "frequent-card__count";
+            count.textContent = tool.count;
+            count.title = `已点击 ${tool.count} 次`;
+            remove.className = "frequent-card__remove";
+            remove.type = "button";
+            remove.textContent = "×";
+            remove.title = `从常用中移除 ${tool.title}`;
+            remove.setAttribute("aria-label", `从常用中移除 ${tool.title}`);
+            remove.addEventListener("click", event => {
+              event.preventDefault();
+              event.stopPropagation();
+              const saved = this.readFrequentTools();
+              delete saved[tool.href];
+              this.writeFrequentTools(saved);
+              group.replaceWith(this.renderFrequentTools());
+            });
+
+            wrapper.append(link, count, remove);
+            grid.appendChild(wrapper);
+          });
+
+          return group;
+        },
         renderFeatureNavigation() {
           const headings = Array.from(this.$el.querySelectorAll("h2"));
           const start = headings.find(
@@ -317,6 +521,7 @@
 
           const container = document.createElement("div");
           container.className = "navigation-cards";
+          container.appendChild(this.renderFrequentTools());
           let node = start.nextElementSibling;
 
           while (node && node.tagName !== "H2") {
@@ -344,21 +549,14 @@
                     .replace(sourceLink.textContent, "")
                     .replace(/^\s*-\s*/, "")
                     .trim();
-                  const card = document.createElement("a");
-                  const content = document.createElement("span");
-                  const title = document.createElement("span");
-                  const detail = document.createElement("span");
-
-                  card.className = "nav-card";
-                  card.href = sourceLink.getAttribute("href");
-                  content.className = "nav-card__content";
-                  title.className = "nav-card__title";
-                  title.textContent = sourceLink.textContent;
-                  detail.className = "nav-card__description";
-                  detail.textContent = description;
-
-                  content.append(title, detail);
-                  card.append(content);
+                  const tool = {
+                    href: sourceLink.getAttribute("href"),
+                    title: sourceLink.textContent,
+                    description
+                  };
+                  const card = this.createToolLink(tool, () => {
+                    this.recordTool(tool);
+                  });
                   grid.appendChild(card);
                 });
 
