@@ -796,10 +796,22 @@
       margin: 0;
     }
 
-    .fullscreen-icon-btn {
+    .textarea-actions-group {
       position: absolute;
       top: 0.5rem;
       right: 0.5rem;
+      display: flex;
+      gap: 0.35rem;
+      opacity: 0;
+      transition: all var(--transition-fast);
+      z-index: 10;
+    }
+
+    .textarea-wrapper:hover .textarea-actions-group {
+      opacity: 1;
+    }
+
+    .textarea-action-btn {
       background: rgba(15, 23, 42, 0.75);
       border: 1px solid var(--panel-border);
       border-radius: 0.35rem;
@@ -809,16 +821,10 @@
       display: grid;
       place-content: center;
       cursor: pointer;
-      opacity: 0;
       transition: all var(--transition-fast);
-      z-index: 10;
     }
 
-    .textarea-wrapper:hover .fullscreen-icon-btn {
-      opacity: 1;
-    }
-
-    .fullscreen-icon-btn:hover {
+    .textarea-action-btn:hover {
       color: var(--text-main);
       background: rgba(15, 23, 42, 0.9);
       border-color: rgba(255, 255, 255, 0.2);
@@ -874,14 +880,26 @@
               placeholder="在此输入、粘贴包含 JSON 的原始日志/文本&#10;直接将 JSON 文件拖入此处载入...&#10;（提示：双击卡片空白处或右上角图标切换全屏）"
               id="rawInputTextarea"
             ></textarea>
-            <button class="fullscreen-icon-btn" @click="toggleRawFullscreen" :title="isRawFullscreen ? '退出全屏' : '全屏查看原始日志'">
-              <svg v-if="!isRawFullscreen" width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5v-4m0 4h-4m4 0l-5-5" />
-              </svg>
-              <svg v-else width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 14h6m0 0v6m0-6L3 21m17-7h-6m0 0v6m0-6l7 7M4 10h6m0 0V4m0 6L3 3m17 7h-6m0 0V4m0 6l7-7" />
-              </svg>
-            </button>
+            <div class="textarea-actions-group">
+              <button class="textarea-action-btn" @click="copyRawInput" data-tooltip="复制原始日志">
+                <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                </svg>
+              </button>
+              <button class="textarea-action-btn" @click="downloadRawInput" data-tooltip="下载原始日志">
+                <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                </svg>
+              </button>
+              <button class="textarea-action-btn" @click="toggleRawFullscreen" :data-tooltip="isRawFullscreen ? '退出全屏' : '全屏查看原始日志'">
+                <svg v-if="!isRawFullscreen" width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5v-4m0 4h-4m4 0l-5-5" />
+                </svg>
+                <svg v-else width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 14h6m0 0v6m0-6L3 21m17-7h-6m0 0v6m0-6l7 7M4 10h6m0 0V4m0 6L3 3m17 7h-6m0 0V4m0 6l7-7" />
+                </svg>
+              </button>
+            </div>
           </div>
           <div class="btn-group vertical-btn-group" @dblclick.stop>
             <select class="input-field" @change="handleDataSelect($event)">
@@ -1005,14 +1023,7 @@
                 >
                   折行
                 </button>
-                
-                <!-- Action Buttons -->
-                <button class="btn btn-sm btn-secondary" @click="copyFormattedJSON" data-tooltip="复制代码至剪贴板">
-                  复制
-                </button>
-                <button class="btn btn-sm btn-secondary" @click="downloadNodeJSON" data-tooltip="下载当前 JSON 节点数据为文件">
-                  下载
-                </button>
+
                 <button class="btn btn-sm btn-success" @click="saveNodeChanges" id="saveBtn">
                   保存并同步
                 </button>
@@ -1038,14 +1049,26 @@
                 placeholder="{"
                 id="nodeJSONTextarea"
               ></textarea>
-              <button class="fullscreen-icon-btn" @click="toggleEditFullscreen" :title="isEditFullscreen ? '退出全屏' : '全屏查看节点JSON'">
-                <svg v-if="!isEditFullscreen" width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5v-4m0 4h-4m4 0l-5-5" />
-                </svg>
-                <svg v-else width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 14h6m0 0v6m0-6L3 21m17-7h-6m0 0v6m0-6l7 7M4 10h6m0 0V4m0 6L3 3m17 7h-6m0 0V4m0 6l7-7" />
-                </svg>
-              </button>
+              <div class="textarea-actions-group">
+                <button class="textarea-action-btn" @click="copyFormattedJSON" data-tooltip="复制 JSON 数据">
+                  <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                  </svg>
+                </button>
+                <button class="textarea-action-btn" @click="downloadNodeJSON" data-tooltip="下载 JSON 为文件">
+                  <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                  </svg>
+                </button>
+                <button class="textarea-action-btn" @click="toggleEditFullscreen" :data-tooltip="isEditFullscreen ? '退出全屏' : '全屏查看节点JSON'">
+                  <svg v-if="!isEditFullscreen" width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5v-4m0 4h-4m4 0l-5-5" />
+                  </svg>
+                  <svg v-else width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 14h6m0 0v6m0-6L3 21m17-7h-6m0 0v6m0-6l7 7M4 10h6m0 0V4m0 6L3 3m17 7h-6m0 0V4m0 6l7-7" />
+                  </svg>
+                </button>
+              </div>
             </div>
           </div>
         </div>
@@ -1631,6 +1654,38 @@
           }
         };
 
+        // Copy raw log content to clipboard
+        const copyRawInput = async () => {
+          if (!rawInput.value) return;
+          try {
+            await navigator.clipboard.writeText(rawInput.value);
+            showToast('复制成功', '已复制原始日志文本至剪切板！', 'success');
+          } catch (err) {
+            showToast('复制失败', '剪切板写入失败，请手动选择复制。', 'error');
+          }
+        };
+
+        // Download raw log content as a file
+        const downloadRawInput = () => {
+          if (!rawInput.value) return;
+          try {
+            const blob = new Blob([rawInput.value], { type: 'text/plain;charset=utf-8;' });
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            link.href = url;
+            const filename = `raw_log.txt`;
+            link.setAttribute('download', filename);
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            URL.revokeObjectURL(url);
+            showToast('下载成功', `原始日志文件已保存为 ${filename}`, 'success');
+          } catch (err) {
+            showToast('下载失败', '创建下载文件失败，请重试。', 'error');
+            console.error(err);
+          }
+        };
+
         // Save modifications to current node and bubble up to the root log string
         const saveNodeChanges = () => {
           if (!selectedNode.value) return;
@@ -1835,6 +1890,8 @@
           selectNode,
           copyFormattedJSON,
           downloadNodeJSON,
+          copyRawInput,
+          downloadRawInput,
           saveNodeChanges,
           handleDataSelect,
           removeToast
