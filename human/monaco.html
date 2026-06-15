@@ -42,11 +42,21 @@
 
 
 
-    <script src="../lib/jquery-3.4.1.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/jquery@3.4.1/dist/jquery.min.js"></script>
     <!-- OR ANY OTHER AMD LOADER HERE INSTEAD OF loader.js -->
-    <script src="../lib/monaco-editor-0.18.1/min/vs/loader.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/monaco-editor@0.18.1/min/vs/loader.js"></script>
     <script>
-        require.config({ paths: { 'vs': '../lib/monaco-editor-0.18.1/min/vs' } });
+        const MONACO_BASE_URL = 'https://cdn.jsdelivr.net/npm/monaco-editor@0.18.1/min/';
+        const MONACO_WEBSITE_URL = 'https://cdn.jsdelivr.net/gh/microsoft/monaco-editor@v0.18.1/website/';
+        window.MonacoEnvironment = {
+            getWorkerUrl: function () {
+                return 'data:text/javascript;charset=utf-8,' + encodeURIComponent(
+                    "self.MonacoEnvironment={baseUrl:'" + MONACO_BASE_URL + "'};" +
+                    "importScripts('" + MONACO_BASE_URL + "vs/base/worker/workerMain.js');"
+                );
+            }
+        };
+        require.config({ paths: { 'vs': MONACO_BASE_URL + 'vs' } });
 
         let editor;
         require(['vs/editor/editor.main'], function () {
@@ -67,7 +77,7 @@
                 return modesIds.map(function (modeId) {
                     return {
                         modeId: modeId,
-                        sampleURL: '../lib/monaco-editor-website/'
+                        sampleURL: MONACO_WEBSITE_URL
                             + 'index/samples/sample.' + modeId + '.txt'
                     };
                 });

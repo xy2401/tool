@@ -1,4 +1,4 @@
-/// <reference path="../../monaco-editor-0.18.1/monaco.d.ts" />
+/// Monaco Editor Playground page logic.
 
 (function () {
 
@@ -6,7 +6,7 @@
 
 	window.onload = function () {
 		require(['vs/editor/editor.main'], function () {
-			xhr('../lib/monaco-editor-website/playground/monaco.d.ts.txt').then(function (response) {
+			xhr(MONACO_WEBSITE_URL + 'playground/monaco.d.ts.txt').then(function (response) {
 				monaco.languages.typescript.javascriptDefaults.addExtraLib(response.responseText, 'monaco.d.ts');
 				monaco.languages.typescript.javascriptDefaults.addExtraLib([
 					'declare var require: {',
@@ -222,7 +222,7 @@
 				return callback(new Error('sample not found'));
 			}
 
-			samplePath = '../lib/monaco-editor-website/'+'playground/new-samples/' + samplePath;
+			samplePath = MONACO_WEBSITE_URL + 'playground/new-samples/' + samplePath;
 
 			var js = xhr(samplePath + '/sample.js').then(function (response) { return response.responseText });
 			var css = xhr(samplePath + '/sample.css').then(function (response) { return response.responseText });
@@ -319,22 +319,52 @@
 		// Load new iframe
 		runIframe = document.createElement('iframe');
 		runIframe.id = 'runner';
-		runIframe.src ='../lib/monaco-editor-website/'+ 'playground/playground-runner.html';
 		runIframe.className = 'run-iframe';
 		runIframe.style.boxSizing = 'border-box';
 		runIframe.style.height = runIframeHeight + 'px';
 		runIframe.style.width = '100%';
 		runIframe.style.border = '1px solid lightgrey';
 		runIframe.frameborder = '0';
-		runContainer.appendChild(runIframe);
 
 		var getLang = function (lang) {
 			return data[lang].model.getValue();
 		};
 
-		runIframe.addEventListener('load', function (e) {
-			runIframe.contentWindow.load(getLang('js'), getLang('html'), getLang('css'));
+		runIframe.addEventListener('load', function () {
+			var frameWindow = runIframe.contentWindow;
+			var frameDocument = runIframe.contentDocument;
+			var style = frameDocument.createElement('style');
+			var loader = frameDocument.createElement('script');
+
+			frameDocument.body.innerHTML = getLang('html');
+			style.textContent = getLang('css');
+			frameDocument.head.appendChild(style);
+
+			frameWindow.MonacoEnvironment = {
+				getWorkerUrl: window.MonacoEnvironment.getWorkerUrl
+			};
+			frameWindow.require = {
+				paths: {
+					'vs': MONACO_BASE_URL + 'vs'
+				}
+			};
+
+			loader.src = MONACO_BASE_URL + 'vs/loader.js';
+			loader.onload = function () {
+				frameWindow.require(['vs/editor/editor.main'], function () {
+					try {
+						frameWindow.eval(getLang('js'));
+					} catch (err) {
+						var error = frameDocument.createElement('pre');
+						error.textContent = err.stack || err.message || String(err);
+						frameDocument.body.insertBefore(error, frameDocument.body.firstChild);
+					}
+				});
+			};
+			frameDocument.head.appendChild(loader);
 		});
+		runIframe.src = 'about:blank';
+		runContainer.appendChild(runIframe);
 	}
 
 	var preloaded = {};
