@@ -1,0 +1,1 @@
+2026-06-15 13:20:05.412 INFO 1204 --- [io-8080-exec-1] c.e.gateway.LoggingFilter : Request info: {"method":"POST","uri":"/api/users","userId":3081,"address":{"city":"Guangzhou","zip":"510000","detail":"{\"street\":\"No.100 Road\",\"building\":\"Room 201\",\"status\":{\"active\":true}}"},"tags":["admin","billing"]}

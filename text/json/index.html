@@ -1,0 +1,1305 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="一个现代且高颜值的 JSON 深度提取、格式化与编辑工具，专为混合日志和多次转义 JSON 设计。">
+  <title>JSON 深度提取查看器 - Dev Tools</title>
+  
+  <!-- Standard System Fonts (Google Fonts Removed) -->
+  
+  <style>
+    :root {
+      --bg-gradient: linear-gradient(135deg, #0b0f19 0%, #111827 50%, #070a13 100%);
+      --panel-bg: rgba(17, 24, 39, 0.65);
+      --panel-border: rgba(255, 255, 255, 0.08);
+      --panel-border-focus: rgba(6, 182, 212, 0.5);
+      --accent-cyan: #06b6d4;
+      --accent-cyan-hover: #0891b2;
+      --accent-cyan-glow: rgba(6, 182, 212, 0.2);
+      --accent-emerald: #10b981;
+      --accent-emerald-hover: #059669;
+      --accent-emerald-glow: rgba(16, 185, 129, 0.2);
+      --accent-rose: #f43f5e;
+      --text-main: #f3f4f6;
+      --text-muted: #9ca3af;
+      --text-dark: #111827;
+      --font-sans: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      --font-mono: ui-monospace, SFMono-Regular, "SF Pro Mono", Menlo, Monaco, Consolas, monospace;
+      --glass-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+      --transition-fast: 0.15s ease;
+      --transition-normal: 0.25s ease;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: var(--font-sans);
+      background: var(--bg-gradient);
+      color: var(--text-main);
+      min-height: 100vh;
+      overflow-x: hidden;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* Main Title Row Styles */
+    .main-title-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 0.5rem;
+      gap: 1rem;
+      grid-column: 1 / -1;
+      border-bottom: 1px solid var(--panel-border);
+      padding-bottom: 1rem;
+    }
+
+    .main-title-text h2 {
+      font-size: 1.5rem;
+      font-weight: 700;
+      letter-spacing: -0.025em;
+      background: linear-gradient(to right, #06b6d4, #10b981);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      margin-bottom: 0.25rem;
+    }
+
+    .main-title-text p {
+      font-size: 0.85rem;
+      color: var(--text-muted);
+    }
+
+    @media (max-width: 640px) {
+      .main-title-row {
+        flex-direction: column-reverse;
+        align-items: flex-start;
+        gap: 0.75rem;
+      }
+    }
+
+    main {
+      flex: 1;
+      max-width: 1400px;
+      width: 100%;
+      margin: 0 auto;
+      padding: 1.5rem 2rem 3rem;
+      display: grid;
+      grid-template-columns: 320px 1fr;
+      gap: 1.5rem;
+      align-items: start;
+    }
+
+    /* Common Card Styling */
+    .glass-card {
+      background: var(--panel-bg);
+      border: 1px solid var(--panel-border);
+      border-radius: 1rem;
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      box-shadow: var(--glass-shadow);
+      padding: 1.25rem;
+      transition: border-color var(--transition-normal);
+    }
+
+    .glass-card:hover {
+      border-color: rgba(255, 255, 255, 0.12);
+    }
+
+    .input-card {
+      grid-column: 1 / -1;
+      padding: 0.85rem 1.25rem;
+    }
+
+    .input-row {
+      display: flex;
+      gap: 1rem;
+      align-items: stretch;
+      width: 100%;
+    }
+
+    .vertical-btn-group {
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+      justify-content: center;
+      flex-shrink: 0;
+      width: 220px;
+    }
+
+    .vertical-btn-group .input-field,
+    .vertical-btn-group .btn {
+      width: 100%;
+      height: 2.1rem;
+      padding: 0.35rem 0.75rem;
+      margin: 0;
+      font-size: 0.82rem;
+    }
+
+    .vertical-btn-group select.input-field {
+      padding-right: 1.8rem;
+    }
+
+    #rawInputTextarea {
+      flex: 1;
+      min-height: 72px;
+      height: 72px;
+      resize: vertical;
+    }
+
+    @media (max-width: 640px) {
+      .input-row {
+        flex-direction: column;
+      }
+      .vertical-btn-group {
+        width: 100%;
+      }
+    }
+
+    /* Left Sidebar: Node Tree */
+    .sidebar {
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
+      height: calc(100vh - 180px);
+      position: sticky;
+      top: 1.5rem;
+    }
+
+    .sidebar-header {
+      font-size: 0.9rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--accent-cyan);
+      border-bottom: 1px solid var(--panel-border);
+      padding-bottom: 0.5rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .node-list-container {
+      flex: 1;
+      overflow-y: auto;
+      padding-right: 0.25rem;
+    }
+
+    /* Custom Scrollbar */
+    ::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    ::-webkit-scrollbar-track {
+      background: rgba(255, 255, 255, 0.02);
+      border-radius: 3px;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: rgba(255, 255, 255, 0.15);
+      border-radius: 3px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: rgba(255, 255, 255, 0.25);
+    }
+
+    .node-item {
+      display: flex;
+      align-items: center;
+      padding: 0.65rem 0.85rem;
+      border-radius: 0.55rem;
+      cursor: pointer;
+      font-family: var(--font-sans);
+      font-size: 0.9rem;
+      transition: all var(--transition-fast);
+      margin-bottom: 0.35rem;
+      border: 1px solid transparent;
+      user-select: none;
+    }
+
+    .node-item:hover {
+      background: rgba(255, 255, 255, 0.04);
+      border-color: rgba(255, 255, 255, 0.05);
+    }
+
+    .node-item.active {
+      background: linear-gradient(135deg, rgba(6, 182, 212, 0.15) 0%, rgba(16, 185, 129, 0.1) 100%);
+      border-color: rgba(6, 182, 212, 0.3);
+      color: #fff;
+      font-weight: 500;
+      box-shadow: 0 4px 12px rgba(6, 182, 212, 0.05);
+    }
+
+    .node-name {
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      flex: 1;
+    }
+
+    .node-badge {
+      font-size: 0.7rem;
+      padding: 0.15rem 0.35rem;
+      border-radius: 0.25rem;
+      background: rgba(255, 255, 255, 0.08);
+      color: var(--text-muted);
+      font-family: var(--font-mono);
+      margin-left: 0.5rem;
+    }
+
+    .node-item.active .node-badge {
+      background: rgba(6, 182, 212, 0.2);
+      color: var(--accent-cyan);
+    }
+
+    /* Right Main Panel */
+    .content-area {
+      display: flex;
+      flex-direction: column;
+      gap: 1.5rem;
+    }
+
+    /* Form & Input Styles */
+    .section-title {
+      font-size: 1rem;
+      font-weight: 600;
+      color: var(--text-main);
+      margin-bottom: 0.85rem;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .section-title span {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    textarea.editor-textarea {
+      width: 100%;
+      background: rgba(15, 23, 42, 0.6);
+      border: 1px solid var(--panel-border);
+      border-radius: 0.75rem;
+      color: var(--text-main);
+      font-family: var(--font-mono);
+      font-size: 0.9rem;
+      line-height: 1.6;
+      padding: 1rem;
+      resize: vertical;
+      transition: all var(--transition-normal);
+      outline: none;
+    }
+
+    textarea.editor-textarea:focus {
+      border-color: var(--panel-border-focus);
+      box-shadow: 0 0 15px var(--accent-cyan-glow);
+      background: rgba(15, 23, 42, 0.85);
+    }
+
+    /* Formatting settings integrated inline in viewer-header */
+
+    .input-field {
+      background: rgba(15, 23, 42, 0.6);
+      border: 1px solid var(--panel-border);
+      border-radius: 0.5rem;
+      color: var(--text-main);
+      padding: 0.5rem 0.75rem;
+      font-family: var(--font-sans);
+      font-size: 0.85rem;
+      outline: none;
+      transition: all var(--transition-fast);
+    }
+
+    .input-field:focus {
+      border-color: var(--panel-border-focus);
+      background: rgba(15, 23, 42, 0.8);
+    }
+
+    .input-field-mono {
+      font-family: var(--font-mono);
+    }
+
+    .input-sm {
+      height: 2.1rem;
+      padding: 0.35rem 0.6rem;
+      font-size: 0.8rem;
+      margin: 0;
+    }
+
+    select.input-field {
+      appearance: none;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%239ca3af'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M19 9l-7 7-7-7'/%3E%3C/svg%3E");
+      background-repeat: no-repeat;
+      background-position: right 0.75rem center;
+      background-size: 1rem;
+      padding-right: 2rem;
+    }
+
+    /* Buttons */
+    .btn-group {
+      display: flex;
+      gap: 0.75rem;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.5rem;
+      padding: 0.6rem 1.25rem;
+      border-radius: 0.5rem;
+      font-size: 0.85rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all var(--transition-fast);
+      border: 1px solid transparent;
+      outline: none;
+      user-select: none;
+    }
+
+    .btn-sm {
+      height: 2.1rem;
+      padding: 0.35rem 0.75rem;
+      font-size: 0.8rem;
+      margin: 0;
+    }
+
+    .btn-primary {
+      background: var(--accent-cyan);
+      color: var(--text-dark);
+    }
+
+    .btn-primary:hover {
+      background: var(--accent-cyan-hover);
+      box-shadow: 0 0 15px var(--accent-cyan-glow);
+      transform: translateY(-1px);
+    }
+
+    .btn-primary:active {
+      transform: translateY(0);
+    }
+
+    .btn-success {
+      background: var(--accent-emerald);
+      color: var(--text-dark);
+    }
+
+    .btn-success:hover {
+      background: var(--accent-emerald-hover);
+      box-shadow: 0 0 15px var(--accent-emerald-glow);
+      transform: translateY(-1px);
+    }
+
+    .btn-secondary {
+      background: rgba(255, 255, 255, 0.05);
+      border-color: var(--panel-border);
+      color: var(--text-main);
+    }
+
+    .btn-secondary:hover {
+      background: rgba(255, 255, 255, 0.1);
+      border-color: rgba(255, 255, 255, 0.2);
+    }
+
+    .btn-icon-only {
+      padding: 0.5rem;
+      border-radius: 0.5rem;
+      color: var(--text-muted);
+      background: transparent;
+      border: 1px solid transparent;
+    }
+
+    .btn-icon-only:hover {
+      color: var(--text-main);
+      background: rgba(255, 255, 255, 0.05);
+      border-color: var(--panel-border);
+    }
+
+    /* Checkbox toggle styled as a switch */
+    .switch-container {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      cursor: pointer;
+      user-select: none;
+      font-size: 0.85rem;
+      color: var(--text-muted);
+    }
+
+    .switch {
+      position: relative;
+      display: inline-block;
+      width: 2.25rem;
+      height: 1.25rem;
+    }
+
+    .switch input {
+      opacity: 0;
+      width: 0;
+      height: 0;
+    }
+
+    .slider {
+      position: absolute;
+      cursor: pointer;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background-color: rgba(255, 255, 255, 0.1);
+      transition: .2s;
+      border-radius: 34px;
+      border: 1px solid var(--panel-border);
+    }
+
+    .slider:before {
+      position: absolute;
+      content: "";
+      height: 0.85rem;
+      width: 0.85rem;
+      left: 0.15rem;
+      bottom: 0.1rem;
+      background-color: var(--text-muted);
+      transition: .2s;
+      border-radius: 50%;
+    }
+
+    input:checked + .slider {
+      background-color: rgba(6, 182, 212, 0.2);
+      border-color: rgba(6, 182, 212, 0.4);
+    }
+
+    input:checked + .slider:before {
+      transform: translateX(0.95rem);
+      background-color: var(--accent-cyan);
+    }
+
+    /* Output Grid split */
+    .output-grid {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 1.5rem;
+    }
+
+    .viewer-panel {
+      position: relative;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .viewer-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 0.75rem;
+    }
+
+    /* Custom Toast Banner System */
+    .toast-container {
+      position: fixed;
+      top: 1.5rem;
+      right: 1.5rem;
+      display: flex;
+      flex-direction: column;
+      gap: 0.75rem;
+      z-index: 9999;
+      pointer-events: none;
+    }
+
+    .toast {
+      min-width: 300px;
+      max-width: 450px;
+      padding: 1rem 1.25rem;
+      border-radius: 0.75rem;
+      background: rgba(17, 24, 39, 0.9);
+      border: 1px solid var(--panel-border);
+      box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.5);
+      color: var(--text-main);
+      font-size: 0.875rem;
+      backdrop-filter: blur(12px);
+      display: flex;
+      align-items: flex-start;
+      gap: 0.75rem;
+      pointer-events: auto;
+      transform: translateY(-20px);
+      opacity: 0;
+      animation: slideIn 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+      transition: all 0.2s ease;
+    }
+
+    @keyframes slideIn {
+      to {
+        transform: translateY(0);
+        opacity: 1;
+      }
+    }
+
+    .toast.hide {
+      transform: translateY(-20px) scale(0.95);
+      opacity: 0;
+    }
+
+    .toast-icon {
+      flex-shrink: 0;
+      width: 1.25rem;
+      height: 1.25rem;
+      border-radius: 50%;
+      display: grid;
+      place-content: center;
+      font-weight: bold;
+      font-size: 0.75rem;
+    }
+
+    .toast-success .toast-icon {
+      background: rgba(16, 185, 129, 0.2);
+      color: var(--accent-emerald);
+    }
+    .toast-success {
+      border-color: rgba(16, 185, 129, 0.3);
+    }
+
+    .toast-error .toast-icon {
+      background: rgba(244, 63, 94, 0.2);
+      color: var(--accent-rose);
+    }
+    .toast-error {
+      border-color: rgba(244, 63, 94, 0.3);
+    }
+
+    .toast-info .toast-icon {
+      background: rgba(6, 182, 212, 0.2);
+      color: var(--accent-cyan);
+    }
+    .toast-info {
+      border-color: rgba(6, 182, 212, 0.3);
+    }
+
+    .toast-content {
+      flex: 1;
+    }
+
+    .toast-title {
+      font-weight: 600;
+      margin-bottom: 0.15rem;
+    }
+
+    .toast-message {
+      color: var(--text-muted);
+      font-size: 0.8rem;
+      line-height: 1.4;
+    }
+
+    .toast-close {
+      background: transparent;
+      border: none;
+      color: var(--text-muted);
+      cursor: pointer;
+      font-size: 1rem;
+      line-height: 1;
+      padding: 0 0.25rem;
+      transition: color var(--transition-fast);
+    }
+
+    .toast-close:hover {
+      color: var(--text-main);
+    }
+
+    /* Helper styles */
+    .empty-state {
+      display: grid;
+      place-content: center;
+      padding: 4rem 2rem;
+      text-align: center;
+      color: var(--text-muted);
+      border: 1px dashed var(--panel-border);
+      border-radius: 0.75rem;
+      background: rgba(255, 255, 255, 0.01);
+    }
+
+    .empty-state svg {
+      width: 3rem;
+      height: 3rem;
+      margin: 0 auto 1rem;
+      stroke: var(--text-muted);
+      opacity: 0.5;
+    }
+
+    .empty-state h3 {
+      color: var(--text-main);
+      font-size: 1.1rem;
+      font-weight: 600;
+      margin-bottom: 0.35rem;
+    }
+
+    .badge-secondary {
+      font-size: 0.75rem;
+      padding: 0.2rem 0.5rem;
+      border-radius: 0.35rem;
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid var(--panel-border);
+      color: var(--text-muted);
+    }
+
+    /* Tooltip styling using only CSS */
+    [data-tooltip] {
+      position: relative;
+    }
+
+    [data-tooltip]::after {
+      content: attr(data-tooltip);
+      position: absolute;
+      bottom: 125%;
+      left: 50%;
+      transform: translateX(-50%);
+      background: rgba(15, 23, 42, 0.95);
+      border: 1px solid var(--panel-border);
+      padding: 0.4rem 0.6rem;
+      border-radius: 0.35rem;
+      color: var(--text-main);
+      font-size: 0.75rem;
+      white-space: nowrap;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.15s ease, bottom 0.15s ease;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.5);
+      z-index: 100;
+    }
+
+    [data-tooltip]:hover::after {
+      opacity: 1;
+      bottom: 115%;
+    }
+
+    /* Responsive adjustments */
+    @media (max-width: 1024px) {
+      main {
+        grid-template-columns: 1fr;
+      }
+      .sidebar {
+        height: auto;
+        position: static;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <div id="app">
+    <!-- Custom Toast Notification System -->
+    <div class="toast-container" aria-live="polite">
+      <div v-for="toast in toasts" :key="toast.id" :class="['toast', `toast-${toast.type}`]">
+        <div class="toast-icon">
+          <span v-if="toast.type === 'success'">✓</span>
+          <span v-else-if="toast.type === 'error'">✗</span>
+          <span v-else>i</span>
+        </div>
+        <div class="toast-content">
+          <div class="toast-title" v-text="toast.title"></div>
+          <div class="toast-message" v-text="toast.message"></div>
+        </div>
+        <button class="toast-close" @click="removeToast(toast.id)" aria-label="关闭">&times;</button>
+      </div>
+    </div>
+
+    <!-- Main Workspace Grid -->
+    <main>
+      <!-- Main Title Row -->
+      <div class="main-title-row">
+        <div class="main-title-text">
+          <h2>JSON 深度提取查看器</h2>
+          <p>从混合文本中提取 JSON，自动解构多次转义内容，支持节点树局部修改与向源合并。</p>
+        </div>
+      </div>
+
+      <!-- Input Textarea Card -->
+      <div class="glass-card input-card">
+        <div class="input-row">
+          <textarea 
+            class="editor-textarea" 
+            rows="3" 
+            v-model="rawInput" 
+            placeholder="在此输入或粘贴包含 JSON 数据的原始日志、文本或代码..."
+            id="rawInputTextarea"
+          ></textarea>
+          <div class="btn-group vertical-btn-group">
+            <select class="input-field" @change="loadDemoData($event)">
+              <option value="">-- 选择测试数据 --</option>
+              <option v-for="item in demoFiles" :key="item.key" :value="item.key" v-text="item.name"></option>
+              <option value="clear">清空数据</option>
+            </select>
+            <button class="btn btn-primary" @click="extractRootJSON" id="extractBtn">
+              提取 JSON
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Sidebar Node Tree Navigation -->
+      <aside class="sidebar glass-card">
+        <div class="sidebar-header">
+          <span>数据层级</span>
+          <span class="badge-secondary" v-text="`${nodes.length} 节点`"></span>
+        </div>
+        
+        <!-- Empty State for Sidebar -->
+        <div v-if="nodes.length === 0" class="empty-state" style="padding: 2rem 1rem; border: none;">
+          <p style="font-size: 0.85rem;">暂无解析节点</p>
+        </div>
+
+        <!-- Scrollable Tree List -->
+        <div v-else class="node-list-container">
+          <div 
+            v-for="node in filteredNodes" 
+            :key="node.id"
+            :class="['node-item', { active: selectedNodeId === node.id }]"
+            @click="selectNode(node.id)"
+            :style="{ paddingLeft: `${Math.max(0.85, node.path.length * 0.6)}rem` }"
+            :title="node.id"
+          >
+            <span class="node-name" v-text="node.name"></span>
+            <span class="node-badge" v-text="node.type"></span>
+          </div>
+        </div>
+      </aside>
+
+      <!-- Main Contents Area -->
+      <section class="content-area">
+        <!-- Output View and Editor Card -->
+        <div class="output-grid">
+          <div class="glass-card viewer-panel">
+            <!-- Header for output -->
+            <div class="viewer-header">
+              <div class="section-title" style="margin-bottom: 0;">
+                <span>
+                  <svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4" />
+                  </svg>
+                  当前选择节点 JSON 数据编辑
+                </span>
+                <span class="badge-secondary" v-if="selectedNode" v-text="`路径: ${selectedNode.id}`"></span>
+              </div>
+              <div class="btn-group" v-if="selectedNode">
+                <!-- Inline Format configurations -->
+                <input 
+                  type="text" 
+                  v-model="replacerText" 
+                  @input="applyFormatting"
+                  class="input-field input-field-mono input-sm" 
+                  placeholder="过滤字段 (空格分隔)"
+                  style="width: 130px;"
+                >
+                <select 
+                  v-model="indentSpaces" 
+                  @change="applyFormatting" 
+                  class="input-field input-sm"
+                  style="width: 90px;"
+                >
+                  <option value="2">2 空格</option>
+                  <option value="4">4 空格</option>
+                  <option value="tabs">Tab</option>
+                  <option value="compact">紧凑</option>
+                </select>
+                <button 
+                  type="button"
+                  :class="['btn', 'btn-sm', wordWrap ? 'btn-primary' : 'btn-secondary']" 
+                  @click="wordWrap = !wordWrap" 
+                  :data-tooltip="wordWrap ? '禁用自动折行' : '启用自动折行'"
+                >
+                  折行
+                </button>
+                
+                <!-- Action Buttons -->
+                <button class="btn btn-sm btn-secondary" @click="copyFormattedJSON" data-tooltip="复制代码至剪贴板">
+                  复制
+                </button>
+                <button class="btn btn-sm btn-secondary" @click="downloadNodeJSON" data-tooltip="下载当前 JSON 节点数据为文件">
+                  下载
+                </button>
+                <button class="btn btn-sm btn-success" @click="saveNodeChanges" id="saveBtn">
+                  保存并同步
+                </button>
+              </div>
+            </div>
+
+            <!-- Content state -->
+            <div v-if="!selectedNode" class="empty-state">
+              <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M8 9l3 3-3 3m5 0h3M5 20h14a2 2 0 002-2V6a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+              </svg>
+              <h3>未提取或选择节点</h3>
+              <p>请在上方输入数据并点击“提取 JSON”按钮，或在左侧树结构中选择节点开始编辑。</p>
+            </div>
+
+            <textarea 
+              v-else
+              class="editor-textarea" 
+              rows="18" 
+              v-model="editText"
+              :style="{ whiteSpace: wordWrap ? 'pre-wrap' : 'pre', wordBreak: wordWrap ? 'break-all' : 'normal' }"
+              placeholder="{"
+              id="nodeJSONTextarea"
+            ></textarea>
+          </div>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <!-- Vue 3 CDN (Locked version for stability) -->
+  <script src="https://unpkg.com/vue@3.5.13/dist/vue.global.prod.js"></script>
+
+  <script>
+    // Redirect to ensure trailing slash if accessed via /text/json (important for relative path resolution)
+    if (!window.location.pathname.endsWith('/') && !window.location.pathname.split('/').pop().includes('.')) {
+      window.location.replace(window.location.pathname + '/' + window.location.search + window.location.hash);
+    }
+
+    const { createApp, ref, computed, watch, nextTick, onMounted } = Vue;
+
+    createApp({
+      setup() {
+        // State
+        const rawInput = ref('');
+        const parsedRoot = ref(null); // { raw: '', obj: null, startIndex: 0, endIndex: 0 }
+        const nodes = ref([]); // Array of nodes: { id, path: [], name, val, isStringifiedInParent, type }
+        const selectedNodeId = ref('');
+        const replacerText = ref('');
+        const indentSpaces = ref('4');
+        const wordWrap = ref(true);
+        const editText = ref('');
+        const toasts = ref([]);
+        const demoFiles = ref([]);
+        const isSyncing = ref(false);
+        let toastIdCounter = 0;
+
+        // Auto-extract JSON when rawInput text changes
+        watch(rawInput, (newVal) => {
+          if (isSyncing.value) return;
+          // Silently trigger extraction so it does not spam toasts on keypresses
+          extractRootJSON(true);
+        });
+
+        // Load self-describing list of demo files
+        const loadDemoList = async () => {
+          try {
+            const response = await fetch('./data/data.json');
+            if (response.ok) {
+              demoFiles.value = await response.json();
+            } else {
+              console.warn('Failed to load demo list:', response.status);
+            }
+          } catch (e) {
+            console.warn('Failed to load demo list:', e);
+          }
+        };
+
+        onMounted(() => {
+          loadDemoList();
+        });
+
+        // Computeds
+        const selectedNode = computed(() => {
+          return nodes.value.find(n => n.id === selectedNodeId.value) || null;
+        });
+
+        const filteredNodes = computed(() => {
+          return nodes.value; // No complex search filter specified, show all nodes
+        });
+
+        // Add Toast Notification
+        const showToast = (title, message, type = 'info', duration = 3000) => {
+          const id = toastIdCounter++;
+          toasts.value.push({ id, title, message, type });
+          setTimeout(() => {
+            removeToast(id);
+          }, duration);
+        };
+
+        const removeToast = (id) => {
+          const index = toasts.value.findIndex(t => t.id === id);
+          if (index !== -1) {
+            toasts.value.splice(index, 1);
+          }
+        };
+
+        // Try to parse string as JSON safely (Standard JSON parse, unescaped fallback)
+        const tryParseJSONString = (str) => {
+          if (typeof str !== 'string') return null;
+          str = str.trim();
+          
+          // Must begin with { or [ and end with } or ] to be a JSON object/array candidates
+          if (!((str.startsWith('{') && str.endsWith('}')) || (str.startsWith('[') && str.endsWith(']')))) {
+            return null;
+          }
+
+          // 1. Direct JSON parse
+          try {
+            return JSON.parse(str);
+          } catch (e) {}
+
+          // 2. Safe JSON-specific double-escaping unescaper
+          try {
+            let unescaped = str
+              .replace(/\\"/g, '"')
+              .replace(/\\\\/g, '\\')
+              .replace(/\\\//g, '/')
+              .replace(/\\b/g, '\b')
+              .replace(/\\f/g, '\f')
+              .replace(/\\n/g, '\n')
+              .replace(/\\r/g, '\r')
+              .replace(/\\t/g, '\t');
+            return JSON.parse(unescaped);
+          } catch (e) {}
+
+          // 3. More aggressive character-by-character unescaper mimicking safe template unescaping
+          try {
+            let unescaped = str.replace(/\\(u[0-9a-fA-F]{4}|x[0-9a-fA-F]{2}|.)/g, (match, p1) => {
+              if (p1.startsWith('u')) {
+                return String.fromCharCode(parseInt(p1.slice(1), 16));
+              }
+              if (p1.startsWith('x')) {
+                return String.fromCharCode(parseInt(p1.slice(1), 16));
+              }
+              switch (p1) {
+                case 'n': return '\n';
+                case 'r': return '\r';
+                case 't': return '\t';
+                case 'b': return '\b';
+                case 'f': return '\f';
+                case '"': return '"';
+                case "'": return "'";
+                case '\\': return '\\';
+                case '/': return '/';
+                default: return p1;
+              }
+            });
+            return JSON.parse(unescaped);
+          } catch (e) {}
+
+          return null;
+        };
+
+        // Extraction of the initial root JSON in a messy string (Only run once on main input)
+        const extractRootJSON = (silent = false) => {
+          if (!rawInput.value) {
+            if (!silent) {
+              showToast('未输入数据', '请输入一些包含 JSON 数据的日志或文本。', 'error');
+            }
+            return;
+          }
+
+          const text = rawInput.value;
+          const opening = [];
+          const closing = [];
+
+          for (let i = 0; i < text.length; i++) {
+            const char = text.charAt(i);
+            if (char === '{' || char === '[') opening.push({ char, index: i });
+            if (char === '}' || char === ']') closing.push({ char, index: i });
+          }
+
+          let matchedRoot = null;
+
+          // Search from the longest substring combinations
+          for (let o = 0; o < opening.length; o++) {
+            const op = opening[o];
+            for (let c = closing.length - 1; c >= 0; c--) {
+              const cl = closing[c];
+              if (cl.index > op.index) {
+                // Bracket check matching
+                if ((op.char === '{' && cl.char === '}') || (op.char === '[' && cl.char === ']')) {
+                  const substring = text.substring(op.index, cl.index + 1);
+                  const parsed = tryParseJSONString(substring);
+                  if (parsed !== null) {
+                    matchedRoot = {
+                      raw: substring,
+                      obj: parsed,
+                      startIndex: op.index,
+                      endIndex: cl.index + 1
+                    };
+                    break; // Break inner loop, we found a match for this start index
+                  }
+                }
+              }
+            }
+            if (matchedRoot) break; // Break outer loop, we take the largest match found first
+          }
+
+          if (matchedRoot) {
+            parsedRoot.value = matchedRoot;
+            nodes.value = [];
+            
+            // Start recursive node extraction
+            extractJSONTree(matchedRoot.obj, ['main'], false);
+            
+            // Set selection
+            selectedNodeId.value = 'main';
+            applyFormatting();
+            if (!silent) {
+              showToast('提取成功', '成功从文本中提取出主 JSON 结构，已生成节点树。', 'success');
+            }
+          } else {
+            parsedRoot.value = null;
+            nodes.value = [];
+            selectedNodeId.value = '';
+            if (!silent) {
+              showToast('提取失败', '未在文本中检测到合法的 JSON 结构。请检查格式。', 'error');
+            }
+          }
+        };
+
+        // Recursive tree node extractor
+        // ONLY checks if the direct string values are JSON. No inner substring search is run here.
+        const extractJSONTree = (val, path, isStringifiedInParent) => {
+          const id = path.join('.');
+          const name = path[path.length - 1];
+          const type = Array.isArray(val) ? 'Array' : 'Object';
+
+          // Add current node
+          nodes.value.push({
+            id,
+            path,
+            name,
+            val,
+            isStringifiedInParent,
+            type
+          });
+
+          // Scan children
+          if (val && typeof val === 'object') {
+            for (const key in val) {
+              if (Object.prototype.hasOwnProperty.call(val, key)) {
+                const childVal = val[key];
+                
+                if (typeof childVal === 'string') {
+                  const parsedChild = tryParseJSONString(childVal);
+                  if (parsedChild !== null) {
+                    // Stringified JSON node found. Recurse into it.
+                    extractJSONTree(parsedChild, [...path, key], true);
+                  }
+                } else if (childVal && typeof childVal === 'object') {
+                  // Direct object/array child. Recurse.
+                  extractJSONTree(childVal, [...path, key], false);
+                }
+              }
+            }
+          }
+        };
+
+        // Formatter implementation (JSON.stringify with selected parameters)
+        const formatJSON = (val) => {
+          let replacer = null;
+          if (replacerText.value.trim().length > 0) {
+            replacer = replacerText.value.split(/\s+/).filter(Boolean);
+          }
+
+          let space = '';
+          if (indentSpaces.value === '2') {
+            space = '  ';
+          } else if (indentSpaces.value === '4') {
+            space = '    ';
+          } else if (indentSpaces.value === 'tabs') {
+            space = '\t';
+          } else if (indentSpaces.value === 'compact') {
+            space = '';
+          }
+
+          return JSON.stringify(val, replacer, space);
+        };
+
+        const applyFormatting = () => {
+          if (selectedNode.value) {
+            editText.value = formatJSON(selectedNode.value.val);
+          }
+        };
+
+        // Handle Node Selection
+        const selectNode = (nodeId) => {
+          selectedNodeId.value = nodeId;
+          applyFormatting();
+        };
+
+        // Copy JSON content to clipboard
+        const copyFormattedJSON = async () => {
+          if (!editText.value) return;
+          try {
+            await navigator.clipboard.writeText(editText.value);
+            showToast('复制成功', '已复制当前节点格式化 JSON 至剪切板！', 'success');
+          } catch (err) {
+            showToast('复制失败', '剪切板写入失败，请手动选择复制。', 'error');
+          }
+        };
+
+        // Download current node JSON as a file
+        const downloadNodeJSON = () => {
+          if (!editText.value) return;
+          try {
+            const blob = new Blob([editText.value], { type: 'application/json;charset=utf-8;' });
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            link.href = url;
+            const filename = `${selectedNode.value.id || 'node'}.json`;
+            link.setAttribute('download', filename);
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            URL.revokeObjectURL(url);
+            showToast('下载成功', `文件已保存为 ${filename}`, 'success');
+          } catch (err) {
+            showToast('下载失败', '创建下载文件失败，请重试。', 'error');
+            console.error(err);
+          }
+        };
+
+        // Save modifications to current node and bubble up to the root log string
+        const saveNodeChanges = () => {
+          if (!selectedNode.value) return;
+
+          let newObjValue = null;
+          try {
+            newObjValue = JSON.parse(editText.value);
+          } catch (e) {
+            showToast('格式错误', 'JSON 格式解析失败，请检查语法错误后再试。', 'error');
+            return;
+          }
+
+          // Deep merge or update current node value
+          selectedNode.value.val = newObjValue;
+
+          // Bubble updates from the selected node up to the root
+          let currentVal = newObjValue;
+          let currentPath = [...selectedNode.value.path];
+
+          while (currentPath.length > 1) {
+            const propName = currentPath[currentPath.length - 1];
+            const parentPath = currentPath.slice(0, -1);
+            const parentId = parentPath.join('.');
+
+            const parentNode = nodes.value.find(n => n.id === parentId);
+            if (!parentNode) break;
+
+            const currentId = currentPath.join('.');
+            const currentNodeObj = nodes.value.find(n => n.id === currentId);
+
+            if (currentNodeObj && currentNodeObj.isStringifiedInParent) {
+              parentNode.value = parentNode.val; // Reference helper
+              parentNode.val[propName] = JSON.stringify(currentVal);
+            } else {
+              parentNode.val[propName] = currentVal;
+            }
+
+            currentVal = parentNode.val;
+            currentPath = parentPath;
+          }
+
+          // Root node is at nodes.value[0] which represents 'main'
+          const rootNode = nodes.value.find(n => n.id === 'main');
+          if (rootNode && parsedRoot.value) {
+            // Update the main source input text by replacing the extracted substring
+            const newRootJSONString = JSON.stringify(rootNode.val);
+            const originalText = rawInput.value;
+            const updatedRawText = 
+              originalText.substring(0, parsedRoot.value.startIndex) + 
+              newRootJSONString + 
+              originalText.substring(parsedRoot.value.endIndex);
+
+            // Re-apply rawInput value and prevent watch extraction
+            isSyncing.value = true;
+            rawInput.value = updatedRawText;
+
+            // Shift indices in parsedRoot reference
+            parsedRoot.value.endIndex = parsedRoot.value.startIndex + newRootJSONString.length;
+            parsedRoot.value.raw = newRootJSONString;
+
+            // Regenerate the node tree structure from the newly parsed root values to keep tree references aligned
+            const savedSelectedId = selectedNodeId.value;
+            nodes.value = [];
+            extractJSONTree(rootNode.val, ['main'], false);
+            selectedNodeId.value = savedSelectedId;
+
+            // Reset syncing flag on next DOM update tick
+            nextTick(() => {
+              isSyncing.value = false;
+            });
+
+            // Update text area view
+            applyFormatting();
+            showToast('同步成功', '修改已顺利保存并反向合并更新了原始日志文本！', 'success');
+          }
+        };
+
+        // Load Demo Datasets dynamically from self-describing path list
+        const loadDemoData = async (event) => {
+          const val = event.target.value;
+          if (!val) return;
+          
+          if (val === 'clear') {
+            rawInput.value = '';
+            parsedRoot.value = null;
+            nodes.value = [];
+            selectedNodeId.value = '';
+            editText.value = '';
+            showToast('已清空', '工作区和解析记录已成功复位。', 'info');
+            event.target.value = '';
+            return;
+          }
+
+          const fileInfo = demoFiles.value.find(f => f.key === val);
+          if (!fileInfo) {
+            showToast('加载失败', '未找到对应的测试数据配置。', 'error');
+            event.target.value = '';
+            return;
+          }
+
+          try {
+            const response = await fetch(fileInfo.path);
+            if (response.ok) {
+              const text = await response.text();
+              rawInput.value = text;
+              parsedRoot.value = null;
+              nodes.value = [];
+              selectedNodeId.value = '';
+              editText.value = '';
+              showToast('测试数据已加载', `已加载：${fileInfo.name}。请点击“提取 JSON”进行解析。`, 'info');
+            } else {
+              showToast('加载失败', `无法获取测试数据文件 (${response.status})。`, 'error');
+            }
+          } catch (e) {
+            showToast('加载失败', '网络请求失败，请稍后再试。', 'error');
+            console.error(e);
+          }
+          event.target.value = ''; // Reset select state
+        };
+
+        return {
+          rawInput,
+          nodes,
+          selectedNodeId,
+          selectedNode,
+          filteredNodes,
+          replacerText,
+          indentSpaces,
+          wordWrap,
+          editText,
+          toasts,
+          demoFiles,
+          
+          extractRootJSON,
+          selectNode,
+          copyFormattedJSON,
+          downloadNodeJSON,
+          saveNodeChanges,
+          loadDemoData,
+          removeToast
+        };
+      }
+    }).mount('#app');
+  </script>
+</body>
+</html>

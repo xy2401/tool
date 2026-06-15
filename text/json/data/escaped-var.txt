@@ -1,0 +1,1 @@
+String log = "person:{\"name\":\"Charlie\",\"profile\":\"{\\\"verified\\\":true,\\\"roles\\\":[\\\"editor\\\",\\\"user\\\"]}\"}";

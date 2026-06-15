@@ -1,0 +1,17 @@
+[
+  {
+    "key": "data-json",
+    "name": "数据配置索引 (data.json)",
+    "path": "./data/data.json"
+  },
+  {
+    "key": "spring-boot",
+    "name": "标准微服务日志 (Spring Boot)",
+    "path": "./data/spring-boot.log"
+  },
+  {
+    "key": "escaped-var",
+    "name": "多重转义变量 (JavaScript)",
+    "path": "./data/escaped-var.txt"
+  }
+]
