@@ -281,9 +281,55 @@
         add("xml", 7, /^<[\w:-]+(?:\s+[\w:-]+="[^"]*")*\s*>[\s\S]*<\/[\w:-]+>\s*$/i);
         add("xml", 2, /<\/[\w:-]+>/);
 
-        // Markdown：围栏代码、标题和链接较可靠；引用、列表、粗体和表格用于叠加判断。
-        add("markdown", 5, /(^|\n)\s*```[\w-]*\s*$/);
-        add("markdown", 4, /(^|\n)\s{0,3}#{1,6}\s+\S/);
+        // Markdown：代码围栏和井号标题都是强特征。
+        // ```html 里的 html 表示内嵌代码，不表示整篇文档是 HTML。
+        const fencedLanguages = Array.from(
+          text.matchAll(/(^|\n)\s*```([a-zA-Z0-9_+-]*)[^\n]*$/g),
+          match => match[2].toLowerCase()
+        );
+        if (fencedLanguages.length) {
+          scores.markdown += 10 + Math.min((fencedLanguages.length - 1) * 2, 6);
+
+          const fencedLanguageMap = {
+            bash: "shell",
+            css: "css",
+            go: "go",
+            html: "html",
+            java: "java",
+            javascript: "javascript",
+            js: "javascript",
+            json: "json",
+            markdown: "markdown",
+            md: "markdown",
+            php: "php",
+            python: "python",
+            py: "python",
+            sql: "sql",
+            typescript: "typescript",
+            ts: "typescript",
+            xml: "xml",
+            yaml: "yaml",
+            yml: "yaml"
+          };
+
+          fencedLanguages.forEach(label => {
+            const embeddedLanguage = fencedLanguageMap[label];
+            if (embeddedLanguage && embeddedLanguage !== "markdown" && scores[embeddedLanguage] !== undefined) {
+              scores[embeddedLanguage] -= 8;
+            }
+          });
+        }
+
+        // 井号后带空格的标题行是强特征，多级标题越多可信度越高。
+        add("markdown", 8, /(^|\n)\s{0,3}#{1,6}\s+\S/);
+        const markdownHeadingCount = (
+          text.match(/(^|\n)\s{0,3}#{1,6}\s+\S/g) || []
+        ).length;
+        scores.markdown += Math.min(
+          Math.max(markdownHeadingCount - 1, 0) * 2,
+          6
+        );
+        // 其余结构用于继续叠加判断：链接、引用、列表、粗体和表格。
         add("markdown", 3, /\[[^\]]+\]\([^)]+\)/);
         add("markdown", 2, /(^|\n)\s*>\s+\S/);
         add("markdown", 2, /(^|\n)\s*[-*+]\s+\S/);
