@@ -1,4 +1,4 @@
-# Handmade Tools
+# Human Tools
 
 此目录用于存放人工手写、非 AI 生成的功能和页面。
 

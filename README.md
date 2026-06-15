@@ -24,7 +24,7 @@ tool/
 │  └─ json.html        # JSON 工具
 ├─ time/
 │  └─ index.html       # 时间类工具
-├─ handmade/
+├─ human/
 │  └─ README.md        # 人工手写、非 AI 生成的功能
 └─ README.md
 ```
