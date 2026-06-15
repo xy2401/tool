@@ -4,6 +4,7 @@
   "html": "html.html",
   "java": "java.java",
   "javascript": "javascript.js",
+  "javascript-run": "javascript-run.js",
   "json": "json.json",
   "markdown": "markdown.md",
   "php": "php.php",

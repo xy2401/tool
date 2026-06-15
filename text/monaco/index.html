@@ -225,6 +225,13 @@
         <span class="version">v0.55.1</span>
       </div>
 
+      <label>
+        Demo
+        <select id="demo" disabled>
+          <option>正在加载...</option>
+        </select>
+      </label>
+
       <button id="open-file" type="button">打开文件</button>
       <input id="file-input" class="file-input" type="file">
       <span id="file-status" class="file-status" aria-live="polite"></span>
@@ -240,13 +247,6 @@
         Auto
         <select id="auto" disabled>
           <option>等待粘贴...</option>
-        </select>
-      </label>
-
-      <label>
-        Demo
-        <select id="demo" disabled>
-          <option>正在加载...</option>
         </select>
       </label>
 
@@ -299,6 +299,11 @@
       <label class="checkbox-label preview-control markdown-preview-control" hidden>
         <input id="markdown-preview-enabled" type="checkbox">
         Markdown 预览
+      </label>
+
+      <label class="checkbox-label preview-control javascript-preview-control" hidden>
+        <input id="javascript-preview-enabled" type="checkbox">
+        JS 运行
       </label>
 
       <label class="checkbox-label preview-control svg-preview-control" hidden>
@@ -408,6 +413,12 @@
       );
       const markdownPreviewInput = document.getElementById(
         "markdown-preview-enabled"
+      );
+      const javascriptPreviewControl = document.querySelector(
+        ".javascript-preview-control"
+      );
+      const javascriptPreviewInput = document.getElementById(
+        "javascript-preview-enabled"
       );
       const svgPreviewControl = document.querySelector(
         ".svg-preview-control"
@@ -1089,15 +1100,133 @@
         );
       }
 
+      function createJavaScriptPreviewDocument(value) {
+        const serializedValue = JSON.stringify(value).replace(/</g, "\\u003c");
+
+        return `<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline' 'unsafe-eval' blob:; worker-src blob:; style-src 'unsafe-inline'; connect-src 'none'; img-src data: blob:">
+  <style>
+    :root { color-scheme: dark; font-family: "Cascadia Code", Consolas, monospace; }
+    body { margin: 0; padding: 18px; color: #e6edf3; background: #0d1117; font-size: 13px; }
+    h2 { margin: 0 0 14px; font: 700 16px system-ui, sans-serif; }
+    .empty { color: #8b949e; }
+    .row { display: grid; grid-template-columns: 52px minmax(0, 1fr); gap: 10px; padding: 8px 0; border-bottom: 1px solid #21262d; }
+    .line { color: #8b949e; text-align: right; user-select: none; }
+    .value { min-width: 0; white-space: pre-wrap; overflow-wrap: anywhere; }
+    .log .value { color: #e6edf3; }
+    .info .value { color: #58a6ff; }
+    .warn .value { color: #d29922; }
+    .error .value { color: #f85149; }
+  </style>
+</head>
+<body>
+  <h2>Console</h2>
+  <div id="output"><p class="empty">正在运行...</p></div>
+  <script>
+    const source = ${serializedValue};
+    const output = document.getElementById("output");
+    const workerSource = \`
+      const format = value => {
+        if (typeof value === "string") return value;
+        if (typeof value === "undefined") return "undefined";
+        if (typeof value === "bigint") return value + "n";
+        if (typeof value === "function") return value.toString();
+        if (value instanceof Error) return value.name + ": " + value.message;
+        try {
+          const seen = new WeakSet();
+          return JSON.stringify(value, (key, item) => {
+            if (typeof item === "bigint") return item + "n";
+            if (item && typeof item === "object") {
+              if (seen.has(item)) return "[Circular]";
+              seen.add(item);
+            }
+            return item;
+          }, 2);
+        } catch {
+          return String(value);
+        }
+      };
+
+      self.onmessage = async event => {
+        const rows = [];
+        ["log", "info", "warn", "error"].forEach(level => {
+          console[level] = (...values) => {
+            rows.push({
+              type: level,
+              value: values.map(format).join(" ")
+            });
+          };
+        });
+
+        try {
+          const result = (0, eval)(event.data);
+          if (result && typeof result.then === "function") {
+            await result;
+          }
+          await new Promise(resolve => setTimeout(resolve, 0));
+        } catch (error) {
+          rows.push({
+            type: "error",
+            value: format(error)
+          });
+        }
+        self.postMessage(rows);
+      };
+    \`;
+    const workerUrl = URL.createObjectURL(
+      new Blob([workerSource], { type: "text/javascript" })
+    );
+    const worker = new Worker(workerUrl);
+    const escapeHtml = value => String(value)
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;");
+    const timer = setTimeout(() => {
+      worker.terminate();
+      output.innerHTML = '<div class="row error"><span class="line">超时</span><span class="value">执行超过 2 秒，已停止。</span></div>';
+    }, 2000);
+
+    worker.onmessage = event => {
+      clearTimeout(timer);
+      worker.terminate();
+      URL.revokeObjectURL(workerUrl);
+      const rows = event.data;
+      output.innerHTML = rows.length
+        ? rows.map(row => \`
+            <div class="row \${row.type}">
+              <span class="line">\${row.type}</span>
+              <span class="value">\${escapeHtml(row.value)}</span>
+            </div>
+          \`).join("")
+        : '<p class="empty">没有 Console 输出。</p>';
+    };
+
+    worker.onerror = event => {
+      clearTimeout(timer);
+      worker.terminate();
+      output.innerHTML = \`<div class="row error"><span class="line">错误</span><span class="value">\${escapeHtml(event.message)}</span></div>\`;
+    };
+    worker.postMessage(source);
+  <\/script>
+</body>
+</html>`;
+      }
+
       function renderPreview() {
         const isHtmlPreview = htmlPreviewInput.checked;
         const isMarkdownPreview = markdownPreviewInput.checked;
+        const isJavaScriptPreview = javascriptPreviewInput.checked;
         const isSvgPreview = svgPreviewInput.checked;
         const isBase64Preview = base64PreviewInput.checked;
 
         if (
           !isHtmlPreview &&
           !isMarkdownPreview &&
+          !isJavaScriptPreview &&
           !isSvgPreview &&
           !isBase64Preview
         ) {
@@ -1109,11 +1238,13 @@
           const value = getActiveEditor().getValue();
           htmlPreviewFrame.srcdoc = isMarkdownPreview
             ? createMarkdownDocument(value)
-            : isSvgPreview
-              ? createSvgPreviewDocument(value)
-              : isBase64Preview
-                ? createBase64PreviewDocument(value)
-                : value;
+            : isJavaScriptPreview
+              ? createJavaScriptPreviewDocument(value)
+              : isSvgPreview
+                ? createSvgPreviewDocument(value)
+                : isBase64Preview
+                  ? createBase64PreviewDocument(value)
+                  : value;
         }, 120);
       }
 
@@ -1134,6 +1265,7 @@
       function closePreview() {
         htmlPreviewInput.checked = false;
         markdownPreviewInput.checked = false;
+        javascriptPreviewInput.checked = false;
         svgPreviewInput.checked = false;
         base64PreviewInput.checked = false;
         workspaceNode.classList.remove("is-previewing");
@@ -1142,6 +1274,7 @@
 
       function syncPreviewAvailability() {
         const isHtml = languageSelect.value === "html";
+        const isJavaScript = languageSelect.value === "javascript";
         const isMarkdown = languageSelect.value === "markdown";
         const isJson = languageSelect.value === "json";
         const isXml = languageSelect.value === "xml";
@@ -1152,6 +1285,7 @@
         htmlPreviewControl.hidden = !isHtml;
         htmlToMarkdownButton.hidden = !isHtml;
         markdownPreviewControl.hidden = !isMarkdown;
+        javascriptPreviewControl.hidden = !isJavaScript;
         svgPreviewControl.hidden = !isSvg;
         base64PreviewControl.hidden = !isBase64;
         jsonToYamlButton.hidden = !isJson;
@@ -1165,6 +1299,7 @@
         if (
           (!isHtml && htmlPreviewInput.checked) ||
           (!isMarkdown && markdownPreviewInput.checked) ||
+          (!isJavaScript && javascriptPreviewInput.checked) ||
           (!isSvg && svgPreviewInput.checked) ||
           (!isBase64 && base64PreviewInput.checked)
         ) {
@@ -1415,6 +1550,7 @@
         .sort((left, right) => left.localeCompare(right));
       const demoLanguageMap = {
         base64: "plaintext",
+        "javascript-run": "javascript",
         svg: "xml"
       };
       demoSelect.replaceChildren(
@@ -1649,6 +1785,7 @@
       const previewInputs = [
         htmlPreviewInput,
         markdownPreviewInput,
+        javascriptPreviewInput,
         svgPreviewInput,
         base64PreviewInput
       ];
@@ -1682,6 +1819,10 @@
 
       markdownPreviewInput.addEventListener("change", () => {
         handlePreviewChange(markdownPreviewInput);
+      });
+
+      javascriptPreviewInput.addEventListener("change", () => {
+        handlePreviewChange(javascriptPreviewInput);
       });
 
       svgPreviewInput.addEventListener("change", () => {
