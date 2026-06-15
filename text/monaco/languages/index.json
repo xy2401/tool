@@ -9,7 +9,9 @@
   "php": "php.php",
   "python": "python.py",
   "sql": "sql.sql",
+  "svg": "svg.svg",
   "typescript": "typescript.ts",
   "xml": "xml.xml",
-  "yaml": "yaml.yaml"
+  "yaml": "yaml.yaml",
+  "base64": "base64.txt"
 }

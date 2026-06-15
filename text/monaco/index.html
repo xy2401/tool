@@ -431,7 +431,9 @@
       let sampleFiles = {};
 
       try {
-        const response = await fetch("./languages/index.json");
+        const response = await fetch("./languages/index.json", {
+          cache: "no-store"
+        });
         if (response.ok) {
           sampleFiles = await response.json();
         }
@@ -447,7 +449,9 @@
         }
 
         try {
-          const response = await fetch(`./languages/${file}`);
+          const response = await fetch(`./languages/${file}`, {
+            cache: "no-store"
+          });
           return response.ok ? await response.text() : "";
         } catch (error) {
           console.warn(`${language} 示例加载失败`, error);
@@ -1409,6 +1413,10 @@
 
       const demos = Object.keys(sampleFiles)
         .sort((left, right) => left.localeCompare(right));
+      const demoLanguageMap = {
+        base64: "plaintext",
+        svg: "xml"
+      };
       demoSelect.replaceChildren(
         ...demos.map(language => {
           const option = document.createElement("option");
@@ -1559,8 +1567,9 @@
       });
 
       demoSelect.addEventListener("change", async () => {
-        const language = demoSelect.value;
-        const value = await loadSample(language);
+        const demo = demoSelect.value;
+        const language = demoLanguageMap[demo] || demo;
+        const value = await loadSample(demo);
         languageSelect.value = language;
         monaco.editor.setModelLanguage(primaryModel, language);
         monaco.editor.setModelLanguage(getActiveModel(), language);
