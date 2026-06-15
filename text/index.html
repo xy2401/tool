@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="常用文本编码、摘要与生成工具">
+  <title>文本工具 - Dev Tools</title>
+  <style>
+    :root { color-scheme: dark; font-family: Inter, system-ui, sans-serif; color: #f2f5f7; background: #0b0d10; }
+    * { box-sizing: border-box; }
+    body { min-width: 320px; min-height: 100vh; margin: 0; }
+    main { width: min(1120px, 90vw); margin: 0 auto; padding: 5rem 0; }
+    .page-heading { max-width: 720px; margin-bottom: 3rem; }
+    .eyebrow { margin: 0 0 1rem; color: #72e2ae; font: 700 .75rem Consolas, monospace; letter-spacing: .14em; }
+    h1 { margin: 0; font-size: clamp(2.35rem, 6vw, 4.5rem); line-height: .98; letter-spacing: -.065em; }
+    .page-heading > p:last-child { margin: 1.35rem 0 0; color: #98a4b3; line-height: 1.75; }
+    .workspace { min-height: 420px; overflow: hidden; border: 1px solid #29313a; border-radius: 1rem; background: #12161b; }
+    .tabs { display: flex; gap: .5rem; padding: 1rem; overflow-x: auto; border-bottom: 1px solid #29313a; }
+    .tab { flex: 0 0 auto; padding: .6rem .85rem; border: 1px solid transparent; border-radius: .55rem; color: #98a4b3; background: transparent; font: inherit; cursor: pointer; }
+    .tab:hover, .tab.is-active { border-color: rgba(114,226,174,.25); color: #f2f5f7; background: rgba(114,226,174,.12); }
+    .placeholder { display: grid; min-height: 340px; padding: 2rem; place-content: center; text-align: center; }
+    .placeholder h2 { margin: 0 0 .65rem; }
+    .placeholder p { margin: 0; color: #98a4b3; }
+  </style>
+</head>
+<body>
+  <main>
+    <header class="page-heading">
+      <p class="eyebrow">TEXT TOOLKIT</p>
+      <h1>文本工具</h1>
+      <p>复用同一套输入、输出和操作区域，集中处理常用文本任务。</p>
+    </header>
+
+    <section class="workspace">
+      <div class="tabs" role="tablist" aria-label="文本工具">
+        <button class="tab is-active" type="button">Base64</button>
+        <button class="tab" type="button">URL 编解码</button>
+        <button class="tab" type="button">哈希</button>
+        <button class="tab" type="button">UUID</button>
+        <button class="tab" type="button">密码</button>
+        <button class="tab" type="button">随机字符串</button>
+      </div>
+      <div class="placeholder">
+        <h2>文本工作区</h2>
+        <p>功能和交互细节将在下一步确定。</p>
+      </div>
+    </section>
+  </main>
+
+</body>
+</html>
