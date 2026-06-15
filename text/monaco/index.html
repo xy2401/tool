@@ -150,7 +150,6 @@
         </select>
       </label>
 
-      <button id="format" type="button" disabled>格式化</button>
     </header>
 
     <main id="editor">
@@ -199,7 +198,6 @@
       const autoSelect = document.getElementById("auto");
       const demoSelect = document.getElementById("demo");
       const themeSelect = document.getElementById("theme");
-      const formatButton = document.getElementById("format");
       let sampleFiles = {};
 
       try {
@@ -553,7 +551,6 @@
         })
       );
       demoSelect.disabled = false;
-      formatButton.disabled = false;
 
       languageSelect.addEventListener("change", async () => {
         monaco.editor.setModelLanguage(editor.getModel(), languageSelect.value);
@@ -607,15 +604,6 @@
         monaco.editor.setTheme(themeSelect.value);
       });
 
-      formatButton.addEventListener("click", async () => {
-        const action = editor.getAction("editor.action.formatDocument");
-
-        if (action) {
-          await action.run();
-        }
-
-        editor.focus();
-      });
     });
   </script>
 </body>
