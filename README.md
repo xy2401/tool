@@ -1,6 +1,6 @@
 # Dev Tools
 
-一个面向程序员的在线工具集合，目标是打开网页即可使用。
+一个面向所有人的在线工具集合，无需安装，打开网页即可使用。
 
 ## 功能列表
 
@@ -18,6 +18,7 @@
 
 ### human
 
+- [JSON 查看](./human/json.html) - 从文本中提取、格式化并查看 JSON 数据。
 - [JSON Editor](./human/jsoneditor.html) - 可视化查看、编辑和提取 JSON 数据。
 - [Monaco Editor](./human/monaco.html) - 在线体验多语言代码编辑器。
 - [Monaco Diff](./human/monaco-diff.html) - 并排或行内比较两段代码。
