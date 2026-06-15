@@ -301,6 +301,16 @@
         Markdown 预览
       </label>
 
+      <label class="checkbox-label preview-control svg-preview-control" hidden>
+        <input id="svg-preview-enabled" type="checkbox">
+        SVG 预览
+      </label>
+
+      <label class="checkbox-label preview-control base64-preview-control" hidden>
+        <input id="base64-preview-enabled" type="checkbox">
+        Base64 预览
+      </label>
+
       <button id="json-to-yaml" type="button" hidden>
         JSON 转 YAML
       </button>
@@ -322,7 +332,7 @@
       </div>
       <iframe
         id="html-preview"
-        title="HTML 预览"
+        title="内容预览"
         sandbox="allow-scripts"
         referrerpolicy="no-referrer"
       ></iframe>
@@ -398,6 +408,18 @@
       );
       const markdownPreviewInput = document.getElementById(
         "markdown-preview-enabled"
+      );
+      const svgPreviewControl = document.querySelector(
+        ".svg-preview-control"
+      );
+      const svgPreviewInput = document.getElementById(
+        "svg-preview-enabled"
+      );
+      const base64PreviewControl = document.querySelector(
+        ".base64-preview-control"
+      );
+      const base64PreviewInput = document.getElementById(
+        "base64-preview-enabled"
       );
       const jsonToYamlButton = document.getElementById("json-to-yaml");
       const yamlToJsonButton = document.getElementById("yaml-to-json");
@@ -942,11 +964,139 @@
 </html>`;
       }
 
+      function isSvgContent(value) {
+        return /^\s*(?:<\?xml[\s\S]*?\?>\s*)?<svg\b/i.test(value);
+      }
+
+      function parseBase64DataUrl(value) {
+        const match = value.trim().match(
+          /^data:([^;,]+)(?:;charset=[^;,]+)?;base64,([a-z0-9+/=\s]+)$/i
+        );
+
+        if (!match) {
+          return null;
+        }
+
+        return {
+          mimeType: match[1].toLowerCase(),
+          url: value.trim().replace(/\s+/g, "")
+        };
+      }
+
+      function createMediaPreviewDocument(content) {
+        const escapeHtml = value => value
+          .replace(/&/g, "&amp;")
+          .replace(/"/g, "&quot;")
+          .replace(/</g, "&lt;")
+          .replace(/>/g, "&gt;");
+        const escapedContent = escapeHtml(content);
+
+        return `<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <style>
+    html, body { width: 100%; height: 100%; margin: 0; }
+    body { display: grid; padding: 24px; background: #f6f8fa; place-items: center; box-sizing: border-box; }
+    img, svg, video, object { max-width: 100%; max-height: 100%; }
+    audio { width: min(560px, 100%); }
+    pre { overflow: auto; width: 100%; height: 100%; margin: 0; color: #1f2328; white-space: pre-wrap; overflow-wrap: anywhere; }
+    .message { color: #57606a; font: 14px system-ui, sans-serif; }
+  </style>
+</head>
+<body>${content.startsWith("<") ? content : escapedContent}</body>
+</html>`;
+      }
+
+      function createSvgPreviewDocument(value) {
+        if (!window.DOMPurify) {
+          return createMediaPreviewDocument(
+            '<p class="message">SVG 预览组件加载失败</p>'
+          );
+        }
+
+        const clean = DOMPurify.sanitize(value, {
+          USE_PROFILES: {
+            svg: true,
+            svgFilters: true
+          }
+        });
+        return createMediaPreviewDocument(clean);
+      }
+
+      function createBase64PreviewDocument(value) {
+        const data = parseBase64DataUrl(value);
+
+        if (!data) {
+          return createMediaPreviewDocument(
+            '<p class="message">不是有效的 Base64 Data URL</p>'
+          );
+        }
+
+        const escapedUrl = data.url.replace(/&/g, "&amp;").replace(/"/g, "&quot;");
+
+        if (data.mimeType.startsWith("image/")) {
+          return createMediaPreviewDocument(
+            `<img src="${escapedUrl}" alt="Base64 图片预览">`
+          );
+        }
+        if (data.mimeType.startsWith("audio/")) {
+          return createMediaPreviewDocument(
+            `<audio src="${escapedUrl}" controls></audio>`
+          );
+        }
+        if (data.mimeType.startsWith("video/")) {
+          return createMediaPreviewDocument(
+            `<video src="${escapedUrl}" controls></video>`
+          );
+        }
+        if (data.mimeType === "application/pdf") {
+          return createMediaPreviewDocument(
+            `<object data="${escapedUrl}" type="application/pdf" width="100%" height="100%"><p class="message">浏览器无法显示此 PDF。</p></object>`
+          );
+        }
+        if (data.mimeType.startsWith("text/")) {
+          try {
+            const encoded = data.url.slice(data.url.indexOf(",") + 1);
+            const binary = atob(encoded);
+            const bytes = Uint8Array.from(binary, character =>
+              character.charCodeAt(0)
+            );
+            const text = new TextDecoder().decode(bytes);
+            const escapedText = text
+              .replace(/&/g, "&amp;")
+              .replace(/</g, "&lt;")
+              .replace(/>/g, "&gt;");
+            return createMediaPreviewDocument(`<pre>${escapedText}</pre>`);
+          } catch {
+            return createMediaPreviewDocument(
+              '<p class="message">Base64 文本解码失败</p>'
+            );
+          }
+        }
+
+        const escapedMimeType = data.mimeType
+          .replace(/&/g, "&amp;")
+          .replace(/</g, "&lt;")
+          .replace(/>/g, "&gt;");
+        return createMediaPreviewDocument(
+          `<p class="message">暂不支持预览 ${escapedMimeType}</p>`
+        );
+      }
+
       function renderPreview() {
         const isHtmlPreview = htmlPreviewInput.checked;
         const isMarkdownPreview = markdownPreviewInput.checked;
+        const isSvgPreview = svgPreviewInput.checked;
+        const isBase64Preview = base64PreviewInput.checked;
 
-        if (!isHtmlPreview && !isMarkdownPreview) {
+        if (
+          !isHtmlPreview &&
+          !isMarkdownPreview &&
+          !isSvgPreview &&
+          !isBase64Preview
+        ) {
           return;
         }
 
@@ -955,7 +1105,11 @@
           const value = getActiveEditor().getValue();
           htmlPreviewFrame.srcdoc = isMarkdownPreview
             ? createMarkdownDocument(value)
-            : value;
+            : isSvgPreview
+              ? createSvgPreviewDocument(value)
+              : isBase64Preview
+                ? createBase64PreviewDocument(value)
+                : value;
         }, 120);
       }
 
@@ -968,6 +1122,7 @@
           }, 0);
         });
         contentChangeDisposable = codeEditor.onDidChangeModelContent(() => {
+          syncPreviewAvailability();
           renderPreview();
         });
       }
@@ -975,6 +1130,8 @@
       function closePreview() {
         htmlPreviewInput.checked = false;
         markdownPreviewInput.checked = false;
+        svgPreviewInput.checked = false;
+        base64PreviewInput.checked = false;
         workspaceNode.classList.remove("is-previewing");
         htmlPreviewFrame.srcdoc = "";
       }
@@ -985,9 +1142,14 @@
         const isJson = languageSelect.value === "json";
         const isXml = languageSelect.value === "xml";
         const isYaml = languageSelect.value === "yaml";
+        const value = getActiveEditor()?.getValue() || "";
+        const isSvg = isSvgContent(value);
+        const isBase64 = Boolean(parseBase64DataUrl(value));
         htmlPreviewControl.hidden = !isHtml;
         htmlToMarkdownButton.hidden = !isHtml;
         markdownPreviewControl.hidden = !isMarkdown;
+        svgPreviewControl.hidden = !isSvg;
+        base64PreviewControl.hidden = !isBase64;
         jsonToYamlButton.hidden = !isJson;
         yamlToJsonButton.hidden = !isYaml;
         minifyOneLineButton.hidden = !(isJson || isXml);
@@ -999,7 +1161,8 @@
         if (
           (!isHtml && htmlPreviewInput.checked) ||
           (!isMarkdown && markdownPreviewInput.checked) ||
-          (!isHtml && !isMarkdown)
+          (!isSvg && svgPreviewInput.checked) ||
+          (!isBase64 && base64PreviewInput.checked)
         ) {
           closePreview();
         }
@@ -1474,7 +1637,14 @@
         }
       });
 
-      function handlePreviewChange(activeInput, otherInput) {
+      const previewInputs = [
+        htmlPreviewInput,
+        markdownPreviewInput,
+        svgPreviewInput,
+        base64PreviewInput
+      ];
+
+      function handlePreviewChange(activeInput) {
         if (activeInput.checked) {
           if (diffEnabledInput.checked) {
             diffEnabledInput.checked = false;
@@ -1482,7 +1652,11 @@
             closeDiffEditor();
           }
 
-          otherInput.checked = false;
+          previewInputs
+            .filter(input => input !== activeInput)
+            .forEach(input => {
+              input.checked = false;
+            });
           workspaceNode.classList.add("is-previewing");
           renderPreview();
         } else {
@@ -1494,11 +1668,19 @@
       }
 
       htmlPreviewInput.addEventListener("change", () => {
-        handlePreviewChange(htmlPreviewInput, markdownPreviewInput);
+        handlePreviewChange(htmlPreviewInput);
       });
 
       markdownPreviewInput.addEventListener("change", () => {
-        handlePreviewChange(markdownPreviewInput, htmlPreviewInput);
+        handlePreviewChange(markdownPreviewInput);
+      });
+
+      svgPreviewInput.addEventListener("change", () => {
+        handlePreviewChange(svgPreviewInput);
+      });
+
+      base64PreviewInput.addEventListener("change", () => {
+        handlePreviewChange(base64PreviewInput);
       });
 
       jsonToYamlButton.addEventListener("click", () => {
