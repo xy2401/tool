@@ -60,6 +60,15 @@
       font-size: 0.82rem;
     }
 
+    .checkbox-label {
+      color: #e6edf3;
+      cursor: pointer;
+    }
+
+    .checkbox-label input {
+      accent-color: #58a6ff;
+    }
+
     select,
     button {
       min-height: 34px;
@@ -84,9 +93,44 @@
       border-color: #58a6ff;
     }
 
+    button:focus-visible,
+    select:focus-visible {
+      outline: 2px solid #58a6ff;
+      outline-offset: 2px;
+    }
+
+    .file-input {
+      display: none;
+    }
+
+    .file-status {
+      overflow: hidden;
+      max-width: 180px;
+      color: #8b949e;
+      font-size: 0.78rem;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
     #editor {
+      position: relative;
       min-width: 0;
       min-height: 0;
+    }
+
+    #editor.is-dragging::after {
+      position: absolute;
+      z-index: 10;
+      display: grid;
+      border: 2px dashed #58a6ff;
+      color: #e6edf3;
+      background: rgb(13 17 23 / 88%);
+      content: "松开以打开文件";
+      font-size: 1rem;
+      font-weight: 650;
+      inset: 12px;
+      place-items: center;
+      pointer-events: none;
     }
 
     .status {
@@ -120,6 +164,10 @@
         <span class="version">v0.55.1</span>
       </div>
 
+      <button id="open-file" type="button">打开文件</button>
+      <input id="file-input" class="file-input" type="file">
+      <span id="file-status" class="file-status" aria-live="polite"></span>
+
       <label>
         语言
         <select id="language" disabled>
@@ -148,6 +196,11 @@
           <option value="vs">浅色</option>
           <option value="hc-black">高对比度</option>
         </select>
+      </label>
+
+      <label class="checkbox-label">
+        <input id="minimap" type="checkbox">
+        小地图
       </label>
 
     </header>
@@ -184,6 +237,7 @@
       }
     };
   </script>
+  <script src="https://cdn.jsdelivr.net/npm/@highlightjs/cdn-assets@11.11.1/highlight.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/monaco-editor@0.55.1/min/vs/loader.js"></script>
   <script>
     require.config({
@@ -198,6 +252,10 @@
       const autoSelect = document.getElementById("auto");
       const demoSelect = document.getElementById("demo");
       const themeSelect = document.getElementById("theme");
+      const minimapInput = document.getElementById("minimap");
+      const openFileButton = document.getElementById("open-file");
+      const fileInput = document.getElementById("file-input");
+      const fileStatus = document.getElementById("file-status");
       let sampleFiles = {};
 
       try {
@@ -225,7 +283,86 @@
         }
       }
 
+      const HIGHLIGHT_LANGUAGE_MAP = {
+        bash: "shell",
+        css: "css",
+        go: "go",
+        java: "java",
+        javascript: "javascript",
+        json: "json",
+        markdown: "markdown",
+        php: "php",
+        python: "python",
+        sql: "sql",
+        typescript: "typescript",
+        xml: "xml",
+        yaml: "yaml"
+      };
+
+      function normalizeDetectedLanguage(language, value) {
+        if (language !== "xml") {
+          return HIGHLIGHT_LANGUAGE_MAP[language] || language;
+        }
+
+        const start = value.replace(/^\uFEFF/, "").trimStart();
+        return /^(?:<!doctype\s+html\b|<(?:html|head|body)\b)/i.test(start)
+          ? "html"
+          : "xml";
+      }
+
       function detectLanguage(value) {
+        const text = value.trim();
+
+        if (!text || !window.hljs) {
+          return {
+            language: null,
+            ranking: [],
+            details: {}
+          };
+        }
+
+        const subset = Object.keys(HIGHLIGHT_LANGUAGE_MAP)
+          .filter(language => hljs.getLanguage(language));
+        const detected = hljs.highlightAuto(text, subset);
+        const candidates = [detected, detected.secondBest]
+          .filter(candidate => candidate?.language)
+          .map(candidate => [
+            normalizeDetectedLanguage(candidate.language, value),
+            candidate.relevance
+          ]);
+        const ranking = Array.from(
+          new Map(candidates.map(([language, relevance]) => [
+            language,
+            Math.max(
+              relevance,
+              ...candidates
+                .filter(candidate => candidate[0] === language)
+                .map(candidate => candidate[1])
+            )
+          ]))
+        ).sort((left, right) => right[1] - left[1]);
+        const [bestLanguage, bestScore = 0] = ranking[0] || [];
+        const language = bestScore >= 2 ? bestLanguage : null;
+        const details = Object.fromEntries(
+          ranking.map(([candidate, relevance]) => [
+            candidate,
+            [{
+              points: relevance,
+              unitPoints: relevance,
+              count: 1,
+              reason: "highlight.js 语法相关度"
+            }]
+          ])
+        );
+
+        return {
+          language,
+          ranking,
+          details
+        };
+      }
+
+      function legacyDetectLanguage(value) {
         const text = value.trim();
 
         if (!text) {
@@ -237,6 +374,8 @@
         }
 
         const lines = text.split(/\r?\n/);
+        const firstContentLine =
+          lines.find(line => line.replace(/^\uFEFF/, "").trim())?.replace(/^\uFEFF/, "").trim() || "";
         const scores = {
           css: 0,
           go: 0,
@@ -300,18 +439,59 @@
         addLine("php", 4, /\$\w+\s*=/, "出现 PHP 变量赋值");
         addLine("php", 3, /\becho\s+["']/, "出现 echo 输出");
 
-        // HTML：完整文档标签权重最高，成对的语义标签和普通标签依次降权。
-        addLine("html", 14, /^\s*<!doctype\s+html\b/i, "出现 HTML doctype");
-        addText("html", 10, /<html\b[\s>][\s\S]*<\/html>/i, "出现完整 html 根标签");
+        // HTML：首个有效行的 doctype/html 标签是文档级强特征。
+        if (/^<!doctype\s+html\b/i.test(firstContentLine)) {
+          record("html", 60, "首个有效行是 HTML doctype");
+        } else if (/^<html\b[\s>]/i.test(firstContentLine)) {
+          record("html", 50, "首个有效行是 html 根标签");
+        } else if (/^<(head|body)\b[\s>]/i.test(firstContentLine)) {
+          record("html", 30, "首个有效行是 HTML 文档标签");
+        }
+        addText("html", 20, /<html\b[\s>][\s\S]*<\/html>/i, "出现完整 html 根标签");
         addLine("html", 4, /<(head|body)\b[\s>]|<\/(head|body)>/i, "出现 head/body 标签");
         addLine("html", 3, /<(div|section|main|header|footer|article)\b[\s>]|<\/(div|section|main|header|footer|article)>/i, "出现 HTML 语义标签");
         addLine("html", 3, /<(script|style)\b[\s>]|<\/(script|style)>/i, "出现 script/style 标签");
         addLine("html", 2, /<[a-z][\w-]*(?:\s+[^<>]*)?>/i, "出现普通 HTML 标签");
 
-        // XML：XML 声明是强特征；完整根节点和闭合标签作为辅助特征。
-        addLine("xml", 12, /^\s*<\?xml\b/i, "以 XML 声明开头");
-        addText("xml", 7, /^<[\w:-]+(?:\s+[\w:-]+="[^"]*")*\s*>[\s\S]*<\/[\w:-]+>\s*$/i, "整体是完整 XML 根节点");
-        addLine("xml", 2, /<\/[\w:-]+>/, "出现 XML/HTML 闭合标签");
+        // XML：声明、根节点和成对标签共同判断，命名空间与单引号属性也应支持。
+        const xmlBody = text.replace(/^\uFEFF/, "")
+          .replace(/^\s*<\?xml[\s\S]*?\?>\s*/i, "")
+          .replace(/^\s*<!--[\s\S]*?-->\s*/, "");
+        const xmlRootMatch = xmlBody.match(
+          /^<([\w:-]+)(?:\s+[\w:.-]+\s*=\s*(?:"[^"]*"|'[^']*'))*\s*>[\s\S]*<\/\1>\s*$/
+        );
+        const xmlRootName = xmlRootMatch?.[1] || "";
+        const hasXmlDeclaration = /^<\?xml\b/i.test(firstContentLine);
+        const isHtmlRoot = xmlRootName.toLowerCase() === "html";
+        const hasXmlRoot = Boolean(xmlRootMatch) && !isHtmlRoot;
+        const firstXmlLine = xmlBody.split(/\r?\n/, 1)[0].trim();
+        const startsWithXmlRoot =
+          hasXmlRoot &&
+          new RegExp(`^<${xmlRootName.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}(?:\\s|>)`).test(firstXmlLine);
+        const xmlTagCount =
+          (xmlBody.match(/<\/?[\w:-]+(?:\s+[^<>]*?)?\s*\/?>/g) || []).length;
+        const isLikelyXml =
+          hasXmlDeclaration || (hasXmlRoot && xmlTagCount >= 2);
+
+        if (hasXmlDeclaration) {
+          record("xml", 70, "首个有效行是 XML 声明");
+        }
+        if (startsWithXmlRoot) {
+          record("xml", 45, `文档以 XML 根标签 <${xmlRootName}> 开始`);
+        }
+        if (hasXmlRoot) {
+          record("xml", 25, "整体是完整且首尾匹配的 XML 根节点");
+        }
+        if (isLikelyXml && xmlTagCount >= 2) {
+          record(
+            "xml",
+            Math.min(xmlTagCount, 8),
+            `出现 ${xmlTagCount} 个 XML 标签`
+          );
+        }
+        if (!isHtmlRoot) {
+          addLine("xml", 3, /<\/[\w:-]+>/, "出现 XML 闭合标签");
+        }
 
         // Markdown：代码围栏和井号标题都是强特征。
         // ```html 里的 html 表示内嵌代码，不表示整篇文档是 HTML。
@@ -385,9 +565,17 @@
         }
 
         // SQL：语句开头与 FROM、WHERE、JOIN 等子句组合出现时可信度较高。
+        const hasSqlStatement = lines.some(line =>
+          /^\s*(SELECT|INSERT\s+INTO|UPDATE|DELETE\s+FROM|CREATE\s+TABLE|ALTER\s+TABLE)\b/i.test(line)
+        );
         addLine("sql", 6, /^\s*(SELECT|INSERT\s+INTO|UPDATE|DELETE\s+FROM|CREATE\s+TABLE|ALTER\s+TABLE)\b/i, "出现 SQL 主语句");
         addLine("sql", 3, /\b(FROM|VALUES|SET|TABLE|WHERE|JOIN|GROUP\s+BY|ORDER\s+BY)\b/i, "出现 SQL 子句");
-        addLine("sql", 2, /;\s*$/, "以分号结束");
+        if (hasSqlStatement && /;\s*$/.test(text)) {
+          record("sql", 2, "SQL 语句以分号结束");
+        }
+        if (isLikelyXml) {
+          record("sql", -12, "整体具有明确 XML 文档结构");
+        }
 
         // Go：package、func 和 fmt 输出调用是常见且较独特的语法。
         addLine("go", 8, /^\s*package\s+\w+/, "出现 Go package 声明");
@@ -412,8 +600,11 @@
 
         // CSS：选择器块、属性声明和 @media 等 at-rule 共同构成主要特征。
         addLine("css", 5, /^\s*[.#]?[a-zA-Z][\w-]*(?:\s+[.#]?[\w-]+)*\s*\{/, "出现 CSS 选择器块");
-        addLine("css", 4, /[\w-]+\s*:\s*[^;{}]+;/, "出现 CSS 属性声明");
+        addLine("css", 4, /^\s*(?:--)?[\w-]+\s*:\s*[^;{}]+;/, "出现 CSS 属性声明");
         addLine("css", 3, /^\s*@(?:media|supports|keyframes|import)\b/, "出现 CSS at-rule");
+        if (isLikelyXml) {
+          record("css", -12, "整体具有明确 XML 文档结构");
+        }
 
         // YAML：键值、数组项和缩进键用于判断；出现分号或花括号时主动扣分。
         addLine("yaml", 4, /^[\w.-]+\s*:\s*(?:\S.*)?$/, "出现 YAML 顶层键值");
@@ -501,6 +692,29 @@
         }
       }
 
+      function languageFromFilename(filename, languageDefinitions) {
+        const lowerName = filename.toLowerCase();
+        const exactMatch = languageDefinitions.find(language =>
+          (language.filenames || []).some(name => name.toLowerCase() === lowerName)
+        );
+
+        if (exactMatch) {
+          return exactMatch.id;
+        }
+
+        const extensionMatches = languageDefinitions
+          .flatMap(language =>
+            (language.extensions || []).map(extension => ({
+              extension: extension.toLowerCase(),
+              language: language.id
+            }))
+          )
+          .filter(item => lowerName.endsWith(item.extension))
+          .sort((left, right) => right.extension.length - left.extension.length);
+
+        return extensionMatches[0]?.language || null;
+      }
+
       const initialValue = await loadSample("javascript");
       let lastDetectionResult = {
         language: null,
@@ -524,18 +738,55 @@
         scrollBeyondLastLine: false
       });
 
-      const languages = monaco.languages.getLanguages()
+      const languageDefinitions = monaco.languages.getLanguages();
+      const languages = languageDefinitions
         .map(language => language.id)
         .sort((left, right) => left.localeCompare(right));
+      const commonFormats = [
+        "plaintext",
+        "javascript",
+        "typescript",
+        "html",
+        "css",
+        "json",
+        "xml",
+        "yaml",
+        "markdown",
+        "ini",
+        "python",
+        "java",
+        "sql",
+        "shell",
+        "powershell",
+        "bat",
+        "dockerfile",
+        "graphql",
+        "go",
+        "php",
+        "c",
+        "cpp",
+        "csharp"
+      ].filter(language => languages.includes(language));
+      const otherLanguages = languages
+        .filter(language => !commonFormats.includes(language));
+      const createLanguageGroup = (label, languageIds) => {
+        const group = document.createElement("optgroup");
+        group.label = label;
+        group.append(
+          ...languageIds.map(language => {
+            const option = document.createElement("option");
+            option.value = language;
+            option.textContent = language;
+            option.selected = language === "javascript";
+            return option;
+          })
+        );
+        return group;
+      };
 
       languageSelect.replaceChildren(
-        ...languages.map(language => {
-          const option = document.createElement("option");
-          option.value = language;
-          option.textContent = language;
-          option.selected = language === "javascript";
-          return option;
-        })
+        createLanguageGroup("常用格式", commonFormats),
+        createLanguageGroup("其他格式", otherLanguages)
       );
       languageSelect.disabled = false;
 
@@ -551,6 +802,109 @@
         })
       );
       demoSelect.disabled = false;
+
+      if (!window.hljs) {
+        autoSelect.options[0].textContent = "自动识别加载失败";
+      }
+
+      function applyDetectedLanguage(value, filename = "") {
+        const result = detectLanguage(value);
+        const filenameLanguage = filename
+          ? languageFromFilename(filename, languageDefinitions)
+          : null;
+        const language = filenameLanguage || result.language;
+        lastDetectionResult = result;
+        renderAutoScores(result);
+        logDetection(result);
+
+        if (!language || !languages.includes(language)) {
+          return;
+        }
+
+        languageSelect.value = language;
+        monaco.editor.setModelLanguage(editor.getModel(), language);
+      }
+
+      async function openFile(file) {
+        if (!file) {
+          return;
+        }
+
+        try {
+          const value = await file.text();
+
+          if (value.includes("\0")) {
+            throw new Error("不支持二进制文件");
+          }
+
+          editor.setValue(value);
+          editor.setPosition({ lineNumber: 1, column: 1 });
+          applyDetectedLanguage(value, file.name);
+          fileStatus.textContent = file.name;
+          fileStatus.title = file.name;
+          editor.focus();
+        } catch (error) {
+          fileStatus.textContent = error.message || "文件读取失败";
+          fileStatus.title = "";
+          console.warn(`${file.name} 读取失败`, error);
+        } finally {
+          fileInput.value = "";
+        }
+      }
+
+      openFileButton.addEventListener("click", () => {
+        fileInput.click();
+      });
+
+      fileInput.addEventListener("change", () => {
+        openFile(fileInput.files[0]);
+      });
+
+      const isFileDrag = event =>
+        Array.from(event.dataTransfer?.types || []).includes("Files");
+      let dragDepth = 0;
+      editorNode.addEventListener("dragenter", event => {
+        if (!isFileDrag(event)) {
+          return;
+        }
+
+        event.preventDefault();
+        dragDepth += 1;
+        editorNode.classList.add("is-dragging");
+      });
+
+      editorNode.addEventListener("dragover", event => {
+        if (!isFileDrag(event)) {
+          return;
+        }
+
+        event.preventDefault();
+        event.dataTransfer.dropEffect = "copy";
+      });
+
+      editorNode.addEventListener("dragleave", () => {
+        if (!editorNode.classList.contains("is-dragging")) {
+          return;
+        }
+
+        dragDepth -= 1;
+        if (dragDepth <= 0) {
+          dragDepth = 0;
+          editorNode.classList.remove("is-dragging");
+        }
+      });
+
+      editorNode.addEventListener("drop", event => {
+        const file = event.dataTransfer.files[0];
+        if (!file) {
+          return;
+        }
+
+        event.preventDefault();
+        dragDepth = 0;
+        editorNode.classList.remove("is-dragging");
+        openFile(file);
+      });
 
       languageSelect.addEventListener("change", async () => {
         monaco.editor.setModelLanguage(editor.getModel(), languageSelect.value);
@@ -580,28 +934,21 @@
 
       editor.onDidPaste(() => {
         window.setTimeout(() => {
-          const result = detectLanguage(editor.getValue());
-          const language = result.language;
-          lastDetectionResult = result;
-          renderAutoScores(result);
-          logDetection(result);
-
-          if (!language || languageSelect.value === language) {
-            return;
-          }
-
-          const optionExists = Array.from(languageSelect.options)
-            .some(option => option.value === language);
-
-          if (optionExists) {
-            languageSelect.value = language;
-            monaco.editor.setModelLanguage(editor.getModel(), language);
-          }
+          applyDetectedLanguage(editor.getValue());
         }, 0);
       });
 
       themeSelect.addEventListener("change", () => {
         monaco.editor.setTheme(themeSelect.value);
+      });
+
+      minimapInput.addEventListener("change", () => {
+        editor.updateOptions({
+          minimap: {
+            enabled: minimapInput.checked
+          }
+        });
+        editor.focus();
       });
 
     });
