@@ -7,7 +7,7 @@
 ### text
 
 - [Any - 智能识别](./text/any/) - 粘贴任意文本自动识别类型（哈希、时间戳、Base64、UUID、IP、颜色等）并提供转换操作。
-- [Monaco 编辑器](./text/monaco/) - 使用 Monaco Editor（VS Code 的核心编辑器）在线编辑文本和代码。
+- [Monaco 工具箱](./text/monaco/) - 集文本与代码编辑、对比、格式转换、内容预览和 JavaScript Console 于一体。
 - [JSON 查看](./text/json/) - 从日志或不规则文本中深度提取 JSON，支持转义解构与局部回填。
 - [JSON 对比编辑](./text/json/editor.html) - 基于 Svelte-JSONEditor 的现代 JSON 对比与可视化树形编辑工具。
 
@@ -40,10 +40,17 @@
 - **计算操作（任意输入均可触发）**：MD5 / SHA-1 / SHA-256 / SHA-512 哈希、Base64 编解码、URL 编解码、Hex 编解码、大小写转换、字符反转、JSON 转义/反转义、字符统计。
 - **多面板设计**：支持同时开多个输入面板，各自独立识别，方便对比。
 
-#### [Monaco 编辑器](./text/monaco/)
+#### [Monaco 工具箱](./text/monaco/)
 
-Monaco Editor 是 VS Code 的核心编辑器。此页面使用 `0.55.1` 版本提供在线文本
-和代码编辑能力，支持语言切换、深浅主题、自动布局和文档格式化。
+基于 Monaco Editor `0.55.1` 构建的浏览器端文本与代码工作台，所有输入默认只在本地处理。主要能力包括：
+
+- **编辑与识别**：支持大量编程语言和文本格式、自动语言识别、主题切换、小地图、示例加载，以及打开或拖入本地文件。
+- **文本对比**：支持并排和行内 Diff；JSON 对比可递归按属性名自然排序，消除仅由键顺序导致的差异。
+- **格式转换**：支持 JSON 与 YAML 双向转换、HTML 转 Markdown，并保留 Monaco 撤销历史。
+- **格式压缩**：支持 JSON 和 XML 校验后压缩为单行。
+- **实时预览**：支持 HTML、Markdown、SVG 和 Base64 Data URL；Base64 可展示图片、音频、视频、PDF 和文本。
+- **JavaScript Console**：采用类似 MDN “Try it”的整段代码运行方式，在隔离 Worker 中捕获 `console.log/info/warn/error` 和运行异常，并提供超时保护。
+- **模块化静态页面**：HTML、CSS、应用脚本、Console 模板和 Worker 独立组织，无需构建即可部署。
 
 #### [JSON 查看](./text/json/)
 
@@ -113,7 +120,12 @@ tool/
 │  │  ├─ editor.css
 │  │  └─ editor.js
 │  └─ monaco/
-│     └─ index.html   # Monaco 编辑器
+│     ├─ index.html       # Monaco 工具箱页面结构
+│     ├─ styles.css       # 页面样式
+│     ├─ monaco-config.js # Monaco Worker 与 CDN 配置
+│     ├─ app.js           # 编辑、转换、对比和预览逻辑
+│     ├─ languages/       # 各语言与功能 Demo
+│     └─ previews/        # JS Console 模板与 Worker
 ├─ human/
 │  └─ README.md        # 人工手写、非 AI 生成的功能
 └─ README.md
@@ -124,7 +136,7 @@ tool/
 
 ## 页面约定
 
-每个工具页面应包含完整的 HTML、CSS 和 JavaScript：
+简单工具可以使用单个 HTML 文件；功能较多的工具可以将 HTML、CSS、JavaScript、模板和 Worker 按职责拆分，但应保持目录自包含、无需构建即可运行。例如：
 
 ```html
 <!doctype html>
@@ -133,29 +145,17 @@ tool/
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>工具名称</title>
-  <style>
-    /* 当前页面的全部样式 */
-  </style>
+  <link rel="stylesheet" href="./styles.css">
 </head>
 <body>
   <div id="app"></div>
 
-  <script src="https://unpkg.com/vue@3.5.13/dist/vue.global.prod.js"></script>
-  <script>
-    const { createApp } = Vue;
-
-    createApp({
-      data() {
-        return {};
-      },
-      methods: {}
-    }).mount("#app");
-  </script>
+  <script src="./app.js"></script>
 </body>
 </html>
 ```
 
-页面之间可以通过普通链接跳转，但不应通过相对路径加载其他页面的资源。
+页面之间可以通过普通链接跳转。工具自身的 CSS、JavaScript、模板和示例资源应放在同一工具目录中，避免依赖其他工具目录的内部文件。
 
 ## 分类思路
 
@@ -190,6 +190,7 @@ tool/
 当前已完成核心工具的实现与上线：
 
 - `Any 智能识别`：多面板智能文本识别与转换，覆盖哈希、时间戳、Base64、JWT、IPv4、颜色、UUID、URL 等类型，并支持计算操作。
+- `Monaco 工具箱`：多语言编辑、文本对比、格式转换、内容预览和隔离 JavaScript Console。
 - `JSON 查看`：从日志或不规则文本中深度提取并可视化 JSON。
 - `JSON 对比编辑`：基于 Svelte-JSONEditor 的双栏对比与编辑工具，含完整汉化。
 
