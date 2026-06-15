@@ -275,6 +275,14 @@
         HTML 预览
       </label>
 
+      <button id="html-to-markdown" class="html-preview-control" type="button" hidden>
+        转为 Markdown
+      </button>
+
+      <button id="undo-html-to-markdown" type="button" hidden>
+        撤销转换
+      </button>
+
       <label class="checkbox-label preview-control markdown-preview-control" hidden>
         <input id="markdown-preview-enabled" type="checkbox">
         Markdown 预览
@@ -323,6 +331,7 @@
   </script>
   <script src="https://cdn.jsdelivr.net/npm/marked@18.0.5/lib/marked.umd.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/dompurify@3.4.10/dist/purify.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/turndown@7.2.4/lib/turndown.browser.umd.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/@highlightjs/cdn-assets@11.11.1/highlight.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/monaco-editor@0.55.1/min/vs/loader.js"></script>
   <script>
@@ -348,6 +357,12 @@
       );
       const htmlPreviewInput = document.getElementById(
         "html-preview-enabled"
+      );
+      const htmlToMarkdownButton = document.getElementById(
+        "html-to-markdown"
+      );
+      const undoHtmlToMarkdownButton = document.getElementById(
+        "undo-html-to-markdown"
       );
       const markdownPreviewControl = document.querySelector(
         ".markdown-preview-control"
@@ -847,6 +862,7 @@
       let pasteDisposable = null;
       let contentChangeDisposable = null;
       let previewTimer = null;
+      let htmlConversionSnapshot = null;
 
       const getActiveEditor = () =>
         diffEditor ? diffEditor.getModifiedEditor() : editor;
@@ -934,6 +950,7 @@
         const isHtml = languageSelect.value === "html";
         const isMarkdown = languageSelect.value === "markdown";
         htmlPreviewControl.hidden = !isHtml;
+        htmlToMarkdownButton.hidden = !isHtml;
         markdownPreviewControl.hidden = !isMarkdown;
 
         if (
@@ -1285,6 +1302,87 @@
         handlePreviewChange(markdownPreviewInput, htmlPreviewInput);
       });
 
+      htmlToMarkdownButton.addEventListener("click", () => {
+        if (!window.TurndownService) {
+          return;
+        }
+
+        const activeEditor = getActiveEditor();
+        const model = activeEditor.getModel();
+        htmlConversionSnapshot = {
+          value: model.getValue(),
+          position: activeEditor.getPosition(),
+          previewEnabled: htmlPreviewInput.checked
+        };
+        const turndown = new TurndownService({
+          headingStyle: "atx",
+          bulletListMarker: "-",
+          codeBlockStyle: "fenced",
+          emDelimiter: "*",
+          strongDelimiter: "**"
+        });
+        turndown.remove(["script", "style", "noscript"]);
+        const markdown = turndown.turndown(model.getValue());
+
+        closePreview();
+        activeEditor.pushUndoStop();
+        activeEditor.executeEdits("html-to-markdown", [{
+          range: model.getFullModelRange(),
+          text: markdown
+        }]);
+        activeEditor.pushUndoStop();
+        languageSelect.value = "markdown";
+        monaco.editor.setModelLanguage(primaryModel, "markdown");
+        monaco.editor.setModelLanguage(model, "markdown");
+        if (diffOriginalModel) {
+          monaco.editor.setModelLanguage(diffOriginalModel, "markdown");
+        }
+        undoHtmlToMarkdownButton.hidden = false;
+        syncPreviewAvailability();
+        activeEditor.setPosition({ lineNumber: 1, column: 1 });
+        focusEditor();
+      });
+
+      undoHtmlToMarkdownButton.addEventListener("click", () => {
+        if (!htmlConversionSnapshot) {
+          return;
+        }
+
+        const snapshot = htmlConversionSnapshot;
+        const activeEditor = getActiveEditor();
+        const model = activeEditor.getModel();
+
+        closePreview();
+        activeEditor.pushUndoStop();
+        activeEditor.executeEdits("undo-html-to-markdown", [{
+          range: model.getFullModelRange(),
+          text: snapshot.value
+        }]);
+        activeEditor.pushUndoStop();
+        languageSelect.value = "html";
+        monaco.editor.setModelLanguage(primaryModel, "html");
+        monaco.editor.setModelLanguage(model, "html");
+        if (diffOriginalModel) {
+          monaco.editor.setModelLanguage(diffOriginalModel, "html");
+        }
+        htmlConversionSnapshot = null;
+        undoHtmlToMarkdownButton.hidden = true;
+        syncPreviewAvailability();
+        activeEditor.setPosition(snapshot.position || {
+          lineNumber: 1,
+          column: 1
+        });
+
+        if (snapshot.previewEnabled) {
+          htmlPreviewInput.checked = true;
+          workspaceNode.classList.add("is-previewing");
+          renderPreview();
+          activeEditor.layout();
+        }
+
+        focusEditor();
+      });
+
       diffModeSelect.addEventListener("change", () => {
         if (!diffEditor) {
           return;
@@ -1299,6 +1397,10 @@
       if (!window.marked || !window.DOMPurify) {
         markdownPreviewInput.disabled = true;
         markdownPreviewControl.title = "Markdown 预览组件加载失败";
+      }
+      if (!window.TurndownService) {
+        htmlToMarkdownButton.disabled = true;
+        htmlToMarkdownButton.title = "HTML 转 Markdown 组件加载失败";
       }
 
       syncPreviewAvailability();
