@@ -440,6 +440,18 @@
       const fileInput = document.getElementById("file-input");
       const fileStatus = document.getElementById("file-status");
       let sampleFiles = {};
+      const javascriptConsoleTemplatePromise = fetch(
+        "./previews/javascript-console.html",
+        {
+          cache: "no-store"
+        }
+      ).then(response => {
+        if (!response.ok) {
+          throw new Error("JavaScript Console 模板加载失败");
+        }
+
+        return response.text();
+      });
 
       try {
         const response = await fetch("./languages/index.json", {
@@ -932,6 +944,7 @@
       let pasteDisposable = null;
       let contentChangeDisposable = null;
       let previewTimer = null;
+      let previewRenderVersion = 0;
       let htmlConversionSnapshot = null;
 
       const getActiveEditor = () =>
@@ -1100,120 +1113,18 @@
         );
       }
 
-      function createJavaScriptPreviewDocument(value) {
+      async function createJavaScriptPreviewDocument(value) {
+        const template = await javascriptConsoleTemplatePromise;
         const serializedValue = JSON.stringify(value).replace(/</g, "\\u003c");
+        const workerUrl = new URL(
+          "./previews/javascript-console-worker.js",
+          window.location.href
+        );
 
-        return `<!doctype html>
-<html lang="zh-CN">
-<head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline' 'unsafe-eval' blob:; worker-src blob:; style-src 'unsafe-inline'; connect-src 'none'; img-src data: blob:">
-  <style>
-    :root { color-scheme: dark; font-family: "Cascadia Code", Consolas, monospace; }
-    body { margin: 0; padding: 18px; color: #e6edf3; background: #0d1117; font-size: 13px; }
-    h2 { margin: 0 0 14px; font: 700 16px system-ui, sans-serif; }
-    .empty { color: #8b949e; }
-    .row { display: grid; grid-template-columns: 52px minmax(0, 1fr); gap: 10px; padding: 8px 0; border-bottom: 1px solid #21262d; }
-    .line { color: #8b949e; text-align: right; user-select: none; }
-    .value { min-width: 0; white-space: pre-wrap; overflow-wrap: anywhere; }
-    .log .value { color: #e6edf3; }
-    .info .value { color: #58a6ff; }
-    .warn .value { color: #d29922; }
-    .error .value { color: #f85149; }
-  </style>
-</head>
-<body>
-  <h2>Console</h2>
-  <div id="output"><p class="empty">正在运行...</p></div>
-  <script>
-    const source = ${serializedValue};
-    const output = document.getElementById("output");
-    const workerSource = \`
-      const format = value => {
-        if (typeof value === "string") return value;
-        if (typeof value === "undefined") return "undefined";
-        if (typeof value === "bigint") return value + "n";
-        if (typeof value === "function") return value.toString();
-        if (value instanceof Error) return value.name + ": " + value.message;
-        try {
-          const seen = new WeakSet();
-          return JSON.stringify(value, (key, item) => {
-            if (typeof item === "bigint") return item + "n";
-            if (item && typeof item === "object") {
-              if (seen.has(item)) return "[Circular]";
-              seen.add(item);
-            }
-            return item;
-          }, 2);
-        } catch {
-          return String(value);
-        }
-      };
-
-      self.onmessage = async event => {
-        const rows = [];
-        ["log", "info", "warn", "error"].forEach(level => {
-          console[level] = (...values) => {
-            rows.push({
-              type: level,
-              value: values.map(format).join(" ")
-            });
-          };
-        });
-
-        try {
-          const result = (0, eval)(event.data);
-          if (result && typeof result.then === "function") {
-            await result;
-          }
-          await new Promise(resolve => setTimeout(resolve, 0));
-        } catch (error) {
-          rows.push({
-            type: "error",
-            value: format(error)
-          });
-        }
-        self.postMessage(rows);
-      };
-    \`;
-    const workerUrl = URL.createObjectURL(
-      new Blob([workerSource], { type: "text/javascript" })
-    );
-    const worker = new Worker(workerUrl);
-    const escapeHtml = value => String(value)
-      .replace(/&/g, "&amp;")
-      .replace(/</g, "&lt;")
-      .replace(/>/g, "&gt;");
-    const timer = setTimeout(() => {
-      worker.terminate();
-      output.innerHTML = '<div class="row error"><span class="line">超时</span><span class="value">执行超过 2 秒，已停止。</span></div>';
-    }, 2000);
-
-    worker.onmessage = event => {
-      clearTimeout(timer);
-      worker.terminate();
-      URL.revokeObjectURL(workerUrl);
-      const rows = event.data;
-      output.innerHTML = rows.length
-        ? rows.map(row => \`
-            <div class="row \${row.type}">
-              <span class="line">\${row.type}</span>
-              <span class="value">\${escapeHtml(row.value)}</span>
-            </div>
-          \`).join("")
-        : '<p class="empty">没有 Console 输出。</p>';
-    };
-
-    worker.onerror = event => {
-      clearTimeout(timer);
-      worker.terminate();
-      output.innerHTML = \`<div class="row error"><span class="line">错误</span><span class="value">\${escapeHtml(event.message)}</span></div>\`;
-    };
-    worker.postMessage(source);
-  <\/script>
-</body>
-</html>`;
+        return template
+          .replace("__JAVASCRIPT_SOURCE__", serializedValue)
+          .replace("__WORKER_URL__", JSON.stringify(workerUrl.href))
+          .replace("__WORKER_ORIGIN__", workerUrl.origin);
       }
 
       function renderPreview() {
@@ -1233,18 +1144,37 @@
           return;
         }
 
+        const renderVersion = ++previewRenderVersion;
         window.clearTimeout(previewTimer);
-        previewTimer = window.setTimeout(() => {
+        previewTimer = window.setTimeout(async () => {
           const value = getActiveEditor().getValue();
-          htmlPreviewFrame.srcdoc = isMarkdownPreview
-            ? createMarkdownDocument(value)
-            : isJavaScriptPreview
-              ? createJavaScriptPreviewDocument(value)
-              : isSvgPreview
-                ? createSvgPreviewDocument(value)
-                : isBase64Preview
-                  ? createBase64PreviewDocument(value)
-                  : value;
+          try {
+            const documentContent = isMarkdownPreview
+              ? createMarkdownDocument(value)
+              : isJavaScriptPreview
+                ? await createJavaScriptPreviewDocument(value)
+                : isSvgPreview
+                  ? createSvgPreviewDocument(value)
+                  : isBase64Preview
+                    ? createBase64PreviewDocument(value)
+                    : value;
+
+            if (renderVersion === previewRenderVersion) {
+              htmlPreviewFrame.setAttribute(
+                "sandbox",
+                isJavaScriptPreview
+                  ? "allow-scripts allow-same-origin"
+                  : "allow-scripts"
+              );
+              htmlPreviewFrame.srcdoc = documentContent;
+            }
+          } catch (error) {
+            if (renderVersion === previewRenderVersion) {
+              htmlPreviewFrame.srcdoc = createMediaPreviewDocument(
+                `<p class="message">${error.message}</p>`
+              );
+            }
+          }
         }, 120);
       }
 
@@ -1268,6 +1198,8 @@
         javascriptPreviewInput.checked = false;
         svgPreviewInput.checked = false;
         base64PreviewInput.checked = false;
+        previewRenderVersion += 1;
+        htmlPreviewFrame.setAttribute("sandbox", "allow-scripts");
         workspaceNode.classList.remove("is-previewing");
         htmlPreviewFrame.srcdoc = "";
       }
