@@ -57,13 +57,13 @@
 
 #### [JSON 查看](./human/json.html)
 
-从混合文本中提取 JSON，对内容进行格式化，并按节点查看或修改数据。这是
-保存在 `human` 目录中的人工手写页面。
+手写原生页面。从混合文本中提取并格式化 JSON，支持自动解构多次转义的 JSON
+字符串，递归解析内部嵌套 JSON 并生成节点树，支持字段过滤与局部修改反向合并。
 
 #### [JSON Editor](./human/jsoneditor.html)
 
-基于 JSONEditor 提供可视化 JSON 查看和编辑能力，适合处理层级较深的对象
-与数组。
+基于 `jsoneditor` 库的页面。支持从混合文本提取 JSON，通过代码编辑器与树形
+编辑器双栏同步展示，便于对深层嵌套的对象与数组进行可视化查看和编辑。
 
 #### [Monaco Editor](./human/monaco.html)
 
