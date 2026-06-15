@@ -309,6 +309,10 @@
         YAML 转 JSON
       </button>
 
+      <button id="minify-one-line" type="button" hidden>
+        压缩为一行
+      </button>
+
       <span id="conversion-status" class="conversion-status" aria-live="polite"></span>
     </div>
 
@@ -397,6 +401,7 @@
       );
       const jsonToYamlButton = document.getElementById("json-to-yaml");
       const yamlToJsonButton = document.getElementById("yaml-to-json");
+      const minifyOneLineButton = document.getElementById("minify-one-line");
       const conversionStatus = document.getElementById("conversion-status");
       const openFileButton = document.getElementById("open-file");
       const fileInput = document.getElementById("file-input");
@@ -978,12 +983,17 @@
         const isHtml = languageSelect.value === "html";
         const isMarkdown = languageSelect.value === "markdown";
         const isJson = languageSelect.value === "json";
+        const isXml = languageSelect.value === "xml";
         const isYaml = languageSelect.value === "yaml";
         htmlPreviewControl.hidden = !isHtml;
         htmlToMarkdownButton.hidden = !isHtml;
         markdownPreviewControl.hidden = !isMarkdown;
         jsonToYamlButton.hidden = !isJson;
         yamlToJsonButton.hidden = !isYaml;
+        minifyOneLineButton.hidden = !(isJson || isXml);
+        minifyOneLineButton.textContent = isXml
+          ? "XML 压缩为一行"
+          : "JSON 压缩为一行";
         sortJsonDiffButton.hidden = !(isJson && diffEditor);
 
         if (
@@ -1081,6 +1091,40 @@
           text: value
         }]);
         codeEditor.pushUndoStop();
+      }
+
+      function minifyXml(value) {
+        const documentNode = new DOMParser().parseFromString(
+          value,
+          "application/xml"
+        );
+        const parserError = documentNode.querySelector("parsererror");
+
+        if (parserError) {
+          throw new Error(
+            parserError.textContent.replace(/\s+/g, " ").trim()
+          );
+        }
+
+        const removeWhitespaceNodes = node => {
+          Array.from(node.childNodes).forEach(child => {
+            if (
+              child.nodeType === Node.TEXT_NODE &&
+              /^[\t\r\n ]+$/.test(child.nodeValue) &&
+              /[\t\r\n]/.test(child.nodeValue)
+            ) {
+              child.remove();
+              return;
+            }
+
+            removeWhitespaceNodes(child);
+          });
+        };
+
+        removeWhitespaceNodes(documentNode);
+        return new XMLSerializer()
+          .serializeToString(documentNode)
+          .replace(/[\r\n\t]+/g, "");
       }
 
       function createStandaloneEditor() {
@@ -1493,6 +1537,33 @@
           setConversionStatus("已转换为 JSON");
         } catch (error) {
           setConversionStatus(describeConversionError(error), true);
+          focusEditor();
+        }
+      });
+
+      minifyOneLineButton.addEventListener("click", () => {
+        const language = languageSelect.value;
+
+        try {
+          const value = getActiveEditor().getValue();
+          const minified = language === "json"
+            ? JSON.stringify(JSON.parse(value))
+            : minifyXml(value);
+          replaceEditorValue(
+            getActiveEditor(),
+            minified,
+            `${language}-minify-one-line`
+          );
+          setConversionStatus(
+            `${language.toUpperCase()} 已压缩为一行`
+          );
+          getActiveEditor().setPosition({ lineNumber: 1, column: 1 });
+          focusEditor();
+        } catch (error) {
+          setConversionStatus(
+            `${language.toUpperCase()} 压缩失败：${describeConversionError(error)}`,
+            true
+          );
           focusEditor();
         }
       });
