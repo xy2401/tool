@@ -938,390 +938,27 @@
       javascriptQueryLanguage 
     } from 'https://cdn.jsdelivr.net/npm/vanilla-jsoneditor/standalone.js';
 
-    // Simplified Chinese Translation Dictionary (populated dynamically, falls back to local backup if fetch fails)
+    // Simplified Chinese Translation Dictionary (populated dynamically from data directory)
     const simplifiedChinese = {};
     const menuTranslations = {};
     const domTranslations = {};
     const domTooltipTranslations = {};
-
-    const simplifiedChinese_old = {
-      landCode: 'zh-CN',
-      values: {
-        Ok: '确定',
-        filter: '过滤',
-        loading: '正在加载',
-        Extract: '提取',
-        View: '查看',
-        Edit: '编辑',
-        sort: '排序',
-        showMe: '定位错误',
-        cancel: '取消',
-        moveToError: '跳转到解析错误位置',
-        autoRepair: '自动修复',
-        autoRepairJson: '自动修复 JSON',
-        cancelFolding: '取消折叠',
-        openAnyWay: '仍然打开',
-        openTextModeWarning: '在文本模式下打开该文档。这可能会导致您的浏览器卡死或崩溃。',
-        openTreeMode: '在树形模式下打开',
-        openTreeModeDescription: '在树形模式下打开该文档。树形模式可以处理超大文档。',
-        cancelLargeDocument: '取消打开该大文档。',
-        confirmFormatJson: '是否要格式化 JSON？',
-        format: '格式化',
-        noThanks: '不用了，谢谢',
-        closeMessage: '关闭此提示',
-        jsonTooLargeWarning: 'JSON 文档大小超过了 {{maxSize}}，在文本模式下加载可能会导致您的浏览器崩溃。当前大小：{{actualSize}}。',
-        item: '项',
-        items: '项',
-        editNestedContent: '编辑嵌套内容',
-        contents: '内容',
-        back: '返回',
-        apply: '应用',
-        selectQueryLanguage: '选择查询语言',
-        pick: '提取字段',
-        language: '语言',
-        wizard: '向导',
-        wizardInfo: '仅适用于数组，不适用于对象',
-        query: '查询语句',
-        docRoot: '文档根节点',
-        invalidJsonNotRepairable: '载入的 JSON 文档有误，且无法被自动修复。',
-        repairManually: '手动修复',
-        repairManuallyTitle: '在“代码”模式下打开文档并手动修复',
-        pastedJsonAsText: '您以文本形式粘贴了 JSON {{type}}',
-        pasteAsJson: '改为粘贴为 JSON',
-        replaceValueWithJson: '使用粘贴的 JSON 替换该值',
-        pastTextAsJson: '将文本作为 JSON 粘贴，而不是单个字符串值',
-        keepAsSingleValue: '保留粘贴的内容为单个字符串值',
-        leaveAsIsTitle: '保留嵌入在值中的 JSON',
-        multilinePastedAsArray: '多行文本已被粘贴为数组',
-        pasteAsStrInstead: '改为粘贴为字符串',
-        pasteAsStrInsteadTitle: '将剪贴板数据作为单个字符串值粘贴，而不是数组',
-        autoRepairSuccess: '载入的 JSON 文档无效，但已成功自动修复。',
-        acceptRepair: '确定',
-        acceptRepairTitle: '接受修复后的文档',
-        repairManuallyInsteadTitle: '保持文档不变，并通过手动修复',
-        insertExplanation: '插入或粘贴内容：输入 [ 插入新数组，输入 { 插入新对象，或直接输入以插入新值',
-        expandAll: '展开全部',
-        collapseAll: '折叠全部',
-        search: '搜索',
-        transformContents: '数据转换 (过滤、排序、投影)',
-        contextMenuExplanation: '打开右键菜单 (可点击此处、在所选内容上右击，或使用右键菜单键或 Ctrl+Q)',
-        undo: '撤销',
-        redo: '重做',
-        copy: '复制',
-        formatJson: '格式化 JSON：添加合适的缩进和换行 (Ctrl+I)',
-        compactJson: '压缩 JSON：移除所有空白和换行 (Ctrl+Shift+I)',
-        toggleReplaceOptions: '切换替换选项的显示状态 (Ctrl+H)',
-        enterTextSearch: '输入要搜索的文本',
-        findPlaceholder: '查找',
-        nextResult: '跳转到下一个搜索结果 (Enter)',
-        prevResult: '跳转到上一个搜索结果 (Shift+Enter)',
-        closeSearch: '关闭搜索框 (Esc)',
-        enterReplaceText: '输入替换文本',
-        replace: '替换',
-        replaceAll: '全部替换',
-        replaceCtrlEnter: '替换当前匹配项 (Ctrl+Enter)',
-        replaceAllTitle: '替换所有匹配项',
-        sortAscending: '升序',
-        sortDescending: '降序',
-        modeText: '代码',
-        modeTree: '树形',
-        modeTable: '表格',
-        switchToTextMode: '切换到代码模式',
-        switchToTreeMode: '切换到树形模式',
-        switchToTableMode: '切换到表格模式',
-        currentMode: '(当前模式: {{mode}})',
-        failedToValidate: '校验失败：',
-        tipContextMenu: '提示：您可以通过右击或使用 Ctrl+Q 打开右键菜单',
-        YouPastedAJsonMessage: '您以文本形式粘贴了 JSON {{content}}',
-        multilineTextPastedMessage: '多行文本已被粘贴为数组',
-        pasteAsStringInstead: '改为粘贴为字符串',
-        pastSingleString: '将剪贴板数据作为单个字符串值粘贴，而不是数组',
-        leaveAsIs: '保持原样',
-        keepThePastedArray: '保留粘贴的数组',
-        textRepairedSuccessMessage: '载入的 JSON 文档无效，但已成功自动修复。',
-        acceptRepairedDocument: '接受修复后的文档',
-        leaveTheDocUnchanged: '保持文档不变，并通过手动修复',
-        manuallyRepairWithCodeModeText: '在“代码”模式下打开文档并手动修复',
-        tableCell: '表格单元格',
-        tableRow: '表格行',
-        objectWithNestedArrays: '包含嵌套数组的对象',
-        emptyDocument: '空文档',
-        anObject: '对象',
-        emptyArray: '空数组',
-        withValueType: '{{valueType}} 类型',
-        objectCannotBeOpened: '无法在表格模式下打开对象。您可以打开嵌套数组，或者在树形模式下打开文档。',
-        emptyDocCannotBeOpened: '无法在表格模式下打开空文档。您可以转到树形模式，或者使用 Ctrl+V 粘贴 JSON 数组。',
-        docCannotBeOpened: '无法在表格模式下打开 {{doc}}。您可以切换到树形模式打开文档。',
-        editKey: '编辑键名',
-        paste: '粘贴',
-        remove: '删除',
-        editRow: '编辑行',
-        editCurrentRow: '编辑当前行',
-        duplicateRow: '复制行',
-        duplicateCurrentRow: '复制当前行',
-        insertBefore: '插入到前面',
-        insertRowBeforeCurrentRow: '在当前行前面插入一行',
-        insertAfter: '插入到后面',
-        insertRowAfterCurrentRow: '在当前行后面插入一行',
-        removeRow: '删除行',
-        removeCurrentRow: '删除当前行',
-        cut: '剪切',
-        cutFormattedTitle: '剪切所选内容并保留缩进格式',
-        cutCompactedTitle: '剪切所选内容 (无缩进)',
-        copyWithIndent: '复制所选内容并保留缩进格式',
-        copyWithoutIndent: '复制所选内容 (无缩进)',
-        pasteTitle: '粘贴剪切板内容',
-        removeSelected: '删除所选内容',
-        copyFormatted: '复制 (格式化)',
-        copyCompacted: '复制 (压缩)',
-        enforceString: '强制设为字符串',
-        enforceKeepingTheValue: '当值包含数字时，强制保持该值为字符串',
-        editValue: '编辑值',
-        cutFormatted: '剪切 (格式化)',
-        cutCompacted: '剪切 (压缩)',
-        extractSelectedContent: '提取所选内容',
-        duplicate: '复制一份',
-        duplicateSelectedContents: '复制所选内容',
-        editArray: '编辑数组',
-        editObject: '编辑对象',
-        convertTo: '转换为',
-        insert: '插入',
-        editTheKey: '编辑键名',
-        sortArrayOrObject: '对数组或对象内容进行排序',
-        transform: '转换',
-        transformArrayOrObject: '转换数组或对象内容 (过滤、排序、投影)',
-        structure: '结构体',
-        structureTitle: '生成类似于数组首项的结构',
-        object: '对象',
-        array: '数组',
-        value: '普通值',
-        selectAreaBeforeCurrentEntry: '选择当前项前方的区域以插入或粘贴内容',
-        selectAreaAfterCurrentEntry: '选择当前项后方的区域以插入或粘贴内容',
-        path: '路径',
-        sortObjectKeys: '对对象键名进行排序',
-        sortArrayItems: '对数组项进行排序',
-        selectedPath: '所选路径',
-        direction: '方向',
-        property: '属性',
-        original: '当前内容',
-        preview: '预览结果',
-      }
-    };
-
-    // Custom i18n Translation Logic for JSONEditor
-    const menuTranslations_old = {
-      'text': '代码',
-      'tree': '树形',
-      'table': '表格',
-      'Sort': '排序',
-      'Transform': '转换',
-      'Undo': '撤销',
-      'Redo': '重做',
-      'Copy': '复制',
-      'Show me': '定位错误',
-      'Auto repair': '自动修复',
-      'Expand all': '展开全部',
-      'Collapse all': '折叠全部',
-      'Cancel': '取消',
-      'Cancel folding': '取消折叠',
-    };
-
-    const domTranslations_old = {
-      // General headings / labels
-      'Edit nested content': '编辑嵌套内容',
-      'Path': '路径',
-      'Selected path': '所选路径',
-      '(document root)': '(文档根节点)',
-      'Contents': '内容',
-      'Back': '返回',
-      'Apply': '应用',
-      'Language': '语言',
-      'Wizard': '向导',
-      '(Only available for arrays, not for objects)': '(仅适用于数组，不适用于对象)',
-      'Query': '查询语句',
-      'Original': '当前内容',
-      'Preview': '预览结果',
-      'Transform': '转换',
-      'Sort array items': '对数组项进行排序',
-      'Sort object keys': '对对象键名进行排序',
-      'Direction': '方向',
-      'Property': '属性',
-      'Sort': '排序',
-      'ascending': '升序',
-      'descending': '降序',
-      'Filter': '过滤',
-      'Pick': '提取字段',
-      'The loaded JSON document is invalid and could not be repaired automatically.': '载入的 JSON 文档有误，且无法被自动修复。',
-      'Repair manually': '手动修复',
-      'The loaded JSON document was invalid but is successfully repaired.': '载入的 JSON 文档无效，但已成功自动修复。',
-      'Ok': '确定',
-      'Repair manually instead': '手动修复',
-      'Paste as JSON instead': '改为粘贴为 JSON',
-      'Leave as is': '保持原样',
-      'Multiline text was pasted as array': '多行文本已被粘贴为数组',
-      'Paste as string instead': '改为粘贴为字符串',
-      'Find': '查找',
-      'Replace': '替换',
-      'All': '全部替换',
-      'loading...': '正在加载...',
-    };
-
-    const domTooltipTranslations_old = {
-      'Toggle visibility of replace options (Ctrl+H)': '切换替换选项的显示状态 (Ctrl+H)',
-      'Enter text to search': '输入要搜索的文本',
-      'Go to next search result (Enter)': '跳转到下一个搜索结果 (Enter)',
-      'Go to previous search result (Shift+Enter)': '跳转到上一个搜索结果 (Shift+Enter)',
-      'Close search box (Esc)': '关闭搜索框 (Esc)',
-      'Enter replacement text': '输入替换文本',
-      'Replace current occurrence (Ctrl+Enter)': '替换当前匹配项 (Ctrl+Enter)',
-      'Replace all occurrences': '替换所有匹配项',
-    };
 
     function translateText(text) {
       if (!text) return text;
       if (menuTranslations[text]) return menuTranslations[text];
       
       let translated = text;
-      if (translated.includes('Switch to text mode')) {
-        translated = translated.replace('Switch to text mode', '切换到代码模式');
+      // Sort keys of menuTranslations by length descending to replace longer phrases first
+      const keys = Object.keys(menuTranslations).sort((a, b) => b.length - a.length);
+      for (const key of keys) {
+        if (translated.includes(key)) {
+          translated = translated.split(key).join(menuTranslations[key]);
+        }
       }
-      if (translated.includes('Switch to tree mode')) {
-        translated = translated.replace('Switch to tree mode', '切换到树形模式');
-      }
-      if (translated.includes('Switch to table mode')) {
-        translated = translated.replace('Switch to table mode', '切换到表格模式');
-      }
-      if (translated.includes('current mode:')) {
-        translated = translated.replace('current mode:', '当前模式:');
-      }
-      if (translated.includes('Format JSON: add proper indentation and new lines')) {
-        translated = translated.replace('Format JSON: add proper indentation and new lines', '格式化 JSON：添加缩进和换行');
-      }
-      if (translated.includes('Compact JSON: remove all white spacing and new lines')) {
-        translated = translated.replace('Compact JSON: remove all white spacing and new lines', '压缩 JSON：移除所有空白和换行');
-      }
-      if (translated.includes('Transform contents (filter, sort, project)')) {
-        translated = translated.replace('Transform contents (filter, sort, project)', '数据转换 (过滤、排序、投影)');
-      }
-      if (translated.includes('Search (Ctrl+F)')) {
-        translated = translated.replace('Search (Ctrl+F)', '搜索 (Ctrl+F)');
-      }
-      if (translated.includes('Undo (Ctrl+Z)')) {
-        translated = translated.replace('Undo (Ctrl+Z)', '撤销 (Ctrl+Z)');
-      }
-      if (translated.includes('Redo (Ctrl+Shift+Z)')) {
-        translated = translated.replace('Redo (Ctrl+Shift+Z)', '重做 (Ctrl+Shift+Z)');
-      }
-      if (translated.includes('Open context menu')) {
-        translated = '打开右键菜单 (可点击此处、右击所选内容，或使用菜单键或 Ctrl+Q)';
-      }
-      if (translated.includes('Move to the parse error location')) {
-        translated = '跳转到解析错误位置';
-      }
-      if (translated.includes('Automatically repair JSON')) {
-        translated = '自动修复 JSON';
-      }
-      if (translated.includes('Sort array or object contents')) {
-        translated = '对数组或对象进行排序';
-      }
-
-      // Context menu keys
-      if (translated === 'Table cell:') return '表格单元格:';
-      if (translated === 'Table row:') return '表格行:';
-      if (translated === 'Edit') return '编辑';
-      if (translated === 'Edit row') return '编辑行';
-      if (translated === 'Edit array') return '编辑数组';
-      if (translated === 'Edit object') return '编辑对象';
-      if (translated === 'Edit value') return '编辑值';
-      if (translated.includes('Edit the value (Double-click on the value)')) {
-        return '编辑该值 (可双击该值)';
-      }
-      if (translated.includes('Edit the current row')) {
-        return '编辑当前行';
-      }
-      if (translated === 'Enforce string') return '强制设为字符串';
-      if (translated.includes('Enforce keeping the value as string')) {
-        return '当值包含数字时，强制保持其为字符串类型';
-      }
-      if (translated === 'Cut') return '剪切';
-      if (translated.includes('Cut selected contents, formatted with indentation')) {
-        return '剪切所选内容 (保留缩进格式, Ctrl+X)';
-      }
-      if (translated === 'Cut formatted') return '剪切 (格式化)';
-      if (translated === 'Cut compacted') return '剪切 (压缩)';
-      if (translated.includes('Cut selected contents, without indentation')) {
-        return '剪切所选内容 (无缩进, Ctrl+Shift+X)';
-      }
-      if (translated === 'Copy') return '复制';
-      if (translated.includes('Copy selected contents, formatted with indentation')) {
-        return '复制所选内容 (保留缩进格式, Ctrl+C)';
-      }
-      if (translated === 'Copy formatted') return '复制 (格式化)';
-      if (translated === 'Copy compacted') return '复制 (压缩)';
-      if (translated.includes('Copy selected contents, without indentation')) {
-        return '复制所选内容 (无缩进, Ctrl+Shift+C)';
-      }
-      if (translated === 'Paste') return '粘贴';
-      if (translated.includes('Paste clipboard contents')) {
-        return '粘贴剪贴板内容 (Ctrl+V)';
-      }
-      if (translated === 'Remove') return '删除';
-      if (translated.includes('Remove selected contents')) {
-        return '删除所选内容 (Delete)';
-      }
-      if (translated === 'Duplicate') return '复制一份';
-      if (translated.includes('Duplicate selected contents')) {
-        return '复制所选内容 (Ctrl+D)';
-      }
-      if (translated === 'Duplicate row') return '复制行';
-      if (translated.includes('Duplicate the current row')) {
-        return '复制当前行 (Ctrl+D)';
-      }
-      if (translated === 'Extract') return '提取';
-      if (translated.includes('Extract selected contents')) {
-        return '提取所选内容';
-      }
-      if (translated === 'Sort') return '排序';
-      if (translated === 'Transform') return '转换';
-      if (translated.includes('Transform array or object contents')) {
-        return '转换数组或对象内容 (过滤、排序、投影)';
-      }
-      if (translated === 'Convert to:') return '转换为:';
-      if (translated === 'Insert:') return '插入:';
-      if (translated === 'Structure') return '结构体';
-      if (translated.includes('structure like the first item in the array')) {
-        return '生成类似于数组首项的结构';
-      }
-      if (translated === 'Object') return '对象';
-      if (translated === 'Array') return '数组';
-      if (translated === 'Value') return '值';
-      if (translated === 'Insert before') return '插入到前面';
-      if (translated.includes('Insert a row before the current row')) {
-        return '在当前行前面插入一行';
-      }
-      if (translated.includes('Select area before current entry')) {
-        return '选择当前项前方的区域以插入或粘贴内容';
-      }
-      if (translated === 'Insert after') return '插入到后面';
-      if (translated.includes('Insert a row after the current row')) {
-        return '在当前行后面插入一行';
-      }
-      if (translated.includes('Select area after current entry')) {
-        return '选择当前项后方的区域以插入或粘贴内容';
-      }
-      if (translated === 'Remove row') return '删除行';
-      if (translated.includes('Remove current row')) {
-        return '删除当前行';
-      }
-      if (translated === 'Edit key') return '编辑键名';
-      if (translated.includes('Edit the key (Double-click on the key)')) {
-        return '编辑键名 (可双击键名)';
-      }
-      if (translated === 'ascending') return '升序';
-      if (translated === 'descending') return '降序';
-
       return translated;
     }
+
 
     function translateMenuItem(item) {
       if (!item) return item;
@@ -1759,17 +1396,17 @@
         };
 
         onMounted(async () => {
-          // Load translations dynamically (with local fallback)
+          // Load translations dynamically from data directory
           try {
             const resLang = await fetch('./data/simplifiedChinese.json');
             if (resLang.ok) {
               const data = await resLang.json();
               Object.assign(simplifiedChinese, data);
             } else {
-              Object.assign(simplifiedChinese, simplifiedChinese_old);
+              console.error('Failed to load simplifiedChinese.json');
             }
           } catch (e) {
-            Object.assign(simplifiedChinese, simplifiedChinese_old);
+            console.error('Error loading simplifiedChinese.json:', e);
           }
 
           try {
@@ -1780,14 +1417,10 @@
               Object.assign(domTranslations, data.domTranslations || {});
               Object.assign(domTooltipTranslations, data.domTooltipTranslations || {});
             } else {
-              Object.assign(menuTranslations, menuTranslations_old);
-              Object.assign(domTranslations, domTranslations_old);
-              Object.assign(domTooltipTranslations, domTooltipTranslations_old);
+              console.error('Failed to load menuTranslations.json');
             }
           } catch (e) {
-            Object.assign(menuTranslations, menuTranslations_old);
-            Object.assign(domTranslations, domTranslations_old);
-            Object.assign(domTooltipTranslations, domTooltipTranslations_old);
+            console.error('Error loading menuTranslations.json:', e);
           }
 
           // Initialize Editors
