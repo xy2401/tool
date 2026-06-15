@@ -90,10 +90,14 @@
               <option value="">-- 选择数据 --</option>
               <option disabled v-if="demoFiles.length > 0">── 示例数据 ──</option>
               <option v-for="item in demoFiles" :key="item.key" :value="'demo-' + item.key" v-text="item.name"></option>
+              <option disabled v-if="savedItems.length > 0">── 保存数据 ──</option>
+              <option v-for="(item, idx) in savedItems" :key="'saved-' + idx" :value="'saved-' + idx" v-text="item.name"></option>
               <option disabled v-if="historyItems.length > 0">── 历史数据 ──</option>
               <option v-for="(item, idx) in historyItems" :key="'hist-' + idx" :value="'hist-' + idx" v-text="item.name"></option>
               <option disabled>── 操作 ──</option>
+              <option value="save-current">保存当前数据</option>
               <option value="clear">清空当前数据</option>
+              <option value="clear-saved" v-if="savedItems.length > 0">清空保存数据</option>
               <option value="clear-history" v-if="historyItems.length > 0">清空历史记录</option>
             </select>
             <button class="btn btn-primary" @click="extractRootJSON" id="extractBtn">

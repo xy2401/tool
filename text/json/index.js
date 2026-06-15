@@ -25,6 +25,7 @@
         const isRawFullscreen = ref(false);
         const isEditFullscreen = ref(false);
         const historyItems = ref([]);
+        const savedItems = ref([]);
         const loadedDemoText = ref('');
         const isDragging = ref(false);
         const themePreference = ref('system');
@@ -84,6 +85,53 @@
           } catch (e) {
             console.error('Failed to save history:', e);
           }
+        };
+
+        // Load saved items from localStorage
+        const loadSavedItems = () => {
+          try {
+            const stored = localStorage.getItem('json_viewer_saved');
+            if (stored) {
+              savedItems.value = JSON.parse(stored);
+            }
+          } catch (e) {
+            console.error('Failed to load saved items:', e);
+          }
+        };
+
+        // Save saved items to localStorage
+        const saveSavedItems = () => {
+          try {
+            localStorage.setItem('json_viewer_saved', JSON.stringify(savedItems.value));
+          } catch (e) {
+            console.error('Failed to save saved items:', e);
+          }
+        };
+
+        // Save current data manually
+        const saveCurrentData = () => {
+          const text = rawInput.value;
+          if (!text || !text.trim()) {
+            showToast('保存失败', '当前工作区无数据，请输入或提取后再保存。', 'warning');
+            return;
+          }
+
+          const now = new Date();
+          const timeStr = now.toLocaleDateString() + ' ' + now.toTimeString().split(' ')[0].substring(0, 5);
+          const defaultName = `保存于 ${timeStr}`;
+          
+          const name = prompt('请输入保存数据的名称：', defaultName);
+          if (name === null) return; // Cancelled
+          
+          const finalName = name.trim() || defaultName;
+
+          savedItems.value.unshift({
+            name: finalName,
+            text: text.trim()
+          });
+
+          saveSavedItems();
+          showToast('保存成功', `数据“${finalName}”已成功保存到本地。`, 'success');
         };
 
         // Add item to history
@@ -205,6 +253,7 @@
         onMounted(() => {
           loadDemoList();
           loadHistory();
+          loadSavedItems();
           window.addEventListener('keydown', handleKeyDown);
 
           // Initialize theme
@@ -724,6 +773,7 @@
             // Re-apply rawInput value and prevent watch extraction
             isSyncing.value = true;
             rawInput.value = updatedRawText;
+            addToHistory(updatedRawText);
 
             // Shift indices in parsedRoot reference
             parsedRoot.value.endIndex = parsedRoot.value.startIndex + newRootJSONString.length;
@@ -818,6 +868,43 @@
             return;
           }
 
+          if (val === 'save-current') {
+            saveCurrentData();
+            event.target.value = '';
+            return;
+          }
+
+          if (val === 'clear-saved') {
+            if (confirm('确定要清空所有已保存的数据吗？')) {
+              savedItems.value = [];
+              saveSavedItems();
+              showToast('已清空', '已成功清空所有手动保存的数据。', 'info');
+            }
+            event.target.value = '';
+            return;
+          }
+
+          // User Saved data loading
+          if (val.startsWith('saved-')) {
+            const idx = parseInt(val.replace('saved-', ''), 10);
+            const savedItem = savedItems.value[idx];
+            if (savedItem) {
+              skipHistoryRecord = true;
+              rawInput.value = savedItem.text;
+              parsedRoot.value = null;
+              nodes.value = [];
+              selectedNodeId.value = '';
+              editText.value = '';
+              showToast('已加载保存数据', `已成功加载“${savedItem.name}”。`, 'info');
+              
+              nextTick(() => {
+                skipHistoryRecord = false;
+              });
+            }
+            event.target.value = '';
+            return;
+          }
+
           // User History data loading
           if (val.startsWith('hist-')) {
             const idx = parseInt(val.replace('hist-', ''), 10);
@@ -891,6 +978,7 @@
           isRawFullscreen,
           isEditFullscreen,
           historyItems,
+          savedItems,
           isDragging,
           isTextareaDirty,
           showPropertiesInTree,
