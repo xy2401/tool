@@ -893,7 +893,6 @@
                 <span class="badge-secondary" v-if="selectedNode" v-text="`路径: ${selectedNode.id}`"></span>
               </div>
               <div class="btn-group" v-if="selectedNode" @dblclick.stop>
-                <!-- Inline Format configurations -->
                 <input 
                   type="text" 
                   v-model="replacerText" 
@@ -904,7 +903,7 @@
                 >
                 <select 
                   v-model="indentSpaces" 
-                  @change="applyFormatting" 
+                  @change="applyFormatting"
                   class="input-field input-sm"
                   style="width: 90px;"
                 >
@@ -1110,6 +1109,14 @@
           extractRootJSON(true);
         });
 
+        // Auto-reformat when formatting options change
+        watch(indentSpaces, () => {
+          applyFormatting();
+        });
+        watch(replacerText, () => {
+          applyFormatting();
+        });
+
         // Load self-describing list of demo files
         const loadDemoList = async () => {
           try {
@@ -1280,6 +1287,7 @@
             
             // Set selection
             selectedNodeId.value = 'main';
+            editText.value = ''; // Clear current editText to force load from the new root value
             applyFormatting();
             if (!silent) {
               showToast('提取成功', '成功从文本中提取出主 JSON 结构，已生成节点树。', 'success');
@@ -1358,14 +1366,27 @@
         };
 
         const applyFormatting = () => {
-          if (selectedNode.value) {
-            editText.value = formatJSON(selectedNode.value.val);
+          if (!selectedNode.value) return;
+
+          // If the user has edited the text, try to format the current edited text
+          if (editText.value && editText.value.trim()) {
+            try {
+              const parsed = JSON.parse(editText.value);
+              editText.value = formatJSON(parsed);
+              return;
+            } catch (e) {
+              // Ignore invalid JSON to prevent losing user edits
+              return;
+            }
           }
+
+          editText.value = formatJSON(selectedNode.value.val);
         };
 
         // Handle Node Selection
         const selectNode = (nodeId) => {
           selectedNodeId.value = nodeId;
+          editText.value = ''; // Clear current editText to force load from selectedNode.value.val
           applyFormatting();
         };
 
@@ -1473,6 +1494,7 @@
             });
 
             // Update text area view
+            editText.value = ''; // Clear current editText to force load the newly saved value
             applyFormatting();
             showToast('同步成功', '修改已顺利保存并反向合并更新了原始日志文本！', 'success');
           }
