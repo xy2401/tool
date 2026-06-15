@@ -52,11 +52,11 @@
       display: flex;
       justify-content: space-between;
       align-items: center;
-      margin-bottom: 0.5rem;
+      margin-bottom: 0.25rem;
       gap: 1rem;
       grid-column: 1 / -1;
       border-bottom: 1px solid var(--panel-border);
-      padding-bottom: 1rem;
+      padding-bottom: 0.5rem;
     }
 
     .main-title-text h2 {
@@ -87,10 +87,11 @@
       max-width: 1400px;
       width: 100%;
       margin: 0 auto;
-      padding: 1.5rem 2rem 3rem;
+      padding: 0.75rem 2rem 2rem;
       display: grid;
       grid-template-columns: 320px 1fr;
-      gap: 1.5rem;
+      row-gap: 0.75rem;
+      column-gap: 1.5rem;
       align-items: start;
     }
 
@@ -723,13 +724,19 @@
       gap: 1rem !important;
     }
 
-    /* Floating Fullscreen Icon Overlay Style */
     .textarea-wrapper {
       position: relative;
       width: 100%;
       flex: 1;
       display: flex;
       flex-direction: column;
+    }
+
+    /* Drag over highlight styles */
+    .input-card.drag-active {
+      border-color: var(--accent-cyan) !important;
+      box-shadow: 0 0 20px var(--accent-cyan-glow) !important;
+      background: rgba(6, 182, 212, 0.08) !important;
     }
 
     .textarea-wrapper textarea.editor-textarea {
@@ -797,14 +804,21 @@
       </div>
 
       <!-- Input Textarea Card -->
-      <div class="glass-card input-card" :class="{ 'fullscreen-mode': isRawFullscreen }" @dblclick.self="toggleRawFullscreen">
+      <div 
+        class="glass-card input-card" 
+        :class="{ 'fullscreen-mode': isRawFullscreen, 'drag-active': isDragging }" 
+        @dblclick.self="toggleRawFullscreen"
+        @dragover.prevent="handleDragOver"
+        @dragleave.prevent="handleDragLeave"
+        @drop.prevent="handleDrop"
+      >
         <div class="input-row">
           <div class="textarea-wrapper">
             <textarea 
               class="editor-textarea" 
               rows="3" 
               v-model="rawInput" 
-              placeholder="在此输入或粘贴包含 JSON 数据的原始日志、文本或代码...（双击卡片空白处或右上角图标可切换全屏）"
+              placeholder="在此输入、粘贴包含 JSON 的原始日志/文本&#10;直接将 JSON 文件拖入此处载入...&#10;（提示：双击卡片空白处或右上角图标切换全屏）"
               id="rawInputTextarea"
             ></textarea>
             <button class="fullscreen-icon-btn" @click="toggleRawFullscreen" :title="isRawFullscreen ? '退出全屏' : '全屏查看原始日志'">
@@ -817,10 +831,15 @@
             </button>
           </div>
           <div class="btn-group vertical-btn-group" @dblclick.stop>
-            <select class="input-field" @change="loadDemoData($event)">
-              <option value="">-- 选择测试数据 --</option>
-              <option v-for="item in demoFiles" :key="item.key" :value="item.key" v-text="item.name"></option>
-              <option value="clear">清空数据</option>
+            <select class="input-field" @change="handleDataSelect($event)">
+              <option value="">-- 选择数据 --</option>
+              <option disabled v-if="demoFiles.length > 0">── 示例数据 ──</option>
+              <option v-for="item in demoFiles" :key="item.key" :value="'demo-' + item.key" v-text="item.name"></option>
+              <option disabled v-if="historyItems.length > 0">── 历史数据 ──</option>
+              <option v-for="(item, idx) in historyItems" :key="'hist-' + idx" :value="'hist-' + idx" v-text="item.name"></option>
+              <option disabled>── 操作 ──</option>
+              <option value="clear">清空当前数据</option>
+              <option value="clear-history" v-if="historyItems.length > 0">清空历史记录</option>
             </select>
             <button class="btn btn-primary" @click="extractRootJSON" id="extractBtn">
               提取 JSON
@@ -976,7 +995,37 @@
         const isSyncing = ref(false);
         const isRawFullscreen = ref(false);
         const isEditFullscreen = ref(false);
+        const historyItems = ref([]);
+        const loadedDemoText = ref('');
+        const isDragging = ref(false);
         let toastIdCounter = 0;
+        let skipHistoryRecord = false;
+        let historyDebounceTimeout = null;
+
+        const handleDragOver = () => {
+          isDragging.value = true;
+        };
+
+        const handleDragLeave = () => {
+          isDragging.value = false;
+        };
+
+        const handleDrop = (e) => {
+          isDragging.value = false;
+          const files = e.dataTransfer.files;
+          if (files && files.length > 0) {
+            const file = files[0];
+            const reader = new FileReader();
+            reader.onload = (event) => {
+              rawInput.value = event.target.result;
+              showToast('文件已载入', `成功读取文件：${file.name} (${(file.size / 1024).toFixed(1)} KB)`, 'success');
+            };
+            reader.onerror = () => {
+              showToast('载入失败', '读取文件时发生错误，请检查文件格式。', 'error');
+            };
+            reader.readAsText(file);
+          }
+        };
 
         const toggleRawFullscreen = () => {
           isRawFullscreen.value = !isRawFullscreen.value;
@@ -986,9 +1035,77 @@
           isEditFullscreen.value = !isEditFullscreen.value;
         };
 
+        // Load history from localStorage
+        const loadHistory = () => {
+          try {
+            const stored = localStorage.getItem('json_viewer_history');
+            if (stored) {
+              historyItems.value = JSON.parse(stored);
+            }
+          } catch (e) {
+            console.error('Failed to load history:', e);
+          }
+        };
+
+        // Save history to localStorage
+        const saveHistory = () => {
+          try {
+            localStorage.setItem('json_viewer_history', JSON.stringify(historyItems.value));
+          } catch (e) {
+            console.error('Failed to save history:', e);
+          }
+        };
+
+        // Add item to history
+        const addToHistory = (text) => {
+          if (skipHistoryRecord) return;
+          if (!text || !text.trim()) return;
+          const trimmed = text.trim();
+
+          // Do NOT save if the text is exactly the loaded demo text
+          if (trimmed === loadedDemoText.value?.trim()) return;
+
+          // Check if already exists in history to avoid duplication
+          const exists = historyItems.value.some(item => item.text.trim() === trimmed);
+          if (exists) return;
+
+          const now = new Date();
+          const timeStr = now.toTimeString().split(' ')[0].substring(0, 5); // "HH:mm"
+          
+          // Generate title: "HH:mm: prefix of text"
+          const displayPrefix = trimmed.substring(0, 45).replace(/\s+/g, ' ');
+          const name = `${timeStr}: ${displayPrefix}${trimmed.length > 45 ? '...' : ''}`;
+
+          // Add to beginning of array
+          historyItems.value.unshift({
+            name,
+            text: trimmed
+          });
+
+          // Limit to 10 items
+          if (historyItems.value.length > 10) {
+            historyItems.value = historyItems.value.slice(0, 10);
+          }
+
+          saveHistory();
+        };
+
+        const debouncedAddToHistory = (text) => {
+          if (historyDebounceTimeout) clearTimeout(historyDebounceTimeout);
+          historyDebounceTimeout = setTimeout(() => {
+            addToHistory(text);
+          }, 1500);
+        };
+
         // Auto-extract JSON when rawInput text changes
         watch(rawInput, (newVal) => {
           if (isSyncing.value) return;
+
+          // If raw text changes and no longer matches the loaded demo text, reset it
+          if (newVal !== loadedDemoText.value) {
+            loadedDemoText.value = '';
+          }
+
           // Silently trigger extraction so it does not spam toasts on keypresses
           extractRootJSON(true);
         });
@@ -1017,11 +1134,13 @@
 
         onMounted(() => {
           loadDemoList();
+          loadHistory();
           window.addEventListener('keydown', handleKeyDown);
         });
 
         onUnmounted(() => {
           window.removeEventListener('keydown', handleKeyDown);
+          if (historyDebounceTimeout) clearTimeout(historyDebounceTimeout);
         });
 
         // Computeds
@@ -1164,6 +1283,10 @@
             applyFormatting();
             if (!silent) {
               showToast('提取成功', '成功从文本中提取出主 JSON 结构，已生成节点树。', 'success');
+              if (historyDebounceTimeout) clearTimeout(historyDebounceTimeout);
+              addToHistory(text);
+            } else {
+              debouncedAddToHistory(text);
             }
           } else {
             parsedRoot.value = null;
@@ -1355,8 +1478,8 @@
           }
         };
 
-        // Load Demo Datasets dynamically from self-describing path list
-        const loadDemoData = async (event) => {
+        // Load Data dynamically from select (Demo datasets or User history)
+        const handleDataSelect = async (event) => {
           const val = event.target.value;
           if (!val) return;
           
@@ -1371,31 +1494,71 @@
             return;
           }
 
-          const fileInfo = demoFiles.value.find(f => f.key === val);
-          if (!fileInfo) {
-            showToast('加载失败', '未找到对应的测试数据配置。', 'error');
+          if (val === 'clear-history') {
+            historyItems.value = [];
+            saveHistory();
+            showToast('历史已清空', '已成功清空所有本地历史输入记录。', 'info');
             event.target.value = '';
             return;
           }
 
-          try {
-            const response = await fetch(fileInfo.path);
-            if (response.ok) {
-              const text = await response.text();
-              rawInput.value = text;
+          // User History data loading
+          if (val.startsWith('hist-')) {
+            const idx = parseInt(val.replace('hist-', ''), 10);
+            const historyItem = historyItems.value[idx];
+            if (historyItem) {
+              skipHistoryRecord = true;
+              rawInput.value = historyItem.text;
               parsedRoot.value = null;
               nodes.value = [];
               selectedNodeId.value = '';
               editText.value = '';
-              showToast('测试数据已加载', `已加载：${fileInfo.name}。请点击“提取 JSON”进行解析。`, 'info');
-            } else {
-              showToast('加载失败', `无法获取测试数据文件 (${response.status})。`, 'error');
+              showToast('已加载历史数据', '已从历史记录中加载输入数据。', 'info');
+              
+              nextTick(() => {
+                skipHistoryRecord = false;
+              });
             }
-          } catch (e) {
-            showToast('加载失败', '网络请求失败，请稍后再试。', 'error');
-            console.error(e);
+            event.target.value = '';
+            return;
           }
-          event.target.value = ''; // Reset select state
+
+          // Demo data loading
+          if (val.startsWith('demo-')) {
+            const key = val.replace('demo-', '');
+            const fileInfo = demoFiles.value.find(f => f.key === key);
+            if (!fileInfo) {
+              showToast('加载失败', '未找到对应的测试数据配置。', 'error');
+              event.target.value = '';
+              return;
+            }
+
+            try {
+              const response = await fetch(fileInfo.path);
+              if (response.ok) {
+                const text = await response.text();
+                skipHistoryRecord = true;
+                loadedDemoText.value = text;
+                rawInput.value = text;
+                parsedRoot.value = null;
+                nodes.value = [];
+                selectedNodeId.value = '';
+                editText.value = '';
+                showToast('示例数据已加载', `已加载：${fileInfo.name}。已自动解析。`, 'info');
+                
+                nextTick(() => {
+                  skipHistoryRecord = false;
+                });
+              } else {
+                showToast('加载失败', `无法获取测试数据文件 (${response.status})。`, 'error');
+              }
+            } catch (e) {
+              showToast('加载失败', '网络请求失败，请稍后再试。', 'error');
+              console.error(e);
+            }
+            event.target.value = ''; // Reset select state
+            return;
+          }
         };
 
         return {
@@ -1412,15 +1575,20 @@
           demoFiles,
           isRawFullscreen,
           isEditFullscreen,
+          historyItems,
+          isDragging,
           
           toggleRawFullscreen,
           toggleEditFullscreen,
+          handleDragOver,
+          handleDragLeave,
+          handleDrop,
           extractRootJSON,
           selectNode,
           copyFormattedJSON,
           downloadNodeJSON,
           saveNodeChanges,
-          loadDemoData,
+          handleDataSelect,
           removeToast
         };
       }
