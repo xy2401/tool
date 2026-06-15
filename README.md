@@ -2,6 +2,27 @@
 
 一个面向程序员的在线工具集合，目标是打开网页即可使用。
 
+## 功能列表
+
+### text
+
+- [文本工具](./text/) - 常用文本编码、摘要和随机内容生成。
+
+### data
+
+- [JSON 工具](./data/json.html) - 格式化、压缩和校验 JSON 数据。
+
+### time
+
+- [时间戳工具](./time/) - 在 Unix 时间戳与日期时间之间转换。
+
+### human
+
+- [JSON Editor](./human/jsoneditor.html) - 可视化查看、编辑和提取 JSON 数据。
+- [Monaco Editor](./human/monaco.html) - 在线体验多语言代码编辑器。
+- [Monaco Diff](./human/monaco-diff.html) - 并排或行内比较两段代码。
+- [Monaco Playground](./human/monaco-playground.html) - 编辑并运行 JavaScript、HTML 和 CSS。
+
 ## 项目原则
 
 - 纯静态网页，不需要安装依赖、编译或构建。

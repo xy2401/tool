@@ -26,7 +26,7 @@
     }
 
     .markdown-body {
-      width: min(900px, 100%);
+      width: 100%;
       margin: 0 auto;
       padding: clamp(24px, 5vw, 56px);
       border: 1px solid #d0d7de;
@@ -80,6 +80,102 @@
       margin-top: 0.3em;
     }
 
+    .navigation-cards {
+      margin: 20px 0 32px;
+    }
+
+    .navigation-group + .navigation-group {
+      margin-top: 34px;
+    }
+
+    .navigation-group h3 {
+      margin: 0 0 14px;
+      font-size: 1.1rem;
+    }
+
+    .navigation-group__grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+      gap: 16px;
+    }
+
+    .nav-card {
+      position: relative;
+      display: block;
+      padding: 20px;
+      border: 1px solid #d0d7de;
+      border-radius: 10px;
+      color: #1f2328;
+      background: #fff;
+      text-decoration: none;
+      overflow: hidden;
+      transition: border-color 150ms ease, box-shadow 150ms ease, transform 150ms ease;
+    }
+
+    .nav-card::before {
+      position: absolute;
+      top: 0;
+      right: 20px;
+      left: 20px;
+      height: 2px;
+      border-radius: 0 0 2px 2px;
+      background: #0969da;
+      content: "";
+      opacity: 0.45;
+      transition: right 180ms ease, left 180ms ease, opacity 180ms ease;
+    }
+
+    .nav-card::after {
+      position: absolute;
+      right: -28px;
+      bottom: -34px;
+      width: 110px;
+      height: 110px;
+      border-radius: 50%;
+      background: #0969da;
+      content: "";
+      opacity: 0;
+      transform: scale(0.7);
+      transition: opacity 180ms ease, transform 180ms ease;
+    }
+
+    .nav-card:hover {
+      transform: translateY(-2px);
+      border-color: #0969da;
+      box-shadow: 0 8px 24px rgba(31, 35, 40, 0.1);
+    }
+
+    .nav-card:hover::after {
+      opacity: 0.06;
+      transform: scale(1);
+    }
+
+    .nav-card:hover::before {
+      right: 0;
+      left: 0;
+      opacity: 1;
+    }
+
+    .nav-card__content {
+      display: block;
+    }
+
+    .nav-card__title {
+      display: block;
+      margin: 1px 0 7px;
+      color: #0969da;
+      font-size: 1.15rem;
+      font-weight: 750;
+      line-height: 1.3;
+    }
+
+    .nav-card__description {
+      display: block;
+      color: #57606a;
+      font-size: 0.9rem;
+      line-height: 1.6;
+    }
+
     .status {
       color: #57606a;
       text-align: center;
@@ -116,6 +212,33 @@
 
       .markdown-body pre {
         background: #0d1117;
+      }
+
+      .nav-card {
+        border-color: #30363d;
+        color: #e6edf3;
+        background: #0d1117;
+      }
+
+      .nav-card:hover {
+        border-color: #58a6ff;
+        box-shadow: 0 8px 24px rgba(0, 0, 0, 0.25);
+      }
+
+      .nav-card__title {
+        color: #58a6ff;
+      }
+
+      .nav-card::after {
+        background: #58a6ff;
+      }
+
+      .nav-card::before {
+        background: #58a6ff;
+      }
+
+      .nav-card__description {
+        color: #8b949e;
       }
 
       .status {
@@ -175,6 +298,85 @@
           console.error(error);
         } finally {
           this.loading = false;
+          await this.$nextTick();
+          this.renderFeatureNavigation();
+        }
+      },
+      methods: {
+        renderFeatureNavigation() {
+          const headings = Array.from(this.$el.querySelectorAll("h2"));
+          const start = headings.find(
+            heading => heading.textContent.trim() === "功能列表"
+          );
+
+          if (!start) {
+            return;
+          }
+
+          const container = document.createElement("div");
+          container.className = "navigation-cards";
+          let node = start.nextElementSibling;
+
+          while (node && node.tagName !== "H2") {
+            const next = node.nextElementSibling;
+
+            if (node.tagName === "H3") {
+              const categoryHeading = node;
+              const list = next && next.tagName === "UL" ? next : null;
+              const group = document.createElement("section");
+              const grid = document.createElement("div");
+
+              group.className = "navigation-group";
+              grid.className = "navigation-group__grid";
+              group.append(categoryHeading, grid);
+
+              if (list) {
+                list.querySelectorAll(":scope > li").forEach(item => {
+                  const sourceLink = item.querySelector("a");
+
+                  if (!sourceLink) {
+                    return;
+                  }
+
+                  const description = item.textContent
+                    .replace(sourceLink.textContent, "")
+                    .replace(/^\s*-\s*/, "")
+                    .trim();
+                  const card = document.createElement("a");
+                  const content = document.createElement("span");
+                  const title = document.createElement("span");
+                  const detail = document.createElement("span");
+
+                  card.className = "nav-card";
+                  card.href = sourceLink.getAttribute("href");
+                  content.className = "nav-card__content";
+                  title.className = "nav-card__title";
+                  title.textContent = sourceLink.textContent;
+                  detail.className = "nav-card__description";
+                  detail.textContent = description;
+
+                  content.append(title, detail);
+                  card.append(content);
+                  grid.appendChild(card);
+                });
+
+                node = list.nextElementSibling;
+              } else {
+                node = next;
+              }
+
+              if (list) {
+                list.remove();
+              }
+              container.appendChild(group);
+              continue;
+            }
+
+            node.remove();
+            node = next;
+          }
+
+          start.insertAdjacentElement("afterend", container);
         }
       }
     }).mount("#app");
