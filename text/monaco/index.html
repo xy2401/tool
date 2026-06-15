@@ -55,7 +55,7 @@
       opacity: 0.55;
     }
 
-    .html-preview-control[hidden] {
+    .preview-control[hidden] {
       display: none;
     }
 
@@ -270,9 +270,14 @@
         </select>
       </label>
 
-      <label class="checkbox-label html-preview-control" hidden>
+      <label class="checkbox-label preview-control html-preview-control" hidden>
         <input id="html-preview-enabled" type="checkbox">
         HTML 预览
+      </label>
+
+      <label class="checkbox-label preview-control markdown-preview-control" hidden>
+        <input id="markdown-preview-enabled" type="checkbox">
+        Markdown 预览
       </label>
     </div>
 
@@ -316,6 +321,8 @@
       }
     };
   </script>
+  <script src="https://cdn.jsdelivr.net/npm/marked@18.0.5/lib/marked.umd.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/dompurify@3.4.10/dist/purify.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/@highlightjs/cdn-assets@11.11.1/highlight.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/monaco-editor@0.55.1/min/vs/loader.js"></script>
   <script>
@@ -341,6 +348,12 @@
       );
       const htmlPreviewInput = document.getElementById(
         "html-preview-enabled"
+      );
+      const markdownPreviewControl = document.querySelector(
+        ".markdown-preview-control"
+      );
+      const markdownPreviewInput = document.getElementById(
+        "markdown-preview-enabled"
       );
       const openFileButton = document.getElementById("open-file");
       const fileInput = document.getElementById("file-input");
@@ -840,14 +853,60 @@
       const getActiveModel = () => getActiveEditor().getModel();
       const focusEditor = () => getActiveEditor().focus();
 
-      function renderHtmlPreview() {
-        if (!htmlPreviewInput.checked) {
+      function createMarkdownDocument(markdown) {
+        if (!window.marked || !window.DOMPurify) {
+          return "";
+        }
+
+        const rendered = marked.parse(markdown, {
+          gfm: true,
+          breaks: false
+        });
+        const clean = DOMPurify.sanitize(rendered, {
+          USE_PROFILES: {
+            html: true
+          }
+        });
+
+        return `<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <style>
+    :root { color-scheme: light; font-family: system-ui, sans-serif; }
+    body { max-width: 900px; margin: 0 auto; padding: 32px; color: #1f2328; background: #fff; line-height: 1.65; overflow-wrap: break-word; }
+    h1, h2, h3, h4, h5, h6 { color: #1f2328; line-height: 1.25; }
+    h1, h2 { padding-bottom: 0.3em; border-bottom: 1px solid #d0d7de; }
+    img { max-width: 100%; }
+    pre { overflow: auto; padding: 16px; border-radius: 6px; color: #1f2328; background: #f6f8fa; }
+    code { font-family: "Cascadia Code", Consolas, monospace; }
+    :not(pre) > code { padding: 0.15em 0.35em; border-radius: 4px; color: #1f2328; background: #eff1f3; }
+    blockquote { margin-left: 0; padding-left: 1em; border-left: 4px solid #d0d7de; color: #57606a; }
+    table { width: 100%; border-collapse: collapse; }
+    th, td { padding: 8px 12px; border: 1px solid #d0d7de; color: #1f2328; text-align: left; }
+    tr:nth-child(2n) { background: #f6f8fa; }
+    a { color: #0969da; }
+  </style>
+</head>
+<body>${clean}</body>
+</html>`;
+      }
+
+      function renderPreview() {
+        const isHtmlPreview = htmlPreviewInput.checked;
+        const isMarkdownPreview = markdownPreviewInput.checked;
+
+        if (!isHtmlPreview && !isMarkdownPreview) {
           return;
         }
 
         window.clearTimeout(previewTimer);
         previewTimer = window.setTimeout(() => {
-          htmlPreviewFrame.srcdoc = getActiveEditor().getValue();
+          const value = getActiveEditor().getValue();
+          htmlPreviewFrame.srcdoc = isMarkdownPreview
+            ? createMarkdownDocument(value)
+            : value;
         }, 120);
       }
 
@@ -860,22 +919,29 @@
           }, 0);
         });
         contentChangeDisposable = codeEditor.onDidChangeModelContent(() => {
-          renderHtmlPreview();
+          renderPreview();
         });
       }
 
-      function closeHtmlPreview() {
+      function closePreview() {
         htmlPreviewInput.checked = false;
+        markdownPreviewInput.checked = false;
         workspaceNode.classList.remove("is-previewing");
         htmlPreviewFrame.srcdoc = "";
       }
 
-      function syncHtmlPreviewAvailability() {
+      function syncPreviewAvailability() {
         const isHtml = languageSelect.value === "html";
+        const isMarkdown = languageSelect.value === "markdown";
         htmlPreviewControl.hidden = !isHtml;
+        markdownPreviewControl.hidden = !isMarkdown;
 
-        if (!isHtml) {
-          closeHtmlPreview();
+        if (
+          (!isHtml && htmlPreviewInput.checked) ||
+          (!isMarkdown && markdownPreviewInput.checked) ||
+          (!isHtml && !isMarkdown)
+        ) {
+          closePreview();
         }
       }
 
@@ -893,7 +959,7 @@
       }
 
       function createDiffEditor() {
-        closeHtmlPreview();
+        closePreview();
         const language = languageSelect.value || "plaintext";
         diffOriginalModel = monaco.editor.createModel(
           primaryModel.getValue(),
@@ -1031,7 +1097,7 @@
         if (diffOriginalModel) {
           monaco.editor.setModelLanguage(diffOriginalModel, language);
         }
-        syncHtmlPreviewAvailability();
+        syncPreviewAvailability();
       }
 
       async function openFile(file) {
@@ -1125,7 +1191,7 @@
             languageSelect.value
           );
         }
-        syncHtmlPreviewAvailability();
+        syncPreviewAvailability();
         focusEditor();
       });
 
@@ -1141,7 +1207,7 @@
         if (diffOriginalModel) {
           monaco.editor.setModelLanguage(diffOriginalModel, autoSelect.value);
         }
-        syncHtmlPreviewAvailability();
+        syncPreviewAvailability();
         focusEditor();
       });
 
@@ -1157,7 +1223,7 @@
         const activeEditor = getActiveEditor();
         activeEditor.setValue(value);
         activeEditor.setPosition({ lineNumber: 1, column: 1 });
-        syncHtmlPreviewAvailability();
+        syncPreviewAvailability();
         focusEditor();
       });
 
@@ -1192,22 +1258,31 @@
         focusEditor();
       });
 
-      htmlPreviewInput.addEventListener("change", () => {
-        if (htmlPreviewInput.checked) {
+      function handlePreviewChange(activeInput, otherInput) {
+        if (activeInput.checked) {
           if (diffEnabledInput.checked) {
             diffEnabledInput.checked = false;
             diffModeSelect.disabled = true;
             closeDiffEditor();
           }
 
+          otherInput.checked = false;
           workspaceNode.classList.add("is-previewing");
-          renderHtmlPreview();
+          renderPreview();
         } else {
-          closeHtmlPreview();
+          closePreview();
         }
 
         getActiveEditor().layout();
         focusEditor();
+      }
+
+      htmlPreviewInput.addEventListener("change", () => {
+        handlePreviewChange(htmlPreviewInput, markdownPreviewInput);
+      });
+
+      markdownPreviewInput.addEventListener("change", () => {
+        handlePreviewChange(markdownPreviewInput, htmlPreviewInput);
       });
 
       diffModeSelect.addEventListener("change", () => {
@@ -1221,7 +1296,12 @@
         focusEditor();
       });
 
-      syncHtmlPreviewAvailability();
+      if (!window.marked || !window.DOMPurify) {
+        markdownPreviewInput.disabled = true;
+        markdownPreviewControl.title = "Markdown 预览组件加载失败";
+      }
+
+      syncPreviewAvailability();
 
     });
   </script>
