@@ -1,0 +1,803 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Any - 智能文本识别与转换 | Dev Tools</title>
+  <meta name="description" content="智能识别任意文本：哈希值、时间戳、Base64、JSON、UUID、IP、颜色等，提供一键计算与转换。">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+    :root {
+      --bg:      #080c14;
+      --surface: rgba(255,255,255,0.04);
+      --surf2:   rgba(255,255,255,0.07);
+      --border:  rgba(255,255,255,0.08);
+      --bfocus:  rgba(99,102,241,0.55);
+      --text:    #e2e8f0;
+      --muted:   #94a3b8;
+      --subtle:  #3d4f66;
+      --accent:  #6366f1;
+      --accent2: #8b5cf6;
+      --glow:    rgba(99,102,241,0.18);
+      --mono: 'JetBrains Mono', 'Consolas', monospace;
+      --sans: 'Inter', system-ui, sans-serif;
+    }
+
+    html { color-scheme: dark; scroll-behavior: smooth; }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: var(--sans);
+      min-height: 100vh;
+      line-height: 1.6;
+      background-image:
+        radial-gradient(ellipse 90% 60% at 15% -5%, rgba(99,102,241,0.13) 0%, transparent 55%),
+        radial-gradient(ellipse 70% 50% at 85% 105%, rgba(139,92,246,0.09) 0%, transparent 55%);
+    }
+
+    /* ── HEADER ──────────────────────────────────── */
+    .header {
+      position: sticky; top: 0; z-index: 200;
+      background: rgba(8,12,20,0.88);
+      backdrop-filter: blur(18px);
+      border-bottom: 1px solid var(--border);
+      padding: 0 28px; height: 60px;
+      display: flex; align-items: center; justify-content: space-between; gap: 16px;
+    }
+    .brand { display: flex; align-items: center; gap: 14px; }
+    .brand-name {
+      font-size: 22px; font-weight: 800; letter-spacing: -1.5px;
+      background: linear-gradient(135deg, #818cf8 0%, #a78bfa 45%, #34d399 100%);
+      -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+    }
+    .brand-sep { width: 1px; height: 20px; background: var(--border); }
+    .brand-desc { font-size: 13px; color: var(--muted); }
+    .header-r { display: flex; align-items: center; gap: 8px; }
+    .panel-count {
+      font-size: 12px; color: var(--muted);
+      padding: 3px 10px; border: 1px solid var(--border); border-radius: 100px;
+    }
+    .btn-primary {
+      display: inline-flex; align-items: center; gap: 6px;
+      padding: 7px 18px;
+      background: linear-gradient(135deg, var(--accent), var(--accent2));
+      border: none; border-radius: 8px;
+      color: white; font-size: 13px; font-weight: 500; font-family: var(--sans);
+      cursor: pointer; transition: all 0.2s; white-space: nowrap;
+    }
+    .btn-primary:hover { transform: translateY(-1px); box-shadow: 0 4px 24px rgba(99,102,241,0.4); }
+    .btn-primary:active { transform: none; }
+
+    /* ── MAIN ────────────────────────────────────── */
+    .main { padding: 24px 28px; max-width: 1700px; margin: 0 auto; }
+
+    .panels-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(500px, 1fr));
+      gap: 16px; align-items: start;
+    }
+    @media (max-width: 580px) { .panels-grid { grid-template-columns: 1fr; } .main { padding: 16px; } }
+
+    /* ── PANEL CARD ──────────────────────────────── */
+    .panel-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 12px; overflow: hidden;
+      display: flex; flex-direction: column;
+      transition: border-color 0.2s, box-shadow 0.2s;
+    }
+    .panel-card:focus-within {
+      border-color: rgba(99,102,241,0.45);
+      box-shadow: 0 0 0 3px rgba(99,102,241,0.1);
+    }
+
+    /* Panel head */
+    .panel-head {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 9px 14px; border-bottom: 1px solid var(--border); gap: 8px;
+    }
+    .panel-num { font-size: 11px; color: var(--subtle); font-weight: 600; letter-spacing: 0.5px; text-transform: uppercase; }
+    .panel-btns { display: flex; gap: 3px; }
+    .btn-sm {
+      background: none; border: 1px solid transparent;
+      color: var(--muted); width: 26px; height: 26px; border-radius: 6px;
+      cursor: pointer; display: flex; align-items: center; justify-content: center;
+      font-size: 13px; transition: all 0.15s; font-family: var(--sans);
+    }
+    .btn-sm:hover { border-color: var(--border); background: var(--surf2); color: var(--text); }
+
+    /* Textarea */
+    .panel-input {
+      width: 100%; min-height: 88px; max-height: 380px;
+      background: transparent; border: none; outline: none;
+      color: var(--text); font-family: var(--mono);
+      font-size: 13px; line-height: 1.75;
+      padding: 14px 16px; resize: none; overflow-y: auto;
+      caret-color: #818cf8;
+    }
+    .panel-input::placeholder { color: var(--subtle); font-family: var(--sans); font-size: 13px; }
+
+    /* Input footer */
+    .input-footer {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 5px 14px; border-top: 1px solid var(--border);
+    }
+    .char-count { font-size: 11px; color: var(--subtle); font-family: var(--mono); }
+    .input-actions { display: flex; gap: 5px; }
+    .btn-xs {
+      background: none; border: 1px solid var(--border); color: var(--muted);
+      padding: 2px 8px; border-radius: 4px; font-size: 11px;
+      cursor: pointer; transition: all 0.15s; font-family: var(--sans);
+    }
+    .btn-xs:hover { border-color: rgba(99,102,241,0.4); color: var(--text); }
+
+    /* ── DETECTIONS ──────────────────────────────── */
+    .detections {
+      padding: 9px 14px; border-top: 1px solid var(--border);
+      display: flex; flex-wrap: wrap; align-items: center; gap: 6px; min-height: 42px;
+    }
+    .det-label { font-size: 11px; color: var(--subtle); flex-shrink: 0; }
+    .badge {
+      display: inline-flex; align-items: center;
+      padding: 2px 10px; border-radius: 100px;
+      font-size: 11px; font-weight: 700; letter-spacing: 0.4px; white-space: nowrap;
+    }
+    .no-detect { font-size: 11px; color: var(--subtle); font-style: italic; }
+
+    /* ── AUTO RESULTS ────────────────────────────── */
+    .auto-results { border-top: 1px solid var(--border); }
+    .result-block { padding: 11px 16px; border-bottom: 1px solid rgba(255,255,255,0.04); }
+    .result-block:last-child { border-bottom: none; }
+    .rblock-title {
+      font-size: 10px; font-weight: 700; text-transform: uppercase;
+      letter-spacing: 0.9px; margin-bottom: 8px;
+      color: var(--muted); display: flex; align-items: center; gap: 6px;
+    }
+    .rblock-title .dot { font-size: 8px; }
+    .result-rows { display: flex; flex-direction: column; gap: 5px; }
+    .rrow { display: flex; gap: 10px; font-size: 12px; line-height: 1.5; align-items: baseline; }
+    .rrow-l { color: var(--muted); flex-shrink: 0; min-width: 76px; font-size: 11px; }
+    .rrow-v { font-family: var(--mono); color: var(--text); word-break: break-all; }
+    .rrow-v.em { color: #86efac; }
+    .rrow-v.hi { color: #93c5fd; }
+    .color-swatch { width: 44px; height: 44px; border-radius: 8px; border: 1px solid var(--border); flex-shrink: 0; }
+    .color-rows { display: flex; gap: 12px; align-items: flex-start; }
+
+    /* ── OPERATIONS ──────────────────────────────── */
+    .ops-section { border-top: 1px solid var(--border); padding: 11px 16px; }
+    .ops-title {
+      font-size: 10px; color: var(--subtle); margin-bottom: 8px;
+      font-weight: 600; text-transform: uppercase; letter-spacing: 0.6px;
+    }
+    .ops-grid { display: flex; flex-wrap: wrap; gap: 5px; }
+    .btn-op {
+      padding: 4px 11px; border: 1px solid var(--border);
+      background: transparent; color: var(--muted);
+      border-radius: 6px; font-size: 11.5px;
+      cursor: pointer; transition: all 0.15s; font-family: var(--sans);
+    }
+    .btn-op:hover { background: rgba(99,102,241,0.1); border-color: rgba(99,102,241,0.4); color: var(--text); }
+    .btn-op.active { background: rgba(99,102,241,0.18); border-color: rgba(99,102,241,0.6); color: #a5b4fc; }
+
+    /* ── COMPUTED RESULTS ────────────────────────── */
+    .computed-section { padding: 0 16px 12px; display: flex; flex-direction: column; gap: 7px; }
+    .cr-item { }
+    .cr-label { font-size: 10px; text-transform: uppercase; letter-spacing: 0.5px; color: var(--muted); margin-bottom: 3px; }
+    .cr-value {
+      position: relative;
+      background: rgba(0,0,0,0.28); border: 1px solid var(--border); border-radius: 6px;
+      padding: 7px 34px 7px 10px;
+      font-family: var(--mono); font-size: 12px; color: var(--text);
+      word-break: break-all; line-height: 1.65; cursor: text; user-select: all;
+    }
+    .cr-copy {
+      position: absolute; top: 50%; right: 6px; transform: translateY(-50%);
+      background: rgba(99,102,241,0.15); border: 1px solid rgba(99,102,241,0.3);
+      color: #a5b4fc; border-radius: 4px; width: 22px; height: 22px;
+      display: flex; align-items: center; justify-content: center;
+      cursor: pointer; font-size: 11px; opacity: 0; transition: opacity 0.15s;
+      font-family: var(--sans);
+    }
+    .cr-value:hover .cr-copy { opacity: 1; }
+
+    /* ── ADD PANEL CARD ──────────────────────────── */
+    .add-card {
+      border: 2px dashed var(--border); border-radius: 12px; min-height: 110px;
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+      gap: 8px; cursor: pointer; transition: all 0.2s;
+      color: var(--subtle); font-size: 13px;
+    }
+    .add-card:hover { border-color: rgba(99,102,241,0.5); background: rgba(99,102,241,0.05); color: var(--muted); }
+    .add-icon { font-size: 26px; line-height: 1; }
+
+    /* ── TOAST ───────────────────────────────────── */
+    .toast {
+      position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%);
+      background: rgba(16,185,129,0.95); color: white;
+      padding: 8px 22px; border-radius: 100px;
+      font-size: 13px; font-weight: 500; z-index: 9999;
+      pointer-events: none; animation: toastIn 0.25s ease;
+    }
+    @keyframes toastIn {
+      from { opacity: 0; transform: translateX(-50%) translateY(10px); }
+      to   { opacity: 1; transform: translateX(-50%) translateY(0); }
+    }
+
+    /* ── MISC ────────────────────────────────────── */
+    .v-enter-active, .v-leave-active { transition: opacity 0.18s, transform 0.18s; }
+    .v-enter-from, .v-leave-to { opacity: 0; transform: translateY(-3px); }
+
+    ::-webkit-scrollbar { width: 5px; height: 5px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 3px; }
+    ::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.2); }
+    ::selection { background: rgba(99,102,241,0.3); }
+  </style>
+</head>
+<body>
+<div id="app">
+
+  <!-- HEADER -->
+  <header class="header">
+    <div class="brand">
+      <span class="brand-name">any</span>
+      <span class="brand-sep"></span>
+      <span class="brand-desc">智能文本识别与转换</span>
+    </div>
+    <div class="header-r">
+      <span class="panel-count">{{ panels.length }} 个面板</span>
+      <button class="btn-primary" @click="addPanel">＋ 添加面板</button>
+    </div>
+  </header>
+
+  <!-- MAIN -->
+  <main class="main">
+    <div class="panels-grid">
+
+      <!-- ── PANEL CARD (v-for) ── -->
+      <div v-for="(panel, idx) in panels" :key="panel.id" class="panel-card">
+
+        <!-- Head -->
+        <div class="panel-head">
+          <span class="panel-num">面板 #{{ idx + 1 }}</span>
+          <div class="panel-btns">
+            <button class="btn-sm" title="粘贴" @click="pasteTo(panel)">⎘</button>
+            <button class="btn-sm" title="复制内容" @click="copy(panel.value)">📋</button>
+            <button class="btn-sm" title="清空" @click="clearPanel(panel)">⌫</button>
+            <button class="btn-sm" title="关闭" @click="removePanel(idx)" v-if="panels.length > 1">✕</button>
+          </div>
+        </div>
+
+        <!-- Textarea -->
+        <textarea
+          class="panel-input"
+          v-model="panel.value"
+          @input="onInput($event, panel)"
+          placeholder="粘贴任意内容：哈希、时间戳、Base64、JSON、UUID、IPv4、颜色、URL…"
+        ></textarea>
+
+        <!-- Input footer -->
+        <div class="input-footer" v-if="panel.value">
+          <span class="char-count">{{ panel.value.length }} 字符 · {{ byteLen(panel.value) }} 字节</span>
+          <div class="input-actions">
+            <button class="btn-xs" @click="doTrim(panel)">去首尾空白</button>
+            <button class="btn-xs" @click="doFormat(panel)">格式化 JSON</button>
+          </div>
+        </div>
+
+        <!-- Detections -->
+        <div class="detections" v-if="panel.value">
+          <span class="det-label">识别</span>
+          <template v-if="detect(panel.value).length">
+            <span
+              v-for="d in detect(panel.value)" :key="d.type"
+              class="badge"
+              :style="{ background: d.color+'1e', color: d.color, border: '1px solid '+d.color+'50' }"
+            >{{ d.label }}</span>
+          </template>
+          <span v-else class="no-detect">未识别特定格式，可通过下方操作计算</span>
+        </div>
+
+        <!-- Auto results -->
+        <transition>
+          <div class="auto-results" v-if="panel.value && detect(panel.value).length">
+            <div class="result-block" v-for="d in detect(panel.value)" :key="'r'+d.type">
+              <div class="rblock-title">
+                <span class="dot" :style="{ color: d.color }">●</span>
+                {{ d.label }}
+              </div>
+
+              <!-- Timestamp (s or ms) -->
+              <div class="result-rows" v-if="d.type==='ts_s'||d.type==='ts_ms'">
+                <div class="rrow"><span class="rrow-l">本地时间</span><span class="rrow-v em">{{ fmtLocal(d.ts) }}</span></div>
+                <div class="rrow"><span class="rrow-l">UTC 时间</span><span class="rrow-v">{{ fmtUtc(d.ts) }}</span></div>
+                <div class="rrow"><span class="rrow-l">ISO 8601</span><span class="rrow-v">{{ new Date(d.ts).toISOString() }}</span></div>
+                <div class="rrow"><span class="rrow-l">距今</span><span class="rrow-v hi">{{ relTime(d.ts) }}</span></div>
+                <div class="rrow" v-if="d.type==='ts_s'"><span class="rrow-l">毫秒戳</span><span class="rrow-v">{{ d.ts }}</span></div>
+                <div class="rrow" v-if="d.type==='ts_ms'"><span class="rrow-l">秒级戳</span><span class="rrow-v">{{ Math.floor(d.ts/1000) }}</span></div>
+              </div>
+
+              <!-- Hashes -->
+              <div class="result-rows" v-else-if="['md5','sha1','sha256','sha512'].includes(d.type)">
+                <div class="rrow"><span class="rrow-l">算法</span><span class="rrow-v em">{{ d.label }}（{{ panel.value.trim().length * 4 }} 位）</span></div>
+                <div class="rrow"><span class="rrow-l">大写</span><span class="rrow-v">{{ panel.value.trim().toUpperCase() }}</span></div>
+                <div class="rrow"><span class="rrow-l">小写</span><span class="rrow-v">{{ panel.value.trim().toLowerCase() }}</span></div>
+              </div>
+
+              <!-- UUID -->
+              <div class="result-rows" v-else-if="d.type==='uuid'">
+                <div class="rrow"><span class="rrow-l">版本</span><span class="rrow-v em">UUID v{{ panel.value.trim()[14] }}</span></div>
+                <div class="rrow"><span class="rrow-l">大写</span><span class="rrow-v">{{ panel.value.trim().toUpperCase() }}</span></div>
+                <div class="rrow"><span class="rrow-l">无分隔符</span><span class="rrow-v">{{ panel.value.trim().replace(/-/g,'') }}</span></div>
+              </div>
+
+              <!-- Base64 -->
+              <div class="result-rows" v-else-if="d.type==='base64'">
+                <div class="rrow"><span class="rrow-l">解码结果</span><span class="rrow-v em" style="word-break:break-all">{{ d.decoded }}</span></div>
+                <div class="rrow" v-if="isJson(d.decoded)"><span class="rrow-l">内含</span><span class="rrow-v" style="color:#fcd34d">✓ 有效 JSON</span></div>
+              </div>
+
+              <!-- JWT -->
+              <div class="result-rows" v-else-if="d.type==='jwt'">
+                <div class="rrow"><span class="rrow-l">算法</span><span class="rrow-v em">{{ (d.header||{}).alg }}</span></div>
+                <div class="rrow" v-if="(d.payload||{}).exp"><span class="rrow-l">过期</span><span class="rrow-v">{{ fmtLocal(d.payload.exp*1000) }}</span></div>
+                <div class="rrow" v-if="(d.payload||{}).iat"><span class="rrow-l">签发</span><span class="rrow-v">{{ fmtLocal(d.payload.iat*1000) }}</span></div>
+                <div class="rrow" v-if="(d.payload||{}).sub"><span class="rrow-l">Subject</span><span class="rrow-v">{{ d.payload.sub }}</span></div>
+                <div class="rrow"><span class="rrow-l">Header</span><span class="rrow-v" style="white-space:pre;font-size:11px">{{ JSON.stringify(d.header,null,2) }}</span></div>
+                <div class="rrow"><span class="rrow-l">Payload</span><span class="rrow-v" style="white-space:pre;font-size:11px">{{ JSON.stringify(d.payload,null,2) }}</span></div>
+              </div>
+
+              <!-- IPv4 -->
+              <div class="result-rows" v-else-if="d.type==='ipv4'">
+                <div class="rrow"><span class="rrow-l">地址类型</span><span class="rrow-v em">{{ ip4Type(panel.value.trim()) }}</span></div>
+                <div class="rrow"><span class="rrow-l">整数</span><span class="rrow-v">{{ ip4Int(panel.value.trim()) }}</span></div>
+                <div class="rrow"><span class="rrow-l">十六进制</span><span class="rrow-v">{{ ip4Hex(panel.value.trim()) }}</span></div>
+                <div class="rrow"><span class="rrow-l">二进制</span><span class="rrow-v" style="font-size:11px;letter-spacing:1px">{{ ip4Bin(panel.value.trim()) }}</span></div>
+              </div>
+
+              <!-- Hex color -->
+              <div class="color-rows" v-else-if="d.type==='color'">
+                <div class="color-swatch" :style="{ background: panel.value.trim() }"></div>
+                <div class="result-rows" style="flex:1">
+                  <div class="rrow"><span class="rrow-l">HEX</span><span class="rrow-v em">{{ panel.value.trim().toUpperCase() }}</span></div>
+                  <div class="rrow"><span class="rrow-l">RGB</span><span class="rrow-v">{{ hex2rgb(panel.value.trim()) }}</span></div>
+                  <div class="rrow"><span class="rrow-l">HSL</span><span class="rrow-v">{{ hex2hsl(panel.value.trim()) }}</span></div>
+                </div>
+              </div>
+
+
+
+              <!-- URL -->
+              <div class="result-rows" v-else-if="d.type==='url'">
+                <div class="rrow"><span class="rrow-l">协议</span><span class="rrow-v em">{{ d.url.protocol }}</span></div>
+                <div class="rrow"><span class="rrow-l">主机</span><span class="rrow-v">{{ d.url.host }}</span></div>
+                <div class="rrow" v-if="d.url.pathname && d.url.pathname!=='/'"><span class="rrow-l">路径</span><span class="rrow-v">{{ d.url.pathname }}</span></div>
+                <div class="rrow" v-if="d.url.search"><span class="rrow-l">查询参数</span><span class="rrow-v">{{ d.url.search }}</span></div>
+                <div class="rrow" v-if="d.url.hash"><span class="rrow-l">锚点</span><span class="rrow-v">{{ d.url.hash }}</span></div>
+              </div>
+
+              <!-- Email -->
+              <div class="result-rows" v-else-if="d.type==='email'">
+                <div class="rrow"><span class="rrow-l">用户名</span><span class="rrow-v em">{{ panel.value.trim().split('@')[0] }}</span></div>
+                <div class="rrow"><span class="rrow-l">域名</span><span class="rrow-v">{{ panel.value.trim().split('@')[1] }}</span></div>
+                <div class="rrow"><span class="rrow-l">Mailto</span><span class="rrow-v">mailto:{{ panel.value.trim() }}</span></div>
+              </div>
+
+              <!-- Number -->
+              <div class="result-rows" v-else-if="d.type==='number'">
+                <div class="rrow"><span class="rrow-l">十进制</span><span class="rrow-v em">{{ d.num }}</span></div>
+                <div class="rrow"><span class="rrow-l">十六进制</span><span class="rrow-v">0x{{ Math.trunc(d.num).toString(16).toUpperCase() }}</span></div>
+                <div class="rrow"><span class="rrow-l">八进制</span><span class="rrow-v">0o{{ Math.trunc(d.num).toString(8) }}</span></div>
+                <div class="rrow"><span class="rrow-l">二进制</span><span class="rrow-v" style="font-size:11px">{{ Math.trunc(d.num).toString(2) }}</span></div>
+              </div>
+
+              <!-- Hex number (0x…) -->
+              <div class="result-rows" v-else-if="d.type==='hexnum'">
+                <div class="rrow"><span class="rrow-l">十进制</span><span class="rrow-v em">{{ d.num }}</span></div>
+                <div class="rrow"><span class="rrow-l">八进制</span><span class="rrow-v">0o{{ d.num.toString(8) }}</span></div>
+                <div class="rrow"><span class="rrow-l">二进制</span><span class="rrow-v" style="font-size:11px">{{ d.num.toString(2) }}</span></div>
+                <div class="rrow" v-if="d.num<=0x10ffff"><span class="rrow-l">Unicode 字符</span><span class="rrow-v">{{ String.fromCodePoint(d.num) }}</span></div>
+              </div>
+
+              <!-- Binary -->
+              <div class="result-rows" v-else-if="d.type==='binary'||d.type==='binraw'">
+                <div class="rrow"><span class="rrow-l">十进制</span><span class="rrow-v em">{{ d.num }}</span></div>
+                <div class="rrow"><span class="rrow-l">十六进制</span><span class="rrow-v">0x{{ d.num.toString(16).toUpperCase() }}</span></div>
+                <div class="rrow" v-if="d.num<=0x10ffff"><span class="rrow-l">Unicode 字符</span><span class="rrow-v">{{ String.fromCodePoint(d.num) }}</span></div>
+              </div>
+
+            </div>
+          </div>
+        </transition>
+
+        <!-- Operations -->
+        <div class="ops-section" v-if="panel.value">
+          <div class="ops-title">计算操作</div>
+          <div class="ops-grid">
+            <button
+              v-for="op in ops" :key="op.id"
+              class="btn-op"
+              :class="{ active: panel.activeOps[op.id] }"
+              @click="compute(panel, op)"
+            >{{ op.label }}</button>
+          </div>
+        </div>
+
+        <!-- Computed results -->
+        <div class="computed-section" v-if="panel.computedList && panel.computedList.length">
+          <div class="cr-item" v-for="cr in panel.computedList" :key="cr.id">
+            <div class="cr-label">{{ cr.label }}</div>
+            <div class="cr-value">
+              {{ cr.value }}
+              <button class="cr-copy" @click.stop="copy(cr.value)" title="复制">⎘</button>
+            </div>
+          </div>
+        </div>
+
+      </div>
+      <!-- ── /PANEL CARD ── -->
+
+      <!-- Add panel card -->
+      <div class="add-card" @click="addPanel">
+        <span class="add-icon">＋</span>
+        <span>添加面板</span>
+      </div>
+
+    </div>
+  </main>
+
+  <!-- Toast -->
+  <div class="toast" v-if="toast">{{ toast }}</div>
+
+</div>
+
+<script src="https://unpkg.com/vue@3.5.13/dist/vue.global.prod.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.2.0/crypto-js.min.js"></script>
+<script>
+'use strict';
+const { createApp } = Vue;
+
+/* ══════════════════════════════════════════════════
+   DETECTION ENGINE
+   ══════════════════════════════════════════════════ */
+function runDetect(raw) {
+  const v = raw.trim();
+  if (!v) return [];
+  const r = [];
+
+  // ── Timestamp seconds (10 digits, year 2001-2099)
+  if (/^\d{10}$/.test(v)) {
+    const ts = parseInt(v) * 1000;
+    const yr = new Date(ts).getFullYear();
+    if (yr >= 2001 && yr <= 2099)
+      r.push({ type: 'ts_s', label: '时间戳(秒)', color: '#60a5fa', ts });
+  }
+
+  // ── Timestamp milliseconds (13 digits)
+  if (/^\d{13}$/.test(v)) {
+    const ts = parseInt(v);
+    const yr = new Date(ts).getFullYear();
+    if (yr >= 2001 && yr <= 2099)
+      r.push({ type: 'ts_ms', label: '时间戳(毫秒)', color: '#93c5fd', ts });
+  }
+
+  // ── Hash fingerprints (hex-only strings by length)
+  const isHex = /^[0-9a-fA-F]+$/.test(v);
+  if (isHex && v.length === 32)  r.push({ type: 'md5',    label: 'MD5',    color: '#f87171' });
+  if (isHex && v.length === 40)  r.push({ type: 'sha1',   label: 'SHA-1',  color: '#fb923c' });
+  if (isHex && v.length === 64)  r.push({ type: 'sha256', label: 'SHA-256',color: '#fbbf24' });
+  if (isHex && v.length === 128) r.push({ type: 'sha512', label: 'SHA-512',color: '#a3e635' });
+
+  // ── UUID (xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx)
+  if (/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(v))
+    r.push({ type: 'uuid', label: 'UUID', color: '#22d3ee' });
+
+  // ── Hex color (#RGB / #RRGGBB / #RRGGBBAA)
+  if (/^#([0-9a-fA-F]{3,4}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})$/.test(v))
+    r.push({ type: 'color', label: '颜色值', color: '#f472b6' });
+
+  // ── IPv4
+  if (/^(\d{1,3}\.){3}\d{1,3}$/.test(v)) {
+    const pts = v.split('.').map(Number);
+    if (pts.every(n => n >= 0 && n <= 255))
+      r.push({ type: 'ipv4', label: 'IPv4 地址', color: '#fb923c' });
+  }
+
+  // ── Email
+  if (/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(v) && !/\s/.test(v))
+    r.push({ type: 'email', label: '邮件地址', color: '#e879f9' });
+
+  // ── URL
+  if (/^(https?|ftp):\/\/.{3,}/.test(v)) {
+    try {
+      const url = new URL(v);
+      r.push({ type: 'url', label: 'URL', color: '#38bdf8', url });
+    } catch(e) {}
+  }
+
+  // ── JWT (three base64url segments)
+  const jwtPts = v.split('.');
+  if (jwtPts.length === 3 && jwtPts.every(p => /^[A-Za-z0-9_-]+$/.test(p))) {
+    try {
+      const h = jwtDecode(jwtPts[0]);
+      if (h && (h.alg || h.typ)) {
+        const payload = (() => { try { return jwtDecode(jwtPts[1]); } catch(e) { return {}; } })();
+        r.push({ type: 'jwt', label: 'JWT Token', color: '#a78bfa', header: h, payload });
+      }
+    } catch(e) {}
+  }
+
+  // ── Base64 (skip if already JWT)
+  if (!r.find(x => x.type === 'jwt')) {
+    if (/^[A-Za-z0-9+/]+=*$/.test(v) && v.length % 4 === 0 && v.length >= 8) {
+      try {
+        const dec = b64Decode(v);
+        r.push({ type: 'base64', label: 'Base64', color: '#34d399', decoded: dec });
+      } catch(e) {}
+    }
+  }
+
+
+
+  // ── Hex number (0x…)
+  if (/^0[xX][0-9a-fA-F]+$/.test(v))
+    r.push({ type: 'hexnum', label: '十六进制数', color: '#86efac', num: parseInt(v, 16) });
+
+  // ── Binary
+  if (/^0[bB][01]+$/.test(v))
+    r.push({ type: 'binary', label: '二进制', color: '#67e8f9', num: parseInt(v.slice(2), 2) });
+  else if (/^[01]+$/.test(v) && v.length >= 8 && v.length % 8 === 0 && !r.length)
+    r.push({ type: 'binraw', label: '二进制串', color: '#67e8f9', num: parseInt(v, 2) });
+
+  // ── Decimal / float number (guard against timestamps already detected)
+  const alreadyTs = r.some(x => x.type.startsWith('ts_'));
+  if (!alreadyTs && !r.find(x => x.type === 'hexnum') && !r.find(x => x.type.startsWith('bin'))) {
+    if (/^-?\d+(\.\d+)?([eE][+-]?\d+)?$/.test(v)) {
+      const num = parseFloat(v);
+      if (!isNaN(num)) r.push({ type: 'number', label: '数字', color: '#86efac', num });
+    }
+  }
+
+  return r;
+}
+
+/* ─── helpers ─── */
+function jwtDecode(part) {
+  const pad = s => s + '='.repeat((4 - s.length % 4) % 4);
+  return JSON.parse(atob(pad(part.replace(/-/g, '+').replace(/_/g, '/'))));
+}
+function b64Decode(s) {
+  const bytes = Uint8Array.from(atob(s), c => c.charCodeAt(0));
+  return new TextDecoder().decode(bytes);
+}
+function b64Encode(s) {
+  return btoa(String.fromCharCode(...new TextEncoder().encode(s)));
+}
+
+/* ══════════════════════════════════════════════════
+   VUE APP
+   ══════════════════════════════════════════════════ */
+createApp({
+  data() {
+    return {
+      panels: [
+        { id: 1, value: '', computedList: [], activeOps: {} },
+        { id: 2, value: '', computedList: [], activeOps: {} },
+      ],
+      _uid: 3,
+      toast: '',
+      _tt: null,
+
+      ops: [
+        { id: 'md5',      label: 'MD5 哈希' },
+        { id: 'sha1',     label: 'SHA-1 哈希' },
+        { id: 'sha256',   label: 'SHA-256' },
+        { id: 'sha512',   label: 'SHA-512' },
+        { id: 'b64enc',   label: 'Base64 编码' },
+        { id: 'b64dec',   label: 'Base64 解码' },
+        { id: 'urlenc',   label: 'URL 编码' },
+        { id: 'urldec',   label: 'URL 解码' },
+        { id: 'hexenc',   label: 'Hex 编码' },
+        { id: 'hexdec',   label: 'Hex 解码' },
+        { id: 'upper',    label: '转大写' },
+        { id: 'lower',    label: '转小写' },
+        { id: 'reverse',  label: '反转字符' },
+        { id: 'escjson',  label: 'JSON 转义' },
+        { id: 'unescjson',label: 'JSON 反转义' },
+        { id: 'count',    label: '字符统计' },
+      ],
+    };
+  },
+
+  methods: {
+    // ── Panel management ──
+    addPanel() {
+      this.panels.push({ id: this._uid++, value: '', computedList: [], activeOps: {} });
+    },
+    removePanel(idx) {
+      if (this.panels.length > 1) this.panels.splice(idx, 1);
+    },
+    clearPanel(p) {
+      p.value = '';
+      p.computedList = [];
+      p.activeOps = {};
+    },
+    async pasteTo(p) {
+      try {
+        const text = await navigator.clipboard.readText();
+        p.value = text;
+        p.computedList = [];
+        p.activeOps = {};
+      } catch(e) {
+        this.showToast('❌ 无法访问剪贴板，请手动粘贴');
+      }
+    },
+
+    // ── Input handling ──
+    onInput(e, p) {
+      const el = e.target;
+      el.style.height = 'auto';
+      el.style.height = Math.min(el.scrollHeight, 380) + 'px';
+      p.computedList = [];
+      p.activeOps = {};
+    },
+    doTrim(p) {
+      p.value = p.value.trim();
+      p.computedList = [];
+      p.activeOps = {};
+    },
+    doFormat(p) {
+      try {
+        p.value = JSON.stringify(JSON.parse(p.value.trim()), null, 2);
+        p.computedList = [];
+        p.activeOps = {};
+        this.showToast('JSON 已格式化 ✓');
+      } catch(e) {
+        this.showToast('❌ 非有效 JSON');
+      }
+    },
+
+    // ── Detection ──
+    detect(val) { return runDetect(val); },
+
+    // ── Compute operations ──
+    compute(p, op) {
+      // Toggle off if already active
+      if (p.activeOps[op.id]) {
+        p.computedList = p.computedList.filter(c => c.id !== op.id);
+        p.activeOps = { ...p.activeOps, [op.id]: false };
+        return;
+      }
+      const v = p.value.trim();
+      if (!v) return;
+      let result = '';
+      try {
+        switch (op.id) {
+          case 'md5':       result = CryptoJS.MD5(v).toString(); break;
+          case 'sha1':      result = CryptoJS.SHA1(v).toString(); break;
+          case 'sha256':    result = CryptoJS.SHA256(v).toString(); break;
+          case 'sha512':    result = CryptoJS.SHA512(v).toString(); break;
+          case 'b64enc':    result = b64Encode(v); break;
+          case 'b64dec': {
+            try { result = b64Decode(v); }
+            catch(e) { result = '❌ 无效的 Base64 字符串'; }
+            break;
+          }
+          case 'urlenc':    result = encodeURIComponent(v); break;
+          case 'urldec': {
+            try { result = decodeURIComponent(v); }
+            catch(e) { result = '❌ 无效的 URL 编码字符串'; }
+            break;
+          }
+          case 'hexenc':
+            result = [...new TextEncoder().encode(v)].map(b => b.toString(16).padStart(2,'0')).join('');
+            break;
+          case 'hexdec': {
+            const clean = v.replace(/\s/g,'').replace(/^0x/i,'');
+            try {
+              const bytes = clean.match(/.{1,2}/g).map(b => parseInt(b, 16));
+              result = new TextDecoder().decode(new Uint8Array(bytes));
+            } catch(e) { result = '❌ 无效的 Hex 字符串'; }
+            break;
+          }
+          case 'upper':     result = v.toUpperCase(); break;
+          case 'lower':     result = v.toLowerCase(); break;
+          case 'reverse':   result = [...v].reverse().join(''); break;
+          case 'escjson':   result = JSON.stringify(v).slice(1,-1); break;
+          case 'unescjson': {
+            try { result = JSON.parse('"' + v + '"'); }
+            catch(e) { result = '❌ 转义解析失败'; }
+            break;
+          }
+          case 'count': {
+            const zh  = (v.match(/[\u4e00-\u9fa5]/g)||[]).length;
+            const wds = v.trim().split(/\s+/).filter(Boolean).length;
+            const byt = new TextEncoder().encode(v).length;
+            result = `字符数: ${v.length}  |  中文: ${zh}  |  词数: ${wds}  |  字节(UTF-8): ${byt}  |  行数: ${v.split('\n').length}`;
+            break;
+          }
+        }
+      } catch(e) {
+        result = '❌ 操作失败: ' + e.message;
+      }
+      p.computedList = [...p.computedList, { id: op.id, label: op.label, value: result }];
+      p.activeOps = { ...p.activeOps, [op.id]: true };
+    },
+
+    // ── Utilities (called from template) ──
+    byteLen(s) { return new TextEncoder().encode(s).length; },
+    isJson(s) { try { JSON.parse(s); return true; } catch(e) { return false; } },
+
+    fmtLocal(ts) {
+      return new Date(ts).toLocaleString('zh-CN', {
+        year:'numeric', month:'2-digit', day:'2-digit',
+        hour:'2-digit', minute:'2-digit', second:'2-digit', hour12: false
+      });
+    },
+    fmtUtc(ts) { return new Date(ts).toUTCString(); },
+    relTime(ts) {
+      const diff = Date.now() - ts;
+      const sign = diff < 0 ? '后' : '前';
+      const abs = Math.abs(diff);
+      const s = Math.floor(abs / 1000), m = Math.floor(s/60), h = Math.floor(m/60), d = Math.floor(h/24), y = Math.floor(d/365);
+      const t = s<60 ? `${s} 秒` : m<60 ? `${m} 分钟` : h<24 ? `${h} 小时 ${m%60} 分` : d<365 ? `${d} 天` : `${y} 年 ${Math.floor((d-y*365)/30)} 个月`;
+      return t + sign;
+    },
+
+    ip4Type(ip) {
+      const [a,b] = ip.split('.').map(Number);
+      if (a===10||(a===172&&b>=16&&b<=31)||(a===192&&b===168)) return '私有地址 (RFC 1918)';
+      if (a===127) return '回环地址 (Loopback)';
+      if (a===169&&b===254) return '链路本地 (APIPA)';
+      if (a>=224&&a<=239) return '多播地址';
+      if (a>=240) return '保留地址';
+      return '公网地址';
+    },
+    ip4Int(ip) { return ip.split('.').reduce((acc,p) => (acc<<8)+parseInt(p), 0) >>> 0; },
+    ip4Hex(ip) { return '0x'+ip.split('.').map(p => parseInt(p).toString(16).padStart(2,'0').toUpperCase()).join(''); },
+    ip4Bin(ip) { return ip.split('.').map(p => parseInt(p).toString(2).padStart(8,'0')).join('.'); },
+
+    hex2rgb(hex) {
+      let h = hex.replace('#','');
+      if (h.length===3||h.length===4) h = h.split('').map(c=>c+c).join('');
+      h = h.slice(0,6);
+      return `rgb(${parseInt(h.slice(0,2),16)}, ${parseInt(h.slice(2,4),16)}, ${parseInt(h.slice(4,6),16)})`;
+    },
+    hex2hsl(hex) {
+      let h = hex.replace('#','');
+      if (h.length===3||h.length===4) h = h.split('').map(c=>c+c).join('');
+      h = h.slice(0,6);
+      let r=parseInt(h.slice(0,2),16)/255, g=parseInt(h.slice(2,4),16)/255, b=parseInt(h.slice(4,6),16)/255;
+      const mx=Math.max(r,g,b), mn=Math.min(r,g,b);
+      let hue=0, sat=0, lum=(mx+mn)/2;
+      if (mx!==mn) {
+        const d=mx-mn;
+        sat = lum>0.5 ? d/(2-mx-mn) : d/(mx+mn);
+        switch(mx) {
+          case r: hue=((g-b)/d+(g<b?6:0))/6; break;
+          case g: hue=((b-r)/d+2)/6; break;
+          case b: hue=((r-g)/d+4)/6; break;
+        }
+      }
+      return `hsl(${Math.round(hue*360)}, ${Math.round(sat*100)}%, ${Math.round(lum*100)}%)`;
+    },
+
+    // ── Copy & Toast ──
+    copy(text) {
+      if (!text) return;
+      navigator.clipboard.writeText(text).then(() => this.showToast('已复制到剪贴板 ✓'));
+    },
+    showToast(msg) {
+      this.toast = msg;
+      clearTimeout(this._tt);
+      this._tt = setTimeout(() => { this.toast = ''; }, 2400);
+    },
+  },
+}).mount('#app');
+</script>
+</body>
+</html>
