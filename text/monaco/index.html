@@ -279,6 +279,10 @@
         </select>
       </label>
 
+      <button id="sort-json-diff" type="button" hidden>
+        JSON 属性自然排序
+      </button>
+
       <label class="checkbox-label preview-control html-preview-control" hidden>
         <input id="html-preview-enabled" type="checkbox">
         HTML 预览
@@ -372,6 +376,7 @@
       const minimapInput = document.getElementById("minimap");
       const diffEnabledInput = document.getElementById("diff-enabled");
       const diffModeSelect = document.getElementById("diff-mode");
+      const sortJsonDiffButton = document.getElementById("sort-json-diff");
       const htmlPreviewControl = document.querySelector(
         ".html-preview-control"
       );
@@ -979,6 +984,7 @@
         markdownPreviewControl.hidden = !isMarkdown;
         jsonToYamlButton.hidden = !isJson;
         yamlToJsonButton.hidden = !isYaml;
+        sortJsonDiffButton.hidden = !(isJson && diffEditor);
 
         if (
           (!isHtml && htmlPreviewInput.checked) ||
@@ -1021,6 +1027,60 @@
         }
 
         return error?.message || "转换失败";
+      }
+
+      const naturalKeyCollator = new Intl.Collator(undefined, {
+        numeric: true,
+        sensitivity: "base"
+      });
+
+      function compareJsonKeys(left, right) {
+        const naturalOrder = naturalKeyCollator.compare(left, right);
+
+        if (naturalOrder) {
+          return naturalOrder;
+        }
+
+        return left < right ? -1 : left > right ? 1 : 0;
+      }
+
+      function sortJsonObjectKeys(value) {
+        if (Array.isArray(value)) {
+          return value.map(sortJsonObjectKeys);
+        }
+
+        if (!value || typeof value !== "object") {
+          return value;
+        }
+
+        return Object.keys(value)
+          .sort(compareJsonKeys)
+          .reduce((sorted, key) => {
+            sorted[key] = sortJsonObjectKeys(value[key]);
+            return sorted;
+          }, {});
+      }
+
+      function sortJsonText(value, side) {
+        try {
+          return `${JSON.stringify(
+            sortJsonObjectKeys(JSON.parse(value)),
+            null,
+            2
+          )}\n`;
+        } catch (error) {
+          throw new Error(`${side} JSON：${error.message}`);
+        }
+      }
+
+      function replaceEditorValue(codeEditor, value, source) {
+        const model = codeEditor.getModel();
+        codeEditor.pushUndoStop();
+        codeEditor.executeEdits(source, [{
+          range: model.getFullModelRange(),
+          text: value
+        }]);
+        codeEditor.pushUndoStop();
       }
 
       function createStandaloneEditor() {
@@ -1071,6 +1131,7 @@
           }
         });
         bindPasteDetection(diffEditor.getModifiedEditor());
+        syncPreviewAvailability();
       }
 
       function closeDiffEditor() {
@@ -1082,6 +1143,7 @@
         diffModifiedModel.dispose();
         diffModifiedModel = null;
         createStandaloneEditor();
+        syncPreviewAvailability();
       }
 
       createStandaloneEditor();
@@ -1334,6 +1396,38 @@
         }
 
         focusEditor();
+      });
+
+      sortJsonDiffButton.addEventListener("click", () => {
+        if (!diffEditor) {
+          return;
+        }
+
+        const originalEditor = diffEditor.getOriginalEditor();
+        const modifiedEditor = diffEditor.getModifiedEditor();
+
+        try {
+          const original = sortJsonText(originalEditor.getValue(), "左侧");
+          const modified = sortJsonText(modifiedEditor.getValue(), "右侧");
+          replaceEditorValue(
+            originalEditor,
+            original,
+            "sort-json-diff-original"
+          );
+          replaceEditorValue(
+            modifiedEditor,
+            modified,
+            "sort-json-diff-modified"
+          );
+          setConversionStatus("已按属性名自然排序左右 JSON");
+          modifiedEditor.focus();
+        } catch (error) {
+          setConversionStatus(
+            `JSON 排序失败：${describeConversionError(error)}`,
+            true
+          );
+          focusEditor();
+        }
       });
 
       function handlePreviewChange(activeInput, otherInput) {

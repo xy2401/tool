@@ -83,6 +83,7 @@
 
     /* ── PANEL CARD ──────────────────────────────── */
     .panel-card {
+      position: relative;
       background: var(--surface);
       border: 1px solid var(--border);
       border-radius: 12px; overflow: hidden;
@@ -93,12 +94,17 @@
       border-color: rgba(99,102,241,0.45);
       box-shadow: 0 0 0 3px rgba(99,102,241,0.1);
     }
+    .panel-card.drag-active {
+      border-color: rgba(99,102,241,0.6);
+      box-shadow: 0 0 0 3px rgba(99,102,241,0.15);
+    }
 
     /* Panel head */
     .panel-head {
       display: flex; align-items: center; justify-content: space-between;
       padding: 9px 14px; border-bottom: 1px solid var(--border); gap: 8px;
     }
+    .panel-head-l { display: flex; align-items: center; gap: 8px; }
     .panel-num { font-size: 11px; color: var(--subtle); font-weight: 600; letter-spacing: 0.5px; text-transform: uppercase; }
     .panel-btns { display: flex; gap: 3px; }
     .btn-sm {
@@ -108,6 +114,27 @@
       font-size: 13px; transition: all 0.15s; font-family: var(--sans);
     }
     .btn-sm:hover { border-color: var(--border); background: var(--surf2); color: var(--text); }
+    .btn-sm.collapse-btn { font-size: 10px; }
+
+    /* Collapsed preview */
+    .panel-preview {
+      padding: 8px 14px;
+      font-family: var(--mono); font-size: 12px; color: var(--muted);
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+      border-top: 1px solid var(--border);
+    }
+
+    /* Drag overlay */
+    .drag-overlay {
+      position: absolute; inset: 0; z-index: 10;
+      background: rgba(99,102,241,0.06);
+      border: 2px dashed rgba(99,102,241,0.45);
+      border-radius: 12px;
+      display: flex; align-items: center; justify-content: center;
+      flex-direction: column; gap: 4px; pointer-events: none;
+    }
+    .drag-overlay span { color: var(--accent); font-size: 14px; font-weight: 500; }
+    .drag-overlay .drag-icon { font-size: 28px; }
 
     /* Textarea */
     .panel-input {
@@ -133,6 +160,20 @@
       cursor: pointer; transition: all 0.15s; font-family: var(--sans);
     }
     .btn-xs:hover { border-color: rgba(99,102,241,0.4); color: var(--text); }
+
+    /* Generator bar */
+    .gen-bar {
+      display: flex; align-items: center; gap: 6px;
+      padding: 5px 14px; border-top: 1px solid var(--border);
+    }
+    .gen-label { font-size: 10px; color: var(--subtle); font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; flex-shrink: 0; }
+    .btn-gen {
+      padding: 2px 10px; border: 1px solid rgba(52,211,153,0.2);
+      background: rgba(52,211,153,0.06); color: #6ee7b7;
+      border-radius: 4px; font-size: 11px;
+      cursor: pointer; transition: all 0.15s; font-family: var(--sans);
+    }
+    .btn-gen:hover { background: rgba(52,211,153,0.15); border-color: rgba(52,211,153,0.4); color: #34d399; }
 
     /* ── DETECTIONS ──────────────────────────────── */
     .detections {
@@ -166,11 +207,25 @@
     .color-swatch { width: 44px; height: 44px; border-radius: 8px; border: 1px solid var(--border); flex-shrink: 0; }
     .color-rows { display: flex; gap: 12px; align-items: flex-start; }
 
+    /* Copyable value (click to copy) */
+    .copyable {
+      cursor: pointer; transition: background 0.15s;
+      border-radius: 3px; padding: 1px 4px; margin: -1px -4px;
+    }
+    .copyable:hover { background: rgba(99,102,241,0.12); }
+    .copyable:active { background: rgba(99,102,241,0.25); }
+
     /* ── OPERATIONS ──────────────────────────────── */
     .ops-section { border-top: 1px solid var(--border); padding: 11px 16px; }
     .ops-title {
-      font-size: 10px; color: var(--subtle); margin-bottom: 8px;
+      font-size: 10px; color: var(--subtle); margin-bottom: 10px;
       font-weight: 600; text-transform: uppercase; letter-spacing: 0.6px;
+    }
+    .ops-group { margin-bottom: 8px; }
+    .ops-group:last-child { margin-bottom: 0; }
+    .ops-group-name {
+      font-size: 10px; color: var(--subtle); font-weight: 500;
+      margin-bottom: 4px; letter-spacing: 0.3px;
     }
     .ops-grid { display: flex; flex-wrap: wrap; gap: 5px; }
     .btn-op {
@@ -189,19 +244,28 @@
     .cr-value {
       position: relative;
       background: rgba(0,0,0,0.28); border: 1px solid var(--border); border-radius: 6px;
-      padding: 7px 34px 7px 10px;
+      padding: 7px 60px 7px 10px;
       font-family: var(--mono); font-size: 12px; color: var(--text);
       word-break: break-all; line-height: 1.65; cursor: text; user-select: all;
+      white-space: pre-wrap;
+    }
+    .cr-btns {
+      position: absolute; top: 50%; right: 6px; transform: translateY(-50%);
+      display: flex; gap: 3px; opacity: 0; transition: opacity 0.15s;
+    }
+    .cr-value:hover .cr-btns { opacity: 1; }
+    .cr-copy, .cr-send {
+      border-radius: 4px; width: 22px; height: 22px;
+      display: flex; align-items: center; justify-content: center;
+      cursor: pointer; font-size: 11px;
+      font-family: var(--sans); border: 1px solid;
     }
     .cr-copy {
-      position: absolute; top: 50%; right: 6px; transform: translateY(-50%);
-      background: rgba(99,102,241,0.15); border: 1px solid rgba(99,102,241,0.3);
-      color: #a5b4fc; border-radius: 4px; width: 22px; height: 22px;
-      display: flex; align-items: center; justify-content: center;
-      cursor: pointer; font-size: 11px; opacity: 0; transition: opacity 0.15s;
-      font-family: var(--sans);
+      background: rgba(99,102,241,0.15); border-color: rgba(99,102,241,0.3); color: #a5b4fc;
     }
-    .cr-value:hover .cr-copy { opacity: 1; }
+    .cr-send {
+      background: rgba(52,211,153,0.15); border-color: rgba(52,211,153,0.3); color: #6ee7b7;
+    }
 
     /* ── ADD PANEL CARD ──────────────────────────── */
     .add-card {
@@ -227,9 +291,6 @@
     }
 
     /* ── MISC ────────────────────────────────────── */
-    .v-enter-active, .v-leave-active { transition: opacity 0.18s, transform 0.18s; }
-    .v-enter-from, .v-leave-to { opacity: 0; transform: translateY(-3px); }
-
     ::-webkit-scrollbar { width: 5px; height: 5px; }
     ::-webkit-scrollbar-track { background: transparent; }
     ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 3px; }
@@ -258,11 +319,25 @@
     <div class="panels-grid">
 
       <!-- ── PANEL CARD (v-for) ── -->
-      <div v-for="(panel, idx) in panels" :key="panel.id" class="panel-card">
+      <div v-for="(panel, idx) in panels" :key="panel.id"
+           class="panel-card" :class="{ 'drag-active': panel.dragging }"
+           @dragenter.prevent="onDragEnter($event, panel)"
+           @dragover.prevent
+           @dragleave="onDragLeave($event, panel)"
+           @drop.prevent="onDrop($event, panel)">
+
+        <!-- Drag overlay -->
+        <div class="drag-overlay" v-if="panel.dragging">
+          <span class="drag-icon">📄</span>
+          <span>释放文件以读取内容</span>
+        </div>
 
         <!-- Head -->
         <div class="panel-head">
-          <span class="panel-num">面板 #{{ idx + 1 }}</span>
+          <div class="panel-head-l">
+            <button class="btn-sm collapse-btn" :title="panel.collapsed ? '展开' : '折叠'" @click="toggleCollapse(panel)">{{ panel.collapsed ? '▶' : '▼' }}</button>
+            <span class="panel-num">面板 #{{ idx + 1 }}</span>
+          </div>
           <div class="panel-btns">
             <button class="btn-sm" title="粘贴" @click="pasteTo(panel)">⎘</button>
             <button class="btn-sm" title="复制内容" @click="copy(panel.value)">📋</button>
@@ -271,40 +346,53 @@
           </div>
         </div>
 
-        <!-- Textarea -->
-        <textarea
-          class="panel-input"
-          v-model="panel.value"
-          @input="onInput($event, panel)"
-          placeholder="粘贴任意内容：哈希、时间戳、Base64、JSON、UUID、IPv4、颜色、URL…"
-        ></textarea>
+        <!-- Collapsed preview -->
+        <div class="panel-preview" v-if="panel.collapsed && panel.value">{{ panel.value.substring(0, 80) }}{{ panel.value.length > 80 ? '…' : '' }}</div>
 
-        <!-- Input footer -->
-        <div class="input-footer" v-if="panel.value">
-          <span class="char-count">{{ panel.value.length }} 字符 · {{ byteLen(panel.value) }} 字节</span>
-          <div class="input-actions">
-            <button class="btn-xs" @click="doTrim(panel)">去首尾空白</button>
-            <button class="btn-xs" @click="doFormat(panel)">格式化 JSON</button>
+        <!-- Panel body (hideable) -->
+        <template v-if="!panel.collapsed">
+
+          <!-- Textarea -->
+          <textarea
+            class="panel-input"
+            v-model="panel.value"
+            @input="onInput($event, panel)"
+            placeholder="粘贴任意内容：哈希、时间戳、Base64、JSON、UUID、IP、MAC、颜色、URL、Cron…&#10;也可拖放文件到此处"
+          ></textarea>
+
+          <!-- Generator bar -->
+          <div class="gen-bar">
+            <span class="gen-label">生成</span>
+            <button class="btn-gen" @click="genUUID(panel)">🎲 UUID</button>
+            <button class="btn-gen" @click="genTimestamp(panel)">⏱ 时间戳</button>
+            <button class="btn-gen" @click="genNow(panel)">📅 当前时间</button>
           </div>
-        </div>
 
-        <!-- Detections -->
-        <div class="detections" v-if="panel.value">
-          <span class="det-label">识别</span>
-          <template v-if="detect(panel.value).length">
-            <span
-              v-for="d in detect(panel.value)" :key="d.type"
-              class="badge"
-              :style="{ background: d.color+'1e', color: d.color, border: '1px solid '+d.color+'50' }"
-            >{{ d.label }}</span>
-          </template>
-          <span v-else class="no-detect">未识别特定格式，可通过下方操作计算</span>
-        </div>
+          <!-- Input footer -->
+          <div class="input-footer" v-if="panel.value">
+            <span class="char-count">{{ panel.value.length }} 字符 · {{ byteLen(panel.value) }} 字节 · {{ panel.value.split('\n').length }} 行</span>
+            <div class="input-actions">
+              <button class="btn-xs" @click="doTrim(panel)">去首尾空白</button>
+              <button class="btn-xs" @click="doFormat(panel)">格式化 JSON</button>
+            </div>
+          </div>
 
-        <!-- Auto results -->
-        <transition>
-          <div class="auto-results" v-if="panel.value && detect(panel.value).length">
-            <div class="result-block" v-for="d in detect(panel.value)" :key="'r'+d.type">
+          <!-- Detections -->
+          <div class="detections" v-if="panel.value">
+            <span class="det-label">识别</span>
+            <template v-if="panel.detections && panel.detections.length">
+              <span
+                v-for="d in panel.detections" :key="d.type"
+                class="badge"
+                :style="{ background: d.color+'1e', color: d.color, border: '1px solid '+d.color+'50' }"
+              >{{ d.label }}</span>
+            </template>
+            <span v-else class="no-detect">未识别特定格式，可通过下方操作计算</span>
+          </div>
+
+          <!-- Auto results -->
+          <div class="auto-results" v-if="panel.value && panel.detections && panel.detections.length">
+            <div class="result-block" v-for="d in panel.detections" :key="'r'+d.type">
               <div class="rblock-title">
                 <span class="dot" :style="{ color: d.color }">●</span>
                 {{ d.label }}
@@ -312,131 +400,215 @@
 
               <!-- Timestamp (s or ms) -->
               <div class="result-rows" v-if="d.type==='ts_s'||d.type==='ts_ms'">
-                <div class="rrow"><span class="rrow-l">本地时间</span><span class="rrow-v em">{{ fmtLocal(d.ts) }}</span></div>
-                <div class="rrow"><span class="rrow-l">UTC 时间</span><span class="rrow-v">{{ fmtUtc(d.ts) }}</span></div>
-                <div class="rrow"><span class="rrow-l">ISO 8601</span><span class="rrow-v">{{ new Date(d.ts).toISOString() }}</span></div>
-                <div class="rrow"><span class="rrow-l">距今</span><span class="rrow-v hi">{{ relTime(d.ts) }}</span></div>
-                <div class="rrow" v-if="d.type==='ts_s'"><span class="rrow-l">毫秒戳</span><span class="rrow-v">{{ d.ts }}</span></div>
-                <div class="rrow" v-if="d.type==='ts_ms'"><span class="rrow-l">秒级戳</span><span class="rrow-v">{{ Math.floor(d.ts/1000) }}</span></div>
+                <div class="rrow"><span class="rrow-l">本地时间</span><span class="rrow-v em copyable" @click="copyEl($event)">{{ fmtLocal(d.ts) }}</span></div>
+                <div class="rrow"><span class="rrow-l">UTC 时间</span><span class="rrow-v copyable" @click="copyEl($event)">{{ fmtUtc(d.ts) }}</span></div>
+                <div class="rrow"><span class="rrow-l">ISO 8601</span><span class="rrow-v copyable" @click="copyEl($event)">{{ new Date(d.ts).toISOString() }}</span></div>
+                <div class="rrow"><span class="rrow-l">距今</span><span class="rrow-v hi copyable" @click="copyEl($event)">{{ relTime(d.ts) }}</span></div>
+                <div class="rrow" v-if="d.type==='ts_s'"><span class="rrow-l">毫秒戳</span><span class="rrow-v copyable" @click="copyEl($event)">{{ d.ts }}</span></div>
+                <div class="rrow" v-if="d.type==='ts_ms'"><span class="rrow-l">秒级戳</span><span class="rrow-v copyable" @click="copyEl($event)">{{ Math.floor(d.ts/1000) }}</span></div>
               </div>
 
               <!-- Hashes -->
               <div class="result-rows" v-else-if="['md5','sha1','sha256','sha512'].includes(d.type)">
-                <div class="rrow"><span class="rrow-l">算法</span><span class="rrow-v em">{{ d.label }}（{{ panel.value.trim().length * 4 }} 位）</span></div>
-                <div class="rrow"><span class="rrow-l">大写</span><span class="rrow-v">{{ panel.value.trim().toUpperCase() }}</span></div>
-                <div class="rrow"><span class="rrow-l">小写</span><span class="rrow-v">{{ panel.value.trim().toLowerCase() }}</span></div>
+                <div class="rrow"><span class="rrow-l">算法</span><span class="rrow-v em copyable" @click="copyEl($event)">{{ d.label }}（{{ panel.value.trim().length * 4 }} 位）</span></div>
+                <div class="rrow"><span class="rrow-l">大写</span><span class="rrow-v copyable" @click="copyEl($event)">{{ panel.value.trim().toUpperCase() }}</span></div>
+                <div class="rrow"><span class="rrow-l">小写</span><span class="rrow-v copyable" @click="copyEl($event)">{{ panel.value.trim().toLowerCase() }}</span></div>
               </div>
 
               <!-- UUID -->
               <div class="result-rows" v-else-if="d.type==='uuid'">
-                <div class="rrow"><span class="rrow-l">版本</span><span class="rrow-v em">UUID v{{ panel.value.trim()[14] }}</span></div>
-                <div class="rrow"><span class="rrow-l">大写</span><span class="rrow-v">{{ panel.value.trim().toUpperCase() }}</span></div>
-                <div class="rrow"><span class="rrow-l">无分隔符</span><span class="rrow-v">{{ panel.value.trim().replace(/-/g,'') }}</span></div>
+                <div class="rrow"><span class="rrow-l">版本</span><span class="rrow-v em copyable" @click="copyEl($event)">UUID v{{ panel.value.trim()[14] }}</span></div>
+                <div class="rrow"><span class="rrow-l">大写</span><span class="rrow-v copyable" @click="copyEl($event)">{{ panel.value.trim().toUpperCase() }}</span></div>
+                <div class="rrow"><span class="rrow-l">无分隔符</span><span class="rrow-v copyable" @click="copyEl($event)">{{ panel.value.trim().replace(/-/g,'') }}</span></div>
               </div>
 
               <!-- Base64 -->
               <div class="result-rows" v-else-if="d.type==='base64'">
-                <div class="rrow"><span class="rrow-l">解码结果</span><span class="rrow-v em" style="word-break:break-all">{{ d.decoded }}</span></div>
+                <div class="rrow"><span class="rrow-l">解码结果</span><span class="rrow-v em copyable" @click="copyEl($event)" style="word-break:break-all">{{ d.decoded }}</span></div>
                 <div class="rrow" v-if="isJson(d.decoded)"><span class="rrow-l">内含</span><span class="rrow-v" style="color:#fcd34d">✓ 有效 JSON</span></div>
               </div>
 
               <!-- JWT -->
               <div class="result-rows" v-else-if="d.type==='jwt'">
-                <div class="rrow"><span class="rrow-l">算法</span><span class="rrow-v em">{{ (d.header||{}).alg }}</span></div>
-                <div class="rrow" v-if="(d.payload||{}).exp"><span class="rrow-l">过期</span><span class="rrow-v">{{ fmtLocal(d.payload.exp*1000) }}</span></div>
-                <div class="rrow" v-if="(d.payload||{}).iat"><span class="rrow-l">签发</span><span class="rrow-v">{{ fmtLocal(d.payload.iat*1000) }}</span></div>
-                <div class="rrow" v-if="(d.payload||{}).sub"><span class="rrow-l">Subject</span><span class="rrow-v">{{ d.payload.sub }}</span></div>
-                <div class="rrow"><span class="rrow-l">Header</span><span class="rrow-v" style="white-space:pre;font-size:11px">{{ JSON.stringify(d.header,null,2) }}</span></div>
-                <div class="rrow"><span class="rrow-l">Payload</span><span class="rrow-v" style="white-space:pre;font-size:11px">{{ JSON.stringify(d.payload,null,2) }}</span></div>
+                <div class="rrow"><span class="rrow-l">算法</span><span class="rrow-v em copyable" @click="copyEl($event)">{{ (d.header||{}).alg }}</span></div>
+                <div class="rrow" v-if="(d.payload||{}).exp"><span class="rrow-l">过期</span><span class="rrow-v copyable" @click="copyEl($event)">{{ fmtLocal(d.payload.exp*1000) }}</span></div>
+                <div class="rrow" v-if="(d.payload||{}).iat"><span class="rrow-l">签发</span><span class="rrow-v copyable" @click="copyEl($event)">{{ fmtLocal(d.payload.iat*1000) }}</span></div>
+                <div class="rrow" v-if="(d.payload||{}).sub"><span class="rrow-l">Subject</span><span class="rrow-v copyable" @click="copyEl($event)">{{ d.payload.sub }}</span></div>
+                <div class="rrow"><span class="rrow-l">Header</span><span class="rrow-v copyable" @click="copyEl($event)" style="white-space:pre;font-size:11px">{{ JSON.stringify(d.header,null,2) }}</span></div>
+                <div class="rrow"><span class="rrow-l">Payload</span><span class="rrow-v copyable" @click="copyEl($event)" style="white-space:pre;font-size:11px">{{ JSON.stringify(d.payload,null,2) }}</span></div>
               </div>
 
               <!-- IPv4 -->
               <div class="result-rows" v-else-if="d.type==='ipv4'">
-                <div class="rrow"><span class="rrow-l">地址类型</span><span class="rrow-v em">{{ ip4Type(panel.value.trim()) }}</span></div>
-                <div class="rrow"><span class="rrow-l">整数</span><span class="rrow-v">{{ ip4Int(panel.value.trim()) }}</span></div>
-                <div class="rrow"><span class="rrow-l">十六进制</span><span class="rrow-v">{{ ip4Hex(panel.value.trim()) }}</span></div>
-                <div class="rrow"><span class="rrow-l">二进制</span><span class="rrow-v" style="font-size:11px;letter-spacing:1px">{{ ip4Bin(panel.value.trim()) }}</span></div>
+                <div class="rrow"><span class="rrow-l">地址类型</span><span class="rrow-v em copyable" @click="copyEl($event)">{{ ip4Type(panel.value.trim()) }}</span></div>
+                <div class="rrow"><span class="rrow-l">整数</span><span class="rrow-v copyable" @click="copyEl($event)">{{ ip4Int(panel.value.trim()) }}</span></div>
+                <div class="rrow"><span class="rrow-l">十六进制</span><span class="rrow-v copyable" @click="copyEl($event)">{{ ip4Hex(panel.value.trim()) }}</span></div>
+                <div class="rrow"><span class="rrow-l">二进制</span><span class="rrow-v copyable" @click="copyEl($event)" style="font-size:11px;letter-spacing:1px">{{ ip4Bin(panel.value.trim()) }}</span></div>
               </div>
 
               <!-- Hex color -->
               <div class="color-rows" v-else-if="d.type==='color'">
                 <div class="color-swatch" :style="{ background: panel.value.trim() }"></div>
                 <div class="result-rows" style="flex:1">
-                  <div class="rrow"><span class="rrow-l">HEX</span><span class="rrow-v em">{{ panel.value.trim().toUpperCase() }}</span></div>
-                  <div class="rrow"><span class="rrow-l">RGB</span><span class="rrow-v">{{ hex2rgb(panel.value.trim()) }}</span></div>
-                  <div class="rrow"><span class="rrow-l">HSL</span><span class="rrow-v">{{ hex2hsl(panel.value.trim()) }}</span></div>
+                  <div class="rrow"><span class="rrow-l">HEX</span><span class="rrow-v em copyable" @click="copyEl($event)">{{ panel.value.trim().toUpperCase() }}</span></div>
+                  <div class="rrow"><span class="rrow-l">RGB</span><span class="rrow-v copyable" @click="copyEl($event)">{{ hex2rgb(panel.value.trim()) }}</span></div>
+                  <div class="rrow"><span class="rrow-l">HSL</span><span class="rrow-v copyable" @click="copyEl($event)">{{ hex2hsl(panel.value.trim()) }}</span></div>
                 </div>
               </div>
 
-
-
               <!-- URL -->
               <div class="result-rows" v-else-if="d.type==='url'">
-                <div class="rrow"><span class="rrow-l">协议</span><span class="rrow-v em">{{ d.url.protocol }}</span></div>
-                <div class="rrow"><span class="rrow-l">主机</span><span class="rrow-v">{{ d.url.host }}</span></div>
-                <div class="rrow" v-if="d.url.pathname && d.url.pathname!=='/'"><span class="rrow-l">路径</span><span class="rrow-v">{{ d.url.pathname }}</span></div>
-                <div class="rrow" v-if="d.url.search"><span class="rrow-l">查询参数</span><span class="rrow-v">{{ d.url.search }}</span></div>
-                <div class="rrow" v-if="d.url.hash"><span class="rrow-l">锚点</span><span class="rrow-v">{{ d.url.hash }}</span></div>
+                <div class="rrow"><span class="rrow-l">协议</span><span class="rrow-v em copyable" @click="copyEl($event)">{{ d.url.protocol }}</span></div>
+                <div class="rrow"><span class="rrow-l">主机</span><span class="rrow-v copyable" @click="copyEl($event)">{{ d.url.host }}</span></div>
+                <div class="rrow" v-if="d.url.pathname && d.url.pathname!=='/'"><span class="rrow-l">路径</span><span class="rrow-v copyable" @click="copyEl($event)">{{ d.url.pathname }}</span></div>
+                <div class="rrow" v-if="d.url.search"><span class="rrow-l">查询参数</span><span class="rrow-v copyable" @click="copyEl($event)">{{ d.url.search }}</span></div>
+                <div class="rrow" v-if="d.url.hash"><span class="rrow-l">锚点</span><span class="rrow-v copyable" @click="copyEl($event)">{{ d.url.hash }}</span></div>
               </div>
 
               <!-- Email -->
               <div class="result-rows" v-else-if="d.type==='email'">
-                <div class="rrow"><span class="rrow-l">用户名</span><span class="rrow-v em">{{ panel.value.trim().split('@')[0] }}</span></div>
-                <div class="rrow"><span class="rrow-l">域名</span><span class="rrow-v">{{ panel.value.trim().split('@')[1] }}</span></div>
-                <div class="rrow"><span class="rrow-l">Mailto</span><span class="rrow-v">mailto:{{ panel.value.trim() }}</span></div>
+                <div class="rrow"><span class="rrow-l">用户名</span><span class="rrow-v em copyable" @click="copyEl($event)">{{ panel.value.trim().split('@')[0] }}</span></div>
+                <div class="rrow"><span class="rrow-l">域名</span><span class="rrow-v copyable" @click="copyEl($event)">{{ panel.value.trim().split('@')[1] }}</span></div>
+                <div class="rrow"><span class="rrow-l">Mailto</span><span class="rrow-v copyable" @click="copyEl($event)">mailto:{{ panel.value.trim() }}</span></div>
               </div>
 
               <!-- Number -->
               <div class="result-rows" v-else-if="d.type==='number'">
-                <div class="rrow"><span class="rrow-l">十进制</span><span class="rrow-v em">{{ d.num }}</span></div>
-                <div class="rrow"><span class="rrow-l">十六进制</span><span class="rrow-v">0x{{ Math.trunc(d.num).toString(16).toUpperCase() }}</span></div>
-                <div class="rrow"><span class="rrow-l">八进制</span><span class="rrow-v">0o{{ Math.trunc(d.num).toString(8) }}</span></div>
-                <div class="rrow"><span class="rrow-l">二进制</span><span class="rrow-v" style="font-size:11px">{{ Math.trunc(d.num).toString(2) }}</span></div>
+                <div class="rrow"><span class="rrow-l">十进制</span><span class="rrow-v em copyable" @click="copyEl($event)">{{ d.num }}</span></div>
+                <div class="rrow"><span class="rrow-l">十六进制</span><span class="rrow-v copyable" @click="copyEl($event)">0x{{ Math.trunc(d.num).toString(16).toUpperCase() }}</span></div>
+                <div class="rrow"><span class="rrow-l">八进制</span><span class="rrow-v copyable" @click="copyEl($event)">0o{{ Math.trunc(d.num).toString(8) }}</span></div>
+                <div class="rrow"><span class="rrow-l">二进制</span><span class="rrow-v copyable" @click="copyEl($event)" style="font-size:11px">{{ Math.trunc(d.num).toString(2) }}</span></div>
               </div>
 
-              <!-- Hex number (0x…) -->
+              <!-- Hex number -->
               <div class="result-rows" v-else-if="d.type==='hexnum'">
-                <div class="rrow"><span class="rrow-l">十进制</span><span class="rrow-v em">{{ d.num }}</span></div>
-                <div class="rrow"><span class="rrow-l">八进制</span><span class="rrow-v">0o{{ d.num.toString(8) }}</span></div>
-                <div class="rrow"><span class="rrow-l">二进制</span><span class="rrow-v" style="font-size:11px">{{ d.num.toString(2) }}</span></div>
-                <div class="rrow" v-if="d.num<=0x10ffff"><span class="rrow-l">Unicode 字符</span><span class="rrow-v">{{ String.fromCodePoint(d.num) }}</span></div>
+                <div class="rrow"><span class="rrow-l">十进制</span><span class="rrow-v em copyable" @click="copyEl($event)">{{ d.num }}</span></div>
+                <div class="rrow"><span class="rrow-l">八进制</span><span class="rrow-v copyable" @click="copyEl($event)">0o{{ d.num.toString(8) }}</span></div>
+                <div class="rrow"><span class="rrow-l">二进制</span><span class="rrow-v copyable" @click="copyEl($event)" style="font-size:11px">{{ d.num.toString(2) }}</span></div>
+                <div class="rrow" v-if="d.num<=0x10ffff"><span class="rrow-l">Unicode 字符</span><span class="rrow-v copyable" @click="copyEl($event)">{{ String.fromCodePoint(d.num) }}</span></div>
               </div>
 
               <!-- Binary -->
               <div class="result-rows" v-else-if="d.type==='binary'||d.type==='binraw'">
-                <div class="rrow"><span class="rrow-l">十进制</span><span class="rrow-v em">{{ d.num }}</span></div>
-                <div class="rrow"><span class="rrow-l">十六进制</span><span class="rrow-v">0x{{ d.num.toString(16).toUpperCase() }}</span></div>
-                <div class="rrow" v-if="d.num<=0x10ffff"><span class="rrow-l">Unicode 字符</span><span class="rrow-v">{{ String.fromCodePoint(d.num) }}</span></div>
+                <div class="rrow"><span class="rrow-l">十进制</span><span class="rrow-v em copyable" @click="copyEl($event)">{{ d.num }}</span></div>
+                <div class="rrow"><span class="rrow-l">十六进制</span><span class="rrow-v copyable" @click="copyEl($event)">0x{{ d.num.toString(16).toUpperCase() }}</span></div>
+                <div class="rrow" v-if="d.num<=0x10ffff"><span class="rrow-l">Unicode 字符</span><span class="rrow-v copyable" @click="copyEl($event)">{{ String.fromCodePoint(d.num) }}</span></div>
+              </div>
+
+              <!-- ═══ NEW DETECTION DISPLAYS ═══ -->
+
+              <!-- JSON -->
+              <div class="result-rows" v-else-if="d.type==='json'">
+                <div class="rrow"><span class="rrow-l">类型</span><span class="rrow-v em copyable" @click="copyEl($event)">{{ d.isArray ? 'Array (数组)' : 'Object (对象)' }}</span></div>
+                <div class="rrow"><span class="rrow-l">{{ d.isArray ? '元素数' : '键数量' }}</span><span class="rrow-v copyable" @click="copyEl($event)">{{ d.count }}</span></div>
+                <div class="rrow"><span class="rrow-l">嵌套深度</span><span class="rrow-v copyable" @click="copyEl($event)">{{ d.depth }}</span></div>
+                <div class="rrow"><span class="rrow-l">大小</span><span class="rrow-v copyable" @click="copyEl($event)">{{ d.size }} 字节</span></div>
+              </div>
+
+              <!-- Date String -->
+              <div class="result-rows" v-else-if="d.type==='datestr'">
+                <div class="rrow"><span class="rrow-l">本地时间</span><span class="rrow-v em copyable" @click="copyEl($event)">{{ fmtLocal(d.ts) }}</span></div>
+                <div class="rrow"><span class="rrow-l">UTC</span><span class="rrow-v copyable" @click="copyEl($event)">{{ fmtUtc(d.ts) }}</span></div>
+                <div class="rrow"><span class="rrow-l">ISO 8601</span><span class="rrow-v copyable" @click="copyEl($event)">{{ new Date(d.ts).toISOString() }}</span></div>
+                <div class="rrow"><span class="rrow-l">秒级时间戳</span><span class="rrow-v copyable" @click="copyEl($event)">{{ Math.floor(d.ts/1000) }}</span></div>
+                <div class="rrow"><span class="rrow-l">毫秒时间戳</span><span class="rrow-v copyable" @click="copyEl($event)">{{ d.ts }}</span></div>
+                <div class="rrow"><span class="rrow-l">距今</span><span class="rrow-v hi copyable" @click="copyEl($event)">{{ relTime(d.ts) }}</span></div>
+              </div>
+
+              <!-- IPv6 -->
+              <div class="result-rows" v-else-if="d.type==='ipv6'">
+                <div class="rrow"><span class="rrow-l">类型</span><span class="rrow-v em copyable" @click="copyEl($event)">{{ d.addrType }}</span></div>
+                <div class="rrow"><span class="rrow-l">完整形式</span><span class="rrow-v copyable" @click="copyEl($event)" style="font-size:11px">{{ d.expanded }}</span></div>
+              </div>
+
+              <!-- MAC -->
+              <div class="result-rows" v-else-if="d.type==='mac'">
+                <div class="rrow"><span class="rrow-l">冒号格式</span><span class="rrow-v em copyable" @click="copyEl($event)">{{ panel.value.trim().replace(/[:-]/g,':').toUpperCase() }}</span></div>
+                <div class="rrow"><span class="rrow-l">连字符</span><span class="rrow-v copyable" @click="copyEl($event)">{{ panel.value.trim().replace(/[:-]/g,'-').toUpperCase() }}</span></div>
+                <div class="rrow"><span class="rrow-l">无分隔符</span><span class="rrow-v copyable" @click="copyEl($event)">{{ panel.value.trim().replace(/[:-]/g,'').toUpperCase() }}</span></div>
+                <div class="rrow"><span class="rrow-l">类型</span><span class="rrow-v copyable" @click="copyEl($event)">{{ macType(panel.value.trim()) }}</span></div>
+              </div>
+
+              <!-- CIDR -->
+              <div class="result-rows" v-else-if="d.type==='cidr'">
+                <div class="rrow"><span class="rrow-l">网络地址</span><span class="rrow-v em copyable" @click="copyEl($event)">{{ d.calc.network }}/{{ d.prefix }}</span></div>
+                <div class="rrow"><span class="rrow-l">子网掩码</span><span class="rrow-v copyable" @click="copyEl($event)">{{ d.calc.mask }}</span></div>
+                <div class="rrow"><span class="rrow-l">广播地址</span><span class="rrow-v copyable" @click="copyEl($event)">{{ d.calc.broadcast }}</span></div>
+                <div class="rrow"><span class="rrow-l">可用主机</span><span class="rrow-v copyable" @click="copyEl($event)">{{ d.calc.hosts.toLocaleString() }}</span></div>
+                <div class="rrow"><span class="rrow-l">地址范围</span><span class="rrow-v copyable" @click="copyEl($event)">{{ d.calc.first }} – {{ d.calc.last }}</span></div>
+              </div>
+
+              <!-- Domain -->
+              <div class="result-rows" v-else-if="d.type==='domain'">
+                <div class="rrow"><span class="rrow-l">域名</span><span class="rrow-v em copyable" @click="copyEl($event)">{{ panel.value.trim() }}</span></div>
+                <div class="rrow"><span class="rrow-l">顶级域</span><span class="rrow-v copyable" @click="copyEl($event)">.{{ panel.value.trim().split('.').pop() }}</span></div>
+                <div class="rrow"><span class="rrow-l">HTTPS</span><span class="rrow-v copyable" @click="copyEl($event)">https://{{ panel.value.trim() }}</span></div>
+              </div>
+
+              <!-- Phone (CN) -->
+              <div class="result-rows" v-else-if="d.type==='phone_cn'">
+                <div class="rrow"><span class="rrow-l">格式化</span><span class="rrow-v em copyable" @click="copyEl($event)">{{ panel.value.trim().replace(/(\d{3})(\d{4})(\d{4})/, '$1 $2 $3') }}</span></div>
+                <div class="rrow"><span class="rrow-l">运营商</span><span class="rrow-v copyable" @click="copyEl($event)">{{ d.carrier }}</span></div>
+              </div>
+
+              <!-- Semver -->
+              <div class="result-rows" v-else-if="d.type==='semver'">
+                <div class="rrow"><span class="rrow-l">Major</span><span class="rrow-v em copyable" @click="copyEl($event)">{{ d.major }}</span></div>
+                <div class="rrow"><span class="rrow-l">Minor</span><span class="rrow-v copyable" @click="copyEl($event)">{{ d.minor }}</span></div>
+                <div class="rrow"><span class="rrow-l">Patch</span><span class="rrow-v copyable" @click="copyEl($event)">{{ d.patch }}</span></div>
+                <div class="rrow" v-if="d.pre"><span class="rrow-l">预发布</span><span class="rrow-v copyable" @click="copyEl($event)">{{ d.pre }}</span></div>
+                <div class="rrow" v-if="d.build"><span class="rrow-l">构建</span><span class="rrow-v copyable" @click="copyEl($event)">{{ d.build }}</span></div>
+              </div>
+
+              <!-- Cron -->
+              <div class="result-rows" v-else-if="d.type==='cron'">
+                <div class="rrow"><span class="rrow-l">描述</span><span class="rrow-v em copyable" @click="copyEl($event)">{{ d.desc }}</span></div>
+                <div class="rrow"><span class="rrow-l">分钟</span><span class="rrow-v copyable" @click="copyEl($event)">{{ d.parts[0] }}</span></div>
+                <div class="rrow"><span class="rrow-l">小时</span><span class="rrow-v copyable" @click="copyEl($event)">{{ d.parts[1] }}</span></div>
+                <div class="rrow"><span class="rrow-l">日</span><span class="rrow-v copyable" @click="copyEl($event)">{{ d.parts[2] }}</span></div>
+                <div class="rrow"><span class="rrow-l">月</span><span class="rrow-v copyable" @click="copyEl($event)">{{ d.parts[3] }}</span></div>
+                <div class="rrow"><span class="rrow-l">星期</span><span class="rrow-v copyable" @click="copyEl($event)">{{ d.parts[4] }}</span></div>
+              </div>
+
+              <!-- Regex -->
+              <div class="result-rows" v-else-if="d.type==='regex'">
+                <div class="rrow"><span class="rrow-l">模式</span><span class="rrow-v em copyable" @click="copyEl($event)">{{ d.pattern }}</span></div>
+                <div class="rrow"><span class="rrow-l">标志</span><span class="rrow-v copyable" @click="copyEl($event)">{{ d.flags || '(无)' }}</span></div>
+                <div class="rrow"><span class="rrow-l">状态</span><span class="rrow-v" style="color:#86efac">✓ 有效正则表达式</span></div>
               </div>
 
             </div>
           </div>
-        </transition>
 
-        <!-- Operations -->
-        <div class="ops-section" v-if="panel.value">
-          <div class="ops-title">计算操作</div>
-          <div class="ops-grid">
-            <button
-              v-for="op in ops" :key="op.id"
-              class="btn-op"
-              :class="{ active: panel.activeOps[op.id] }"
-              @click="compute(panel, op)"
-            >{{ op.label }}</button>
-          </div>
-        </div>
-
-        <!-- Computed results -->
-        <div class="computed-section" v-if="panel.computedList && panel.computedList.length">
-          <div class="cr-item" v-for="cr in panel.computedList" :key="cr.id">
-            <div class="cr-label">{{ cr.label }}</div>
-            <div class="cr-value">
-              {{ cr.value }}
-              <button class="cr-copy" @click.stop="copy(cr.value)" title="复制">⎘</button>
+          <!-- Operations (grouped) -->
+          <div class="ops-section" v-if="panel.value">
+            <div class="ops-title">计算操作</div>
+            <div v-for="group in opGroups" :key="group.name" class="ops-group">
+              <div class="ops-group-name">{{ group.name }}</div>
+              <div class="ops-grid">
+                <button
+                  v-for="op in group.ops" :key="op.id"
+                  class="btn-op"
+                  :class="{ active: panel.activeOps[op.id] }"
+                  @click="compute(panel, op)"
+                >{{ op.label }}</button>
+              </div>
             </div>
           </div>
-        </div>
 
+          <!-- Computed results -->
+          <div class="computed-section" v-if="panel.computedList && panel.computedList.length">
+            <div class="cr-item" v-for="cr in panel.computedList" :key="cr.id">
+              <div class="cr-label">{{ cr.label }}</div>
+              <div class="cr-value">{{ cr.value }}<div class="cr-btns">
+                  <button class="cr-send" @click.stop="sendToPanel(cr.value)" title="发送到新面板">→</button>
+                  <button class="cr-copy" @click.stop="copy(cr.value)" title="复制">⎘</button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+        </template>
       </div>
       <!-- ── /PANEL CARD ── -->
 
@@ -459,6 +631,104 @@
 <script>
 'use strict';
 const { createApp } = Vue;
+
+/* ══════════════════════════════════════════════════
+   HELPERS
+   ══════════════════════════════════════════════════ */
+function jwtDecode(part) {
+  const pad = s => s + '='.repeat((4 - s.length % 4) % 4);
+  return JSON.parse(atob(pad(part.replace(/-/g, '+').replace(/_/g, '/'))));
+}
+function b64Decode(s) {
+  const bytes = Uint8Array.from(atob(s), c => c.charCodeAt(0));
+  return new TextDecoder().decode(bytes);
+}
+function b64Encode(s) {
+  return btoa(String.fromCharCode(...new TextEncoder().encode(s)));
+}
+function jsonDepth(obj, d = 0) {
+  if (typeof obj !== 'object' || obj === null) return d;
+  const children = Array.isArray(obj) ? obj : Object.values(obj);
+  if (!children.length) return d + 1;
+  return Math.max(...children.map(c => jsonDepth(c, d + 1)));
+}
+function expandIPv6(addr) {
+  let parts = addr.split('::');
+  let left = parts[0] ? parts[0].split(':') : [];
+  let right = parts.length > 1 && parts[1] ? parts[1].split(':') : [];
+  let mid = Array(8 - left.length - right.length).fill('0000');
+  return [...left, ...mid, ...right].map(p => p.padStart(4, '0')).join(':');
+}
+function ipv6Type(addr) {
+  const exp = expandIPv6(addr).toLowerCase();
+  if (exp === '0000:0000:0000:0000:0000:0000:0000:0001') return '回环地址 (Loopback)';
+  if (exp.startsWith('fe80')) return '链路本地 (Link-Local)';
+  if (exp.startsWith('fc') || exp.startsWith('fd')) return '唯一本地 (ULA)';
+  if (exp.startsWith('ff')) return '多播地址 (Multicast)';
+  if (exp === '0000:0000:0000:0000:0000:0000:0000:0000') return '未指定地址';
+  if (exp.startsWith('2001:0db8')) return '文档示例地址';
+  return '全局单播 (Global Unicast)';
+}
+function isIPv6(str) {
+  if (/^([0-9a-fA-F]{1,4}:){7}[0-9a-fA-F]{1,4}$/.test(str)) return true;
+  if (!str.includes('::')) return false;
+  const parts = str.split('::');
+  if (parts.length !== 2) return false;
+  const left = parts[0] ? parts[0].split(':') : [];
+  const right = parts[1] ? parts[1].split(':') : [];
+  if (left.length + right.length > 7) return false;
+  return left.concat(right).every(p => /^[0-9a-fA-F]{0,4}$/.test(p));
+}
+function cidrCalc(ip, prefix) {
+  const ipNum = ip.split('.').reduce((a, p) => (a << 8) + parseInt(p), 0) >>> 0;
+  const mask = prefix === 0 ? 0 : (~0 << (32 - prefix)) >>> 0;
+  const network = (ipNum & mask) >>> 0;
+  const broadcast = (network | (~mask >>> 0)) >>> 0;
+  const hosts = prefix >= 31 ? (prefix === 32 ? 1 : 2) : Math.pow(2, 32 - prefix) - 2;
+  const n2ip = n => [(n >>> 24) & 255, (n >>> 16) & 255, (n >>> 8) & 255, n & 255].join('.');
+  return {
+    network: n2ip(network), broadcast: n2ip(broadcast), mask: n2ip(mask),
+    hosts, first: prefix >= 31 ? n2ip(network) : n2ip(network + 1),
+    last: prefix >= 31 ? n2ip(broadcast) : n2ip(broadcast - 1),
+  };
+}
+function phoneCarrier(phone) {
+  const p3 = phone.slice(0, 3);
+  if ('134,135,136,137,138,139,147,148,150,151,152,157,158,159,172,178,182,183,184,187,188,195,197,198'.split(',').includes(p3)) return '中国移动';
+  if ('130,131,132,145,146,155,156,166,167,171,175,176,185,186,196'.split(',').includes(p3)) return '中国联通';
+  if ('133,149,153,173,174,177,180,181,189,190,191,193,199'.split(',').includes(p3)) return '中国电信';
+  return '未知运营商';
+}
+function describeCron(parts) {
+  const [min, hour, dom, month, dow] = parts;
+  const dowNames = ['周日','周一','周二','周三','周四','周五','周六'];
+  if (parts.every(p => p === '*')) return '每分钟执行';
+  const s = [];
+  if (min === '*') {}
+  else if (min.startsWith('*/')) s.push(`每 ${min.slice(2)} 分钟`);
+  else s.push(`在第 ${min} 分钟`);
+  if (hour === '*') { if (min !== '*' && !min.startsWith('*/')) s.push('每小时'); }
+  else if (hour.startsWith('*/')) s.push(`每 ${hour.slice(2)} 小时`);
+  else s.push(`${hour} 时`);
+  if (dom !== '*') { if (dom.startsWith('*/')) s.push(`每 ${dom.slice(2)} 天`); else s.push(`每月第 ${dom} 天`); }
+  if (month !== '*') { if (month.startsWith('*/')) s.push(`每 ${month.slice(2)} 个月`); else s.push(`${month} 月`); }
+  if (dow !== '*') { const d = parseInt(dow); s.push(!isNaN(d) && d >= 0 && d <= 6 ? dowNames[d] : `周${dow}`); }
+  return s.join('，') || '每分钟执行';
+}
+function splitWords(str) {
+  return str
+    .replace(/([a-z])([A-Z])/g, '$1 $2')
+    .replace(/([A-Z]+)([A-Z][a-z])/g, '$1 $2')
+    .split(/[\s_\-]+/)
+    .filter(Boolean)
+    .map(w => w.toLowerCase());
+}
+function uuidv4() {
+  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, c => {
+    const r = Math.random() * 16 | 0;
+    return (c === 'x' ? r : (r & 0x3 | 0x8)).toString(16);
+  });
+}
 
 /* ══════════════════════════════════════════════════
    DETECTION ENGINE
@@ -484,14 +754,14 @@ function runDetect(raw) {
       r.push({ type: 'ts_ms', label: '时间戳(毫秒)', color: '#93c5fd', ts });
   }
 
-  // ── Hash fingerprints (hex-only strings by length)
+  // ── Hash fingerprints
   const isHex = /^[0-9a-fA-F]+$/.test(v);
   if (isHex && v.length === 32)  r.push({ type: 'md5',    label: 'MD5',    color: '#f87171' });
   if (isHex && v.length === 40)  r.push({ type: 'sha1',   label: 'SHA-1',  color: '#fb923c' });
   if (isHex && v.length === 64)  r.push({ type: 'sha256', label: 'SHA-256',color: '#fbbf24' });
   if (isHex && v.length === 128) r.push({ type: 'sha512', label: 'SHA-512',color: '#a3e635' });
 
-  // ── UUID (xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx)
+  // ── UUID
   if (/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(v))
     r.push({ type: 'uuid', label: 'UUID', color: '#22d3ee' });
 
@@ -506,19 +776,42 @@ function runDetect(raw) {
       r.push({ type: 'ipv4', label: 'IPv4 地址', color: '#fb923c' });
   }
 
+  // ── IPv6
+  if (isIPv6(v)) {
+    r.push({ type: 'ipv6', label: 'IPv6 地址', color: '#fdba74', expanded: expandIPv6(v), addrType: ipv6Type(v) });
+  }
+
+  // ── CIDR
+  const cidrM = v.match(/^(\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3})\/(\d{1,2})$/);
+  if (cidrM) {
+    const pts = cidrM[1].split('.').map(Number);
+    const prefix = parseInt(cidrM[2]);
+    if (pts.every(n => n >= 0 && n <= 255) && prefix >= 0 && prefix <= 32)
+      r.push({ type: 'cidr', label: 'CIDR 子网', color: '#f97316', prefix, calc: cidrCalc(cidrM[1], prefix) });
+  }
+
+  // ── MAC address
+  if (/^([0-9a-fA-F]{2}[:-]){5}[0-9a-fA-F]{2}$/.test(v))
+    r.push({ type: 'mac', label: 'MAC 地址', color: '#c084fc' });
+
   // ── Email
   if (/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(v) && !/\s/.test(v))
     r.push({ type: 'email', label: '邮件地址', color: '#e879f9' });
 
   // ── URL
   if (/^(https?|ftp):\/\/.{3,}/.test(v)) {
-    try {
-      const url = new URL(v);
-      r.push({ type: 'url', label: 'URL', color: '#38bdf8', url });
-    } catch(e) {}
+    try { const url = new URL(v); r.push({ type: 'url', label: 'URL', color: '#38bdf8', url }); } catch(e) {}
   }
 
-  // ── JWT (three base64url segments)
+  // ── Chinese phone number
+  if (/^1[3-9]\d{9}$/.test(v))
+    r.push({ type: 'phone_cn', label: '手机号(中国)', color: '#f472b6', carrier: phoneCarrier(v) });
+
+  // ── Domain (without protocol)
+  if (/^(?:[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?\.)+[a-zA-Z]{2,}$/.test(v) && !v.includes(' ') && !r.find(x => x.type === 'email'))
+    r.push({ type: 'domain', label: '域名', color: '#38bdf8' });
+
+  // ── JWT
   const jwtPts = v.split('.');
   if (jwtPts.length === 3 && jwtPts.every(p => /^[A-Za-z0-9_-]+$/.test(p))) {
     try {
@@ -530,17 +823,45 @@ function runDetect(raw) {
     } catch(e) {}
   }
 
-  // ── Base64 (skip if already JWT)
+  // ── Base64 (skip if JWT)
   if (!r.find(x => x.type === 'jwt')) {
     if (/^[A-Za-z0-9+/]+=*$/.test(v) && v.length % 4 === 0 && v.length >= 8) {
-      try {
-        const dec = b64Decode(v);
-        r.push({ type: 'base64', label: 'Base64', color: '#34d399', decoded: dec });
-      } catch(e) {}
+      try { const dec = b64Decode(v); r.push({ type: 'base64', label: 'Base64', color: '#34d399', decoded: dec }); } catch(e) {}
     }
   }
 
+  // ── JSON
+  if (v.length >= 2 && ((v[0] === '{' && v[v.length-1] === '}') || (v[0] === '[' && v[v.length-1] === ']'))) {
+    try {
+      const parsed = JSON.parse(v);
+      const isArr = Array.isArray(parsed);
+      r.push({ type: 'json', label: 'JSON ' + (isArr ? '数组' : '对象'), color: '#fcd34d',
+        isArray: isArr, count: isArr ? parsed.length : Object.keys(parsed).length,
+        depth: jsonDepth(parsed), size: v.length });
+    } catch(e) {}
+  }
 
+  // ── Semantic Version
+  const svM = v.match(/^v?(\d+)\.(\d+)\.(\d+)(?:-([a-zA-Z0-9.]+))?(?:\+([a-zA-Z0-9.]+))?$/);
+  if (svM && !r.find(x => x.type === 'ipv4'))
+    r.push({ type: 'semver', label: '语义版本号', color: '#a3e635', major: svM[1], minor: svM[2], patch: svM[3], pre: svM[4] || '', build: svM[5] || '' });
+
+  // ── Cron expression (5 fields)
+  const cronParts = v.split(/\s+/);
+  if (cronParts.length === 5 && cronParts.every(p => /^(\*|(\d+(-\d+)?(,\d+(-\d+)?)*)(\/((\d+(-\d+)?(,\d+(-\d+)?)*)))?|\*\/\d+)$/.test(p)))
+    r.push({ type: 'cron', label: 'Cron 表达式', color: '#14b8a6', desc: describeCron(cronParts), parts: cronParts });
+
+  // ── Regex (/pattern/flags)
+  const rxM = v.match(/^\/(.+)\/([gimsuy]*)$/);
+  if (rxM) {
+    try { new RegExp(rxM[1], rxM[2]); r.push({ type: 'regex', label: '正则表达式', color: '#e879f9', pattern: rxM[1], flags: rxM[2] }); } catch(e) {}
+  }
+
+  // ── Date string
+  if (/^\d{4}[-/]\d{2}[-/]\d{2}([\sT]\d{2}:\d{2}(:\d{2})?(\.\d+)?(Z|[+-]\d{2}:?\d{2})?)?$/.test(v)) {
+    const d = new Date(v.replace(/\//g, '-'));
+    if (!isNaN(d.getTime())) r.push({ type: 'datestr', label: '日期字符串', color: '#60a5fa', ts: d.getTime() });
+  }
 
   // ── Hex number (0x…)
   if (/^0[xX][0-9a-fA-F]+$/.test(v))
@@ -552,9 +873,9 @@ function runDetect(raw) {
   else if (/^[01]+$/.test(v) && v.length >= 8 && v.length % 8 === 0 && !r.length)
     r.push({ type: 'binraw', label: '二进制串', color: '#67e8f9', num: parseInt(v, 2) });
 
-  // ── Decimal / float number (guard against timestamps already detected)
+  // ── Decimal / float number
   const alreadyTs = r.some(x => x.type.startsWith('ts_'));
-  if (!alreadyTs && !r.find(x => x.type === 'hexnum') && !r.find(x => x.type.startsWith('bin'))) {
+  if (!alreadyTs && !r.find(x => x.type === 'hexnum') && !r.find(x => x.type.startsWith('bin')) && !r.find(x => x.type === 'phone_cn')) {
     if (/^-?\d+(\.\d+)?([eE][+-]?\d+)?$/.test(v)) {
       const num = parseFloat(v);
       if (!isNaN(num)) r.push({ type: 'number', label: '数字', color: '#86efac', num });
@@ -564,19 +885,6 @@ function runDetect(raw) {
   return r;
 }
 
-/* ─── helpers ─── */
-function jwtDecode(part) {
-  const pad = s => s + '='.repeat((4 - s.length % 4) % 4);
-  return JSON.parse(atob(pad(part.replace(/-/g, '+').replace(/_/g, '/'))));
-}
-function b64Decode(s) {
-  const bytes = Uint8Array.from(atob(s), c => c.charCodeAt(0));
-  return new TextDecoder().decode(bytes);
-}
-function b64Encode(s) {
-  return btoa(String.fromCharCode(...new TextEncoder().encode(s)));
-}
-
 /* ══════════════════════════════════════════════════
    VUE APP
    ══════════════════════════════════════════════════ */
@@ -584,56 +892,93 @@ createApp({
   data() {
     return {
       panels: [
-        { id: 1, value: '', computedList: [], activeOps: {} },
-        { id: 2, value: '', computedList: [], activeOps: {} },
+        { id: 1, value: '', computedList: [], activeOps: {}, detections: [], collapsed: false, dragging: false },
+        { id: 2, value: '', computedList: [], activeOps: {}, detections: [], collapsed: false, dragging: false },
       ],
       _uid: 3,
       toast: '',
-      _tt: null,
 
-      ops: [
-        { id: 'md5',      label: 'MD5 哈希' },
-        { id: 'sha1',     label: 'SHA-1 哈希' },
-        { id: 'sha256',   label: 'SHA-256' },
-        { id: 'sha512',   label: 'SHA-512' },
-        { id: 'b64enc',   label: 'Base64 编码' },
-        { id: 'b64dec',   label: 'Base64 解码' },
-        { id: 'urlenc',   label: 'URL 编码' },
-        { id: 'urldec',   label: 'URL 解码' },
-        { id: 'hexenc',   label: 'Hex 编码' },
-        { id: 'hexdec',   label: 'Hex 解码' },
-        { id: 'upper',    label: '转大写' },
-        { id: 'lower',    label: '转小写' },
-        { id: 'reverse',  label: '反转字符' },
-        { id: 'escjson',  label: 'JSON 转义' },
-        { id: 'unescjson',label: 'JSON 反转义' },
-        { id: 'count',    label: '字符统计' },
+      opGroups: [
+        { name: '哈希', ops: [
+          { id: 'md5', label: 'MD5' }, { id: 'sha1', label: 'SHA-1' },
+          { id: 'sha256', label: 'SHA-256' }, { id: 'sha512', label: 'SHA-512' },
+        ]},
+        { name: '编码 / 解码', ops: [
+          { id: 'b64enc', label: 'Base64 编码' }, { id: 'b64dec', label: 'Base64 解码' },
+          { id: 'urlenc', label: 'URL 编码' }, { id: 'urldec', label: 'URL 解码' },
+          { id: 'hexenc', label: 'Hex 编码' }, { id: 'hexdec', label: 'Hex 解码' },
+          { id: 'htmlenc', label: 'HTML 编码' }, { id: 'htmldec', label: 'HTML 解码' },
+          { id: 'uniesc', label: 'Unicode 转义' }, { id: 'uniunesc', label: 'Unicode 反转义' },
+        ]},
+        { name: '文本变换', ops: [
+          { id: 'upper', label: '转大写' }, { id: 'lower', label: '转小写' },
+          { id: 'reverse', label: '反转字符' }, { id: 'rot13', label: 'ROT13' },
+          { id: 'camel', label: 'camelCase' }, { id: 'snake', label: 'snake_case' },
+          { id: 'kebab', label: 'kebab-case' }, { id: 'pascal', label: 'PascalCase' },
+        ]},
+        { name: '行操作', ops: [
+          { id: 'sortasc', label: '行排序 ↑' }, { id: 'sortdesc', label: '行排序 ↓' },
+          { id: 'dedup', label: '去重行' },
+        ]},
+        { name: 'JSON', ops: [
+          { id: 'escjson', label: 'JSON 转义' }, { id: 'unescjson', label: 'JSON 反转义' },
+          { id: 'jsonmin', label: '压缩 JSON' },
+        ]},
+        { name: '转义', ops: [
+          { id: 'escnl', label: '转义换行符' }, { id: 'unescnl', label: '反转义换行符' },
+        ]},
+        { name: '统计 & 匹配', ops: [
+          { id: 'count', label: '字符统计' }, { id: 'regmatch', label: '正则提取' },
+        ]},
       ],
     };
   },
 
+  computed: {
+    allOps() { return this.opGroups.flatMap(g => g.ops); },
+  },
+
+  created() {
+    this._loaded = false;
+    this._saveTimer = null;
+    this._tt = null;
+  },
+
+  mounted() {
+    this.loadFromStorage();
+    this.$nextTick(() => {
+      this._loaded = true;
+      // Auto-resize textareas for loaded content
+      document.querySelectorAll('.panel-input').forEach(el => {
+        el.style.height = 'auto';
+        el.style.height = Math.min(el.scrollHeight, 380) + 'px';
+      });
+    });
+  },
+
+  watch: {
+    panels: {
+      handler() { if (this._loaded) this.debounceSave(); },
+      deep: true,
+    },
+  },
+
   methods: {
     // ── Panel management ──
-    addPanel() {
-      this.panels.push({ id: this._uid++, value: '', computedList: [], activeOps: {} });
+    mkPanel() {
+      return { id: this._uid++, value: '', computedList: [], activeOps: {}, detections: [], collapsed: false, dragging: false };
     },
-    removePanel(idx) {
-      if (this.panels.length > 1) this.panels.splice(idx, 1);
-    },
-    clearPanel(p) {
-      p.value = '';
-      p.computedList = [];
-      p.activeOps = {};
-    },
+    addPanel() { this.panels.push(this.mkPanel()); },
+    removePanel(idx) { if (this.panels.length > 1) this.panels.splice(idx, 1); },
+    clearPanel(p) { p.value = ''; p.computedList = []; p.activeOps = {}; p.detections = []; },
+    toggleCollapse(p) { p.collapsed = !p.collapsed; },
     async pasteTo(p) {
       try {
         const text = await navigator.clipboard.readText();
         p.value = text;
-        p.computedList = [];
-        p.activeOps = {};
-      } catch(e) {
-        this.showToast('❌ 无法访问剪贴板，请手动粘贴');
-      }
+        p.computedList = []; p.activeOps = {};
+        this.updateDetections(p);
+      } catch(e) { this.showToast('❌ 无法访问剪贴板，请手动粘贴'); }
     },
 
     // ── Input handling ──
@@ -641,93 +986,181 @@ createApp({
       const el = e.target;
       el.style.height = 'auto';
       el.style.height = Math.min(el.scrollHeight, 380) + 'px';
-      p.computedList = [];
-      p.activeOps = {};
+      this.updateDetections(p);
+      this.recompute(p);
     },
     doTrim(p) {
       p.value = p.value.trim();
-      p.computedList = [];
-      p.activeOps = {};
+      this.updateDetections(p);
+      this.recompute(p);
     },
     doFormat(p) {
       try {
         p.value = JSON.stringify(JSON.parse(p.value.trim()), null, 2);
-        p.computedList = [];
-        p.activeOps = {};
+        this.updateDetections(p);
+        this.recompute(p);
         this.showToast('JSON 已格式化 ✓');
-      } catch(e) {
-        this.showToast('❌ 非有效 JSON');
-      }
+      } catch(e) { this.showToast('❌ 非有效 JSON'); }
     },
 
     // ── Detection ──
-    detect(val) { return runDetect(val); },
+    updateDetections(p) { p.detections = runDetect(p.value); },
+
+    // ── Generators ──
+    genUUID(p) {
+      p.value = uuidv4();
+      this.updateDetections(p);
+      this.recompute(p);
+      this.showToast('已生成 UUID v4 ✓');
+    },
+    genTimestamp(p) {
+      p.value = String(Math.floor(Date.now() / 1000));
+      this.updateDetections(p);
+      this.recompute(p);
+      this.showToast('已填入当前时间戳 ✓');
+    },
+    genNow(p) {
+      p.value = new Date().toISOString();
+      this.updateDetections(p);
+      this.recompute(p);
+      this.showToast('已填入当前时间 ✓');
+    },
+
+    // ── Drag & Drop ──
+    onDragEnter(e, p) {
+      p._dragCount = (p._dragCount || 0) + 1;
+      p.dragging = true;
+    },
+    onDragLeave(e, p) {
+      p._dragCount = (p._dragCount || 1) - 1;
+      if (p._dragCount <= 0) { p.dragging = false; p._dragCount = 0; }
+    },
+    onDrop(e, p) {
+      p.dragging = false; p._dragCount = 0;
+      const file = e.dataTransfer.files[0];
+      if (!file) return;
+      if (file.size > 5 * 1024 * 1024) { this.showToast('❌ 文件过大(>5MB)'); return; }
+      const reader = new FileReader();
+      reader.onload = (ev) => {
+        p.value = ev.target.result;
+        p.computedList = []; p.activeOps = {};
+        this.updateDetections(p);
+        this.showToast(`已读取 ${file.name} ✓`);
+      };
+      reader.readAsText(file);
+    },
+
+    // ── Send to new panel ──
+    sendToPanel(value) {
+      const p = this.mkPanel();
+      p.value = value;
+      this.panels.push(p);
+      this.$nextTick(() => this.updateDetections(p));
+      this.showToast('已发送到新面板 ✓');
+    },
 
     // ── Compute operations ──
-    compute(p, op) {
-      // Toggle off if already active
-      if (p.activeOps[op.id]) {
-        p.computedList = p.computedList.filter(c => c.id !== op.id);
-        p.activeOps = { ...p.activeOps, [op.id]: false };
+    compute(panel, op) {
+      // Toggle off
+      if (panel.activeOps[op.id]) {
+        panel.computedList = panel.computedList.filter(c => c.id !== op.id);
+        panel.activeOps = { ...panel.activeOps, [op.id]: false };
+        if (op.id === 'regmatch') delete panel._lastRegex;
         return;
       }
-      const v = p.value.trim();
+      const v = panel.value.trim();
       if (!v) return;
-      let result = '';
+
+      let result;
+      if (op.id === 'regmatch') {
+        const pattern = prompt('请输入正则表达式（不含 / 分隔符）：', panel._lastRegex || '\\d+');
+        if (pattern === null) return;
+        panel._lastRegex = pattern;
+        result = this.runRegex(v, pattern);
+      } else {
+        result = this.runOp(op.id, v);
+      }
+      panel.computedList = [...panel.computedList, { id: op.id, label: op.label, value: result }];
+      panel.activeOps = { ...panel.activeOps, [op.id]: true };
+    },
+
+    recompute(panel) {
+      const v = panel.value.trim();
+      if (!v) { panel.computedList = []; panel.activeOps = {}; return; }
+      const activeIds = Object.keys(panel.activeOps).filter(k => panel.activeOps[k]);
+      if (!activeIds.length) return;
+      panel.computedList = activeIds.map(opId => {
+        const op = this.allOps.find(o => o.id === opId);
+        if (!op) return null;
+        let result;
+        if (opId === 'regmatch') {
+          result = panel._lastRegex ? this.runRegex(v, panel._lastRegex) : '（需要先输入正则）';
+        } else {
+          result = this.runOp(opId, v);
+        }
+        return { id: opId, label: op.label, value: result };
+      }).filter(Boolean);
+    },
+
+    runRegex(v, pattern) {
       try {
-        switch (op.id) {
-          case 'md5':       result = CryptoJS.MD5(v).toString(); break;
-          case 'sha1':      result = CryptoJS.SHA1(v).toString(); break;
-          case 'sha256':    result = CryptoJS.SHA256(v).toString(); break;
-          case 'sha512':    result = CryptoJS.SHA512(v).toString(); break;
-          case 'b64enc':    result = b64Encode(v); break;
-          case 'b64dec': {
-            try { result = b64Decode(v); }
-            catch(e) { result = '❌ 无效的 Base64 字符串'; }
-            break;
-          }
-          case 'urlenc':    result = encodeURIComponent(v); break;
-          case 'urldec': {
-            try { result = decodeURIComponent(v); }
-            catch(e) { result = '❌ 无效的 URL 编码字符串'; }
-            break;
-          }
-          case 'hexenc':
-            result = [...new TextEncoder().encode(v)].map(b => b.toString(16).padStart(2,'0')).join('');
-            break;
+        const re = new RegExp(pattern, 'g');
+        const matches = [...v.matchAll(re)].map(m => m[0]);
+        return matches.length
+          ? `/${pattern}/g → 找到 ${matches.length} 个匹配：\n${matches.join('\n')}`
+          : `/${pattern}/g → 未找到匹配`;
+      } catch(e) { return '❌ 无效正则: ' + e.message; }
+    },
+
+    runOp(opId, v) {
+      try {
+        switch (opId) {
+          case 'md5':       return CryptoJS.MD5(v).toString();
+          case 'sha1':      return CryptoJS.SHA1(v).toString();
+          case 'sha256':    return CryptoJS.SHA256(v).toString();
+          case 'sha512':    return CryptoJS.SHA512(v).toString();
+          case 'b64enc':    return b64Encode(v);
+          case 'b64dec':    try { return b64Decode(v); } catch(e) { return '❌ 无效的 Base64 字符串'; }
+          case 'urlenc':    return encodeURIComponent(v);
+          case 'urldec':    try { return decodeURIComponent(v); } catch(e) { return '❌ 无效的 URL 编码字符串'; }
+          case 'hexenc':    return [...new TextEncoder().encode(v)].map(b => b.toString(16).padStart(2,'0')).join('');
           case 'hexdec': {
             const clean = v.replace(/\s/g,'').replace(/^0x/i,'');
-            try {
-              const bytes = clean.match(/.{1,2}/g).map(b => parseInt(b, 16));
-              result = new TextDecoder().decode(new Uint8Array(bytes));
-            } catch(e) { result = '❌ 无效的 Hex 字符串'; }
-            break;
+            try { return new TextDecoder().decode(new Uint8Array(clean.match(/.{1,2}/g).map(b => parseInt(b, 16)))); }
+            catch(e) { return '❌ 无效的 Hex 字符串'; }
           }
-          case 'upper':     result = v.toUpperCase(); break;
-          case 'lower':     result = v.toLowerCase(); break;
-          case 'reverse':   result = [...v].reverse().join(''); break;
-          case 'escjson':   result = JSON.stringify(v).slice(1,-1); break;
-          case 'unescjson': {
-            try { result = JSON.parse('"' + v + '"'); }
-            catch(e) { result = '❌ 转义解析失败'; }
-            break;
-          }
+          case 'htmlenc':   return v.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+          case 'htmldec': { const el = document.createElement('div'); el.innerHTML = v; return el.textContent; }
+          case 'uniesc':    return [...v].map(c => { const cp = c.codePointAt(0); return cp > 127 ? (cp > 0xFFFF ? `\\u{${cp.toString(16)}}` : `\\u${cp.toString(16).padStart(4,'0')}`) : c; }).join('');
+          case 'uniunesc':  try { return v.replace(/\\u\{([0-9a-fA-F]+)\}/g, (_, h) => String.fromCodePoint(parseInt(h, 16))).replace(/\\u([0-9a-fA-F]{4})/g, (_, h) => String.fromCharCode(parseInt(h, 16))); } catch(e) { return '❌ 无效的 Unicode 转义'; }
+          case 'upper':     return v.toUpperCase();
+          case 'lower':     return v.toLowerCase();
+          case 'reverse':   return [...v].reverse().join('');
+          case 'rot13':     return v.replace(/[a-zA-Z]/g, c => { const b = c >= 'a' ? 97 : 65; return String.fromCharCode(((c.charCodeAt(0) - b + 13) % 26) + b); });
+          case 'camel':     { const w = splitWords(v); return w.map((s, i) => i === 0 ? s : s[0].toUpperCase() + s.slice(1)).join(''); }
+          case 'snake':     return splitWords(v).join('_');
+          case 'kebab':     return splitWords(v).join('-');
+          case 'pascal':    return splitWords(v).map(s => s[0].toUpperCase() + s.slice(1)).join('');
+          case 'sortasc':   return v.split('\n').sort((a, b) => a.localeCompare(b, 'zh-CN')).join('\n');
+          case 'sortdesc':  return v.split('\n').sort((a, b) => b.localeCompare(a, 'zh-CN')).join('\n');
+          case 'dedup':     { const lines = v.split('\n'), u = [...new Set(lines)]; return u.join('\n') + `\n\n(${lines.length} 行 → ${u.length} 行，去除 ${lines.length - u.length} 行重复)`; }
+          case 'escjson':   return JSON.stringify(v).slice(1,-1);
+          case 'unescjson': try { return JSON.parse('"' + v + '"'); } catch(e) { return '❌ 转义解析失败'; }
+          case 'jsonmin':   try { return JSON.stringify(JSON.parse(v)); } catch(e) { return '❌ 非有效 JSON'; }
+          case 'escnl':     return v.replace(/\\/g, '\\\\').replace(/\n/g, '\\n').replace(/\r/g, '\\r').replace(/\t/g, '\\t');
+          case 'unescnl':   return v.replace(/\\n/g, '\n').replace(/\\r/g, '\r').replace(/\\t/g, '\t').replace(/\\\\/g, '\\');
           case 'count': {
             const zh  = (v.match(/[\u4e00-\u9fa5]/g)||[]).length;
             const wds = v.trim().split(/\s+/).filter(Boolean).length;
             const byt = new TextEncoder().encode(v).length;
-            result = `字符数: ${v.length}  |  中文: ${zh}  |  词数: ${wds}  |  字节(UTF-8): ${byt}  |  行数: ${v.split('\n').length}`;
-            break;
+            return `字符数: ${v.length}  |  中文: ${zh}  |  词数: ${wds}  |  字节(UTF-8): ${byt}  |  行数: ${v.split('\n').length}`;
           }
+          default: return '';
         }
-      } catch(e) {
-        result = '❌ 操作失败: ' + e.message;
-      }
-      p.computedList = [...p.computedList, { id: op.id, label: op.label, value: result }];
-      p.activeOps = { ...p.activeOps, [op.id]: true };
+      } catch(e) { return '❌ 操作失败: ' + e.message; }
     },
 
-    // ── Utilities (called from template) ──
+    // ── Utilities (template) ──
     byteLen(s) { return new TextEncoder().encode(s).length; },
     isJson(s) { try { JSON.parse(s); return true; } catch(e) { return false; } },
 
@@ -760,6 +1193,11 @@ createApp({
     ip4Hex(ip) { return '0x'+ip.split('.').map(p => parseInt(p).toString(16).padStart(2,'0').toUpperCase()).join(''); },
     ip4Bin(ip) { return ip.split('.').map(p => parseInt(p).toString(2).padStart(8,'0')).join('.'); },
 
+    macType(mac) {
+      const first = parseInt(mac.replace(/[:-]/g,'').slice(0,2), 16);
+      return (first & 1) ? '多播地址' : ((first & 2) ? '本地管理地址' : '全局唯一地址 (OUI)');
+    },
+
     hex2rgb(hex) {
       let h = hex.replace('#','');
       if (h.length===3||h.length===4) h = h.split('').map(c=>c+c).join('');
@@ -790,10 +1228,51 @@ createApp({
       if (!text) return;
       navigator.clipboard.writeText(text).then(() => this.showToast('已复制到剪贴板 ✓'));
     },
+    copyEl(e) {
+      const text = e.target.textContent.trim();
+      this.copy(text);
+    },
     showToast(msg) {
       this.toast = msg;
       clearTimeout(this._tt);
       this._tt = setTimeout(() => { this.toast = ''; }, 2400);
+    },
+
+    // ── Persistence ──
+    debounceSave() {
+      clearTimeout(this._saveTimer);
+      this._saveTimer = setTimeout(() => this.saveToStorage(), 500);
+    },
+    saveToStorage() {
+      try {
+        const data = this.panels.map(p => ({
+          id: p.id, value: p.value,
+          activeOps: p.activeOps,
+          collapsed: p.collapsed,
+          _lastRegex: p._lastRegex,
+        }));
+        localStorage.setItem('any-tool-panels', JSON.stringify(data));
+      } catch(e) {}
+    },
+    loadFromStorage() {
+      try {
+        const data = JSON.parse(localStorage.getItem('any-tool-panels'));
+        if (data && data.length) {
+          this.panels = data.map(d => ({
+            id: d.id, value: d.value || '',
+            activeOps: d.activeOps || {},
+            computedList: [], detections: [],
+            collapsed: d.collapsed || false,
+            dragging: false,
+            _lastRegex: d._lastRegex,
+          }));
+          this._uid = Math.max(...this.panels.map(p => p.id)) + 1;
+          this.panels.forEach(p => {
+            this.updateDetections(p);
+            this.recompute(p);
+          });
+        }
+      } catch(e) { /* use defaults */ }
     },
   },
 }).mount('#app');
