@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="description" content="一个现代且高颜值的 JSON 深度提取、格式化与编辑工具，专为混合日志和多次转义 JSON 设计。">
-  <title>JSON 深度提取查看器 - Dev Tools</title>
+  <title>JSON 提取查看 - Dev Tools</title>
 
 
   <style>
@@ -198,18 +198,24 @@
       padding-bottom: 0.5rem;
     }
 
+    .main-title-text {
+      display: flex;
+      align-items: baseline;
+      gap: 0.75rem;
+      flex-wrap: wrap;
+    }
+
     .main-title-text h2 {
-      font-size: 1.5rem;
+      font-size: 1.25rem;
       font-weight: 700;
       letter-spacing: -0.025em;
       background: linear-gradient(to right, #06b6d4, #10b981);
       -webkit-background-clip: text;
       -webkit-text-fill-color: transparent;
-      margin-bottom: 0.25rem;
     }
 
     .main-title-text p {
-      font-size: 0.85rem;
+      font-size: 0.8rem;
       color: var(--text-muted);
     }
 
@@ -1001,7 +1007,7 @@
       <!-- Main Title Row -->
       <div class="main-title-row">
         <div class="main-title-text">
-          <h2>JSON 深度提取查看器</h2>
+          <h2>JSON 提取查看</h2>
           <p>从混合文本中提取 JSON，自动解构多次转义内容，支持节点树局部修改与向源合并。</p>
         </div>
         <div class="theme-selector-container" @dblclick.stop>
