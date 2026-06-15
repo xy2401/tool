@@ -1476,7 +1476,7 @@
         const extractJSONTree = (val, path, isStringifiedInParent) => {
           const id = path.join('.');
           const name = path[path.length - 1];
-          const type = Array.isArray(val) ? 'Array' : 'Object';
+          const type = isStringifiedInParent ? 'String(JSON)' : (Array.isArray(val) ? 'Array' : 'Object');
 
           // Add current node
           nodes.value.push({
