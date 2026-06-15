@@ -938,8 +938,13 @@
       javascriptQueryLanguage 
     } from 'https://cdn.jsdelivr.net/npm/vanilla-jsoneditor/standalone.js';
 
-    // Simplified Chinese Translation Dictionary (Svelte-JSONEditor i18n support)
-    const simplifiedChinese = {
+    // Simplified Chinese Translation Dictionary (populated dynamically, falls back to local backup if fetch fails)
+    const simplifiedChinese = {};
+    const menuTranslations = {};
+    const domTranslations = {};
+    const domTooltipTranslations = {};
+
+    const simplifiedChinese_old = {
       landCode: 'zh-CN',
       values: {
         Ok: '确定',
@@ -1104,7 +1109,7 @@
     };
 
     // Custom i18n Translation Logic for JSONEditor
-    const menuTranslations = {
+    const menuTranslations_old = {
       'text': '代码',
       'tree': '树形',
       'table': '表格',
@@ -1121,7 +1126,7 @@
       'Cancel folding': '取消折叠',
     };
 
-    const domTranslations = {
+    const domTranslations_old = {
       // General headings / labels
       'Edit nested content': '编辑嵌套内容',
       'Path': '路径',
@@ -1161,7 +1166,7 @@
       'loading...': '正在加载...',
     };
 
-    const domTooltipTranslations = {
+    const domTooltipTranslations_old = {
       'Toggle visibility of replace options (Ctrl+H)': '切换替换选项的显示状态 (Ctrl+H)',
       'Enter text to search': '输入要搜索的文本',
       'Go to next search result (Enter)': '跳转到下一个搜索结果 (Enter)',
@@ -1753,7 +1758,38 @@
           }
         };
 
-        onMounted(() => {
+        onMounted(async () => {
+          // Load translations dynamically (with local fallback)
+          try {
+            const resLang = await fetch('./data/simplifiedChinese.json');
+            if (resLang.ok) {
+              const data = await resLang.json();
+              Object.assign(simplifiedChinese, data);
+            } else {
+              Object.assign(simplifiedChinese, simplifiedChinese_old);
+            }
+          } catch (e) {
+            Object.assign(simplifiedChinese, simplifiedChinese_old);
+          }
+
+          try {
+            const resTrans = await fetch('./data/menuTranslations.json');
+            if (resTrans.ok) {
+              const data = await resTrans.json();
+              Object.assign(menuTranslations, data.menuTranslations || {});
+              Object.assign(domTranslations, data.domTranslations || {});
+              Object.assign(domTooltipTranslations, data.domTooltipTranslations || {});
+            } else {
+              Object.assign(menuTranslations, menuTranslations_old);
+              Object.assign(domTranslations, domTranslations_old);
+              Object.assign(domTooltipTranslations, domTooltipTranslations_old);
+            }
+          } catch (e) {
+            Object.assign(menuTranslations, menuTranslations_old);
+            Object.assign(domTranslations, domTranslations_old);
+            Object.assign(domTooltipTranslations, domTooltipTranslations_old);
+          }
+
           // Initialize Editors
           const initialJson = {
             "Array": [1, 2, 3],

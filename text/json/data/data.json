@@ -5,6 +5,16 @@
     "path": "./data/data.json"
   },
   {
+    "key": "simplified-chinese",
+    "name": "JSON编辑器汉化包 (原生语言对象)",
+    "path": "./data/simplifiedChinese.json"
+  },
+  {
+    "key": "menu-translations",
+    "name": "界面元素映射表 (兼容补丁词典)",
+    "path": "./data/menuTranslations.json"
+  },
+  {
     "key": "spring-boot",
     "name": "标准微服务日志 (Spring Boot)",
     "path": "./data/spring-boot.log"
