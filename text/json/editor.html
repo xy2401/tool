@@ -931,7 +931,12 @@
   <script src="https://unpkg.com/vue@3.5.13/dist/vue.global.prod.js"></script>
 
   <script type="module">
-    import { JSONEditor } from 'https://cdn.jsdelivr.net/npm/vanilla-jsoneditor/standalone.js';
+    import { 
+      JSONEditor, 
+      jmespathQueryLanguage, 
+      lodashQueryLanguage, 
+      javascriptQueryLanguage 
+    } from 'https://cdn.jsdelivr.net/npm/vanilla-jsoneditor/standalone.js';
 
     // State & Editors (Global scope inside module script)
     let editorLeft = null;
@@ -1315,6 +1320,12 @@
             "String": "Hello World"
           };
 
+          const queryLanguages = [
+            jmespathQueryLanguage,
+            lodashQueryLanguage,
+            javascriptQueryLanguage
+          ];
+
           editorLeft = new JSONEditor({
             target: document.getElementById('editor-left'),
             props: {
@@ -1322,7 +1333,8 @@
               mode: 'text',
               mainMenuBar: true,
               navigationBar: true,
-              statusBar: true
+              statusBar: true,
+              queryLanguages
             }
           });
 
@@ -1333,7 +1345,8 @@
               mode: 'tree',
               mainMenuBar: true,
               navigationBar: true,
-              statusBar: true
+              statusBar: true,
+              queryLanguages
             }
           });
 
