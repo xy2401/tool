@@ -335,14 +335,14 @@
     main.editor-workspace {
       flex: 1;
       display: grid;
-      grid-template-columns: 1fr 120px 1fr;
+      grid-template-columns: 1fr 1fr;
       align-items: stretch;
       gap: 1.5rem;
-      padding: 0.75rem 2rem 2rem;
-      height: calc(100vh - 200px);
-      min-height: 500px;
+      padding: 0 2rem 1.5rem;
+      height: calc(100vh - 275px);
+      min-height: 420px;
     }
-
+ 
     .editor-panel {
       display: flex;
       flex-direction: column;
@@ -350,7 +350,7 @@
       padding: 1.25rem;
       overflow: hidden;
     }
-
+ 
     .panel-header {
       font-size: 0.95rem;
       font-weight: 600;
@@ -359,7 +359,7 @@
       border-bottom: 1px solid var(--panel-border);
       padding-bottom: 0.5rem;
     }
-
+ 
     .editor-container {
       flex: 1;
       min-height: 0;
@@ -367,51 +367,65 @@
       overflow: hidden;
       border: 1px solid var(--panel-border);
     }
-
-    .center-menu {
+ 
+    /* Bottom Actions / Control Bar styling */
+    .action-bar {
       display: flex;
-      flex-direction: column;
-      justify-content: center;
+      justify-content: space-between;
       align-items: center;
+      gap: 2rem;
+      padding: 0.85rem 1.5rem;
+      box-shadow: var(--glass-shadow);
+      transition: all var(--transition-normal);
+    }
+
+    .sync-actions-group {
+      display: flex;
+      gap: 0.75rem;
+      align-items: center;
+    }
+
+    .sync-actions-group .btn {
+      white-space: nowrap;
+      min-height: 38px;
+    }
+
+    .instructions-row {
+      display: flex;
       gap: 1.5rem;
-      padding: 1.25rem;
-      text-align: center;
-      height: 100%;
+      flex-wrap: wrap;
+      align-items: center;
     }
 
-    .center-menu .btn {
-      width: 100%;
-      max-width: 90px;
-      height: 42px;
-      font-size: 1.1rem;
-      font-weight: bold;
-    }
-
-    .instructions-details {
-      margin-top: 2rem;
-      text-align: left;
-      font-size: 0.78rem;
+    .instruction-item {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      font-size: 0.8rem;
       color: var(--text-muted);
-      width: 100%;
-      border-top: 1px dashed var(--panel-border);
-      padding-top: 1rem;
     }
 
-    .instructions-details summary {
-      cursor: pointer;
-      font-weight: 600;
-      color: var(--text-main);
-      margin-bottom: 0.5rem;
-      outline: none;
+    .step-num {
+      display: inline-grid;
+      place-content: center;
+      width: 1.25rem;
+      height: 1.25rem;
+      border-radius: 50%;
+      background: rgba(6, 182, 212, 0.1);
+      color: var(--accent-cyan);
+      font-weight: 700;
+      font-size: 0.75rem;
+      border: 1px solid var(--panel-border-focus);
     }
 
-    .instructions-details ol {
-      padding-left: 1.1rem;
+    .theme-light .step-num {
+      background: rgba(8, 145, 178, 0.08);
+      color: var(--accent-cyan);
     }
 
-    .instructions-details li {
-      margin-bottom: 0.5rem;
-      line-height: 1.5;
+    .step-text {
+      line-height: 1.4;
+      white-space: nowrap;
     }
 
     /* vanilla-jsoneditor Dark Theme Integration overrides */
@@ -770,7 +784,7 @@
     <div 
       class="glass-card input-card" 
       :class="{ 'fullscreen-mode': isRawFullscreen, 'drag-active': isDragging }" 
-      style="margin: 0.5rem 2rem 1rem;"
+      style="margin: 0.5rem 2rem 0.5rem;"
       @dblclick.self="toggleRawFullscreen"
       @dragover.prevent="handleDragOver"
       @dragleave.prevent="handleDragLeave"
@@ -828,6 +842,43 @@
       </div>
     </div>
 
+    <!-- Workspace Actions bar -->
+    <div class="glass-card action-bar" style="margin: 0 2rem 0.75rem;">
+      <div class="sync-actions-group">
+        <button class="btn btn-secondary" @click="copyToRight" title="将左侧代码同步到右侧树形">
+          <span>左侧同步到右侧</span>
+          <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" style="stroke-width: 2px;">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M13 5l7 7-7 7M5 5l7 7-7 7" />
+          </svg>
+        </button>
+        <button class="btn btn-secondary" @click="copyToLeft" title="将右侧树形同步到左侧代码">
+          <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" style="stroke-width: 2px;">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M11 19l-7-7 7-7M19 19l-7-7 7-7" />
+          </svg>
+          <span>右侧同步到左侧</span>
+        </button>
+      </div>
+
+      <div class="instructions-row">
+        <div class="instruction-item">
+          <span class="step-num">1</span>
+          <span class="step-text">上方粘贴日志/文本并提取 JSON</span>
+        </div>
+        <div class="instruction-item">
+          <span class="step-num">2</span>
+          <span class="step-text">左侧编辑 JSON 代码文本</span>
+        </div>
+        <div class="instruction-item">
+          <span class="step-num">3</span>
+          <span class="step-text">右侧树形节点展开与修改</span>
+        </div>
+        <div class="instruction-item">
+          <span class="step-num">4</span>
+          <span class="step-text">点击同步按钮双向互传数据</span>
+        </div>
+      </div>
+    </div>
+
     <!-- Editor Layout workspace -->
     <main class="editor-workspace">
       <div class="glass-card editor-panel">
@@ -835,27 +886,6 @@
         <div id="editor-left" class="editor-container"></div>
       </div>
       
-      <div class="center-menu glass-card">
-        <button class="btn btn-secondary" @click="copyToRight" title="将左侧代码同步到右侧树形">
-          ==&gt;
-        </button>
-        <button class="btn btn-secondary" @click="copyToLeft" title="将右侧树形同步到左侧代码">
-          &lt;==
-        </button>
-        
-        <div class="instructions-details">
-          <details open>
-            <summary>说明说明</summary>
-            <ol>
-              <li>上方框输入包含 JSON 的文本/日志并点击提取。</li>
-              <li>左侧为 JSON 代码文本模式。</li>
-              <li>右侧为 JSON 树形节点模式。</li>
-              <li>可通过中间按钮双向传输同步。</li>
-            </ol>
-          </details>
-        </div>
-      </div>
-
       <div class="glass-card editor-panel">
         <div class="panel-header">树形编辑器 (Right)</div>
         <div id="editor-right" class="editor-container"></div>
