@@ -10,6 +10,7 @@
   
   <style>
     :root {
+      color-scheme: dark;
       --bg-gradient: linear-gradient(135deg, #0b0f19 0%, #111827 50%, #070a13 100%);
       --panel-bg: rgba(17, 24, 39, 0.65);
       --panel-border: rgba(255, 255, 255, 0.08);
@@ -29,6 +30,126 @@
       --glass-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
       --transition-fast: 0.15s ease;
       --transition-normal: 0.25s ease;
+      
+      --text-active: #ffffff;
+      --bg-solid-fallback: #0b0f19;
+      --toast-bg: rgba(17, 24, 39, 0.9);
+      --toast-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.5);
+    }
+
+    .theme-light {
+      color-scheme: light;
+      --bg-gradient: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 50%, #e2e8f0 100%);
+      --panel-bg: rgba(255, 255, 255, 0.7);
+      --panel-border: rgba(0, 0, 0, 0.06);
+      --panel-border-focus: rgba(6, 182, 212, 0.5);
+      --accent-cyan: #0891b2;
+      --accent-cyan-hover: #0e7490;
+      --accent-cyan-glow: rgba(8, 145, 178, 0.15);
+      --accent-emerald: #059669;
+      --accent-emerald-hover: #047857;
+      --accent-emerald-glow: rgba(5, 150, 105, 0.15);
+      --accent-rose: #e11d48;
+      --text-main: #1e293b;
+      --text-muted: #64748b;
+      --text-dark: #ffffff;
+      --glass-shadow: 0 8px 32px 0 rgba(148, 163, 184, 0.12);
+      
+      --text-active: #0f172a;
+      --bg-solid-fallback: #f8fafc;
+      --toast-bg: rgba(255, 255, 255, 0.95);
+      --toast-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
+    }
+
+    /* Light Theme Element Customizations */
+    .theme-light ::-webkit-scrollbar-track {
+      background: rgba(0, 0, 0, 0.02);
+    }
+    .theme-light ::-webkit-scrollbar-thumb {
+      background: rgba(0, 0, 0, 0.12);
+    }
+    .theme-light ::-webkit-scrollbar-thumb:hover {
+      background: rgba(0, 0, 0, 0.2);
+    }
+    
+    .theme-light .input-field {
+      background: rgba(255, 255, 255, 0.8);
+      border-color: rgba(0, 0, 0, 0.1);
+      color: #1e293b;
+    }
+
+    .theme-light .input-field:focus {
+      background: rgba(255, 255, 255, 0.95);
+      border-color: var(--panel-border-focus);
+    }
+    
+    .theme-light select.input-field {
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%2364748b'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M19 9l-7 7-7-7'/%3E%3C/svg%3E");
+    }
+
+    .theme-light .input-field option {
+      background-color: #ffffff;
+      color: #1e293b;
+    }
+
+    .theme-light textarea.editor-textarea {
+      background: rgba(255, 255, 255, 0.6);
+      border-color: rgba(0, 0, 0, 0.1);
+      color: #1e293b;
+    }
+    .theme-light textarea.editor-textarea:focus {
+      border-color: var(--panel-border-focus);
+      background: rgba(255, 255, 255, 0.95);
+    }
+
+    .theme-light .textarea-action-btn {
+      background: rgba(255, 255, 255, 0.8);
+      border-color: rgba(0, 0, 0, 0.1);
+      color: var(--text-muted);
+    }
+    .theme-light .textarea-action-btn:hover {
+      color: var(--text-main);
+      background: rgba(255, 255, 255, 0.95);
+      border-color: rgba(0, 0, 0, 0.2);
+    }
+
+    .theme-light .node-item.active {
+      background: linear-gradient(135deg, rgba(6, 182, 212, 0.12) 0%, rgba(16, 185, 129, 0.08) 100%);
+      border-color: rgba(6, 182, 212, 0.2);
+      color: #0f172a;
+    }
+    .theme-light .node-item:hover {
+      background: rgba(0, 0, 0, 0.03);
+      border-color: rgba(0, 0, 0, 0.03);
+    }
+    .theme-light .node-badge {
+      background: rgba(0, 0, 0, 0.05);
+      color: var(--text-muted);
+    }
+    .theme-light .node-item.active .node-badge {
+      background: rgba(6, 182, 212, 0.15);
+      color: #0891b2;
+    }
+    .theme-light .property-item:hover {
+      color: var(--text-main);
+      background: rgba(0, 0, 0, 0.02);
+    }
+    .theme-light .empty-state {
+      background: rgba(0, 0, 0, 0.01);
+      border-color: rgba(0, 0, 0, 0.08);
+    }
+    .theme-light .btn-secondary {
+      background: rgba(0, 0, 0, 0.03);
+      border-color: rgba(0, 0, 0, 0.08);
+      color: #1e293b;
+    }
+    .theme-light .btn-secondary:hover {
+      background: rgba(0, 0, 0, 0.06);
+      border-color: rgba(0, 0, 0, 0.15);
+    }
+
+    .theme-light .slider {
+      background-color: rgba(0, 0, 0, 0.05);
     }
 
     * {
@@ -229,7 +350,7 @@
     .node-item.active {
       background: linear-gradient(135deg, rgba(6, 182, 212, 0.15) 0%, rgba(16, 185, 129, 0.1) 100%);
       border-color: rgba(6, 182, 212, 0.3);
-      color: #fff;
+      color: var(--text-active, #fff);
       font-weight: 500;
       box-shadow: 0 4px 12px rgba(6, 182, 212, 0.05);
     }
@@ -382,6 +503,11 @@
       background-position: right 0.75rem center;
       background-size: 1rem;
       padding-right: 2rem;
+    }
+
+    .input-field option {
+      background-color: #1e293b;
+      color: #f3f4f6;
     }
 
     /* Buttons */
@@ -562,9 +688,9 @@
       max-width: 450px;
       padding: 1rem 1.25rem;
       border-radius: 0.75rem;
-      background: rgba(17, 24, 39, 0.9);
+      background: var(--toast-bg);
       border: 1px solid var(--panel-border);
-      box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.5);
+      box-shadow: var(--toast-shadow);
       color: var(--text-main);
       font-size: 0.875rem;
       backdrop-filter: blur(12px);
@@ -750,7 +876,7 @@
       z-index: 2000 !important;
       border-radius: 0 !important;
       padding: 1.5rem !important;
-      background: #0b0f19 !important; /* solid fallback */
+      background: var(--bg-solid-fallback) !important; /* solid fallback */
       background: var(--bg-gradient) !important;
       display: flex !important;
       flex-direction: column !important;
@@ -859,6 +985,13 @@
         <div class="main-title-text">
           <h2>JSON 深度提取查看器</h2>
           <p>从混合文本中提取 JSON，自动解构多次转义内容，支持节点树局部修改与向源合并。</p>
+        </div>
+        <div class="theme-selector-container" @dblclick.stop>
+          <select class="input-field input-sm" v-model="themePreference" @change="applyThemePreference" style="width: 110px;">
+            <option value="system">🌓 跟随系统</option>
+            <option value="light">☀️ 浅色模式</option>
+            <option value="dark">🌙 深色模式</option>
+          </select>
         </div>
       </div>
 
@@ -1109,6 +1242,7 @@
         const historyItems = ref([]);
         const loadedDemoText = ref('');
         const isDragging = ref(false);
+        const themePreference = ref('system');
         let toastIdCounter = 0;
         let skipHistoryRecord = false;
         let historyDebounceTimeout = null;
@@ -1240,6 +1374,41 @@
           }
         };
 
+        const applyTheme = () => {
+          let activeTheme = 'dark';
+          if (themePreference.value === 'light') {
+            activeTheme = 'light';
+          } else if (themePreference.value === 'dark') {
+            activeTheme = 'dark';
+          } else {
+            const isSystemDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+            activeTheme = isSystemDark ? 'dark' : 'light';
+          }
+
+          const body = document.body;
+          if (activeTheme === 'light') {
+            body.classList.remove('theme-dark');
+            body.classList.add('theme-light');
+          } else {
+            body.classList.remove('theme-light');
+            body.classList.add('theme-dark');
+          }
+        };
+
+        const applyThemePreference = () => {
+          try {
+            localStorage.setItem('theme_preference', themePreference.value);
+          } catch (e) {}
+          applyTheme();
+        };
+
+        let systemThemeMedia = null;
+        const onSystemThemeChange = () => {
+          if (themePreference.value === 'system') {
+            applyTheme();
+          }
+        };
+
         // Handle Escape key to exit fullscreen
         const handleKeyDown = (e) => {
           if (e.key === 'Escape') {
@@ -1252,11 +1421,35 @@
           loadDemoList();
           loadHistory();
           window.addEventListener('keydown', handleKeyDown);
+
+          // Initialize theme
+          try {
+            const storedTheme = localStorage.getItem('theme_preference');
+            if (storedTheme) {
+              themePreference.value = storedTheme;
+            }
+          } catch (e) {}
+          applyTheme();
+
+          systemThemeMedia = window.matchMedia('(prefers-color-scheme: dark)');
+          if (systemThemeMedia.addEventListener) {
+            systemThemeMedia.addEventListener('change', onSystemThemeChange);
+          } else if (systemThemeMedia.addListener) {
+            systemThemeMedia.addListener(onSystemThemeChange);
+          }
         });
 
         onUnmounted(() => {
           window.removeEventListener('keydown', handleKeyDown);
           if (historyDebounceTimeout) clearTimeout(historyDebounceTimeout);
+
+          if (systemThemeMedia) {
+            if (systemThemeMedia.removeEventListener) {
+              systemThemeMedia.removeEventListener('change', onSystemThemeChange);
+            } else if (systemThemeMedia.removeListener) {
+              systemThemeMedia.removeListener(onSystemThemeChange);
+            }
+          }
         });
 
         // Computeds
@@ -1892,6 +2085,8 @@
           downloadNodeJSON,
           copyRawInput,
           downloadRawInput,
+          themePreference,
+          applyThemePreference,
           saveNodeChanges,
           handleDataSelect,
           removeToast
