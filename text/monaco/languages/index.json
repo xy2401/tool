@@ -1,0 +1,15 @@
+{
+  "css": "css.css",
+  "go": "go.go",
+  "html": "html.html",
+  "java": "java.java",
+  "javascript": "javascript.js",
+  "json": "json.json",
+  "markdown": "markdown.md",
+  "php": "php.php",
+  "python": "python.py",
+  "sql": "sql.sql",
+  "typescript": "typescript.ts",
+  "xml": "xml.xml",
+  "yaml": "yaml.yaml"
+}
