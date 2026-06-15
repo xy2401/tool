@@ -233,10 +233,12 @@
         if (!text) {
           return {
             language: null,
-            ranking: []
+            ranking: [],
+            details: {}
           };
         }
 
+        const lines = text.split(/\r?\n/);
         const scores = {
           css: 0,
           go: 0,
@@ -252,43 +254,79 @@
           xml: 0,
           yaml: 0
         };
-        const add = (language, points, pattern) => {
-          if (pattern.test(text)) {
-            scores[language] += points;
+        const details = Object.fromEntries(
+          Object.keys(scores).map(language => [language, []])
+        );
+        const record = (language, points, reason, count = 1, unitPoints = points) => {
+          scores[language] += points;
+          details[language].push({
+            points,
+            unitPoints,
+            count,
+            reason
+          });
+        };
+        const addText = (language, points, pattern, reason) => {
+          const flags = Array.from(new Set(
+            `${pattern.flags.replace("y", "")}g`.split("")
+          )).join("");
+          const globalPattern = new RegExp(pattern.source, flags);
+          const count = Array.from(text.matchAll(globalPattern)).length;
+
+          if (count) {
+            record(language, points * count, reason, count, points);
+          }
+        };
+        const addLine = (language, points, pattern, reason) => {
+          const linePattern = new RegExp(
+            pattern.source,
+            pattern.flags.replace(/[gy]/g, "")
+          );
+          const count = lines.reduce(
+            (total, line) => total + (linePattern.test(line) ? 1 : 0),
+            0
+          );
+
+          if (count) {
+            record(language, points * count, reason, count, points);
           }
         };
 
         try {
           JSON.parse(text);
-          scores.json += 100;
+          record("json", 100, "可以被 JSON.parse 完整解析");
         } catch {}
 
         // PHP：文件通常以 <?php 开始，并大量使用 $变量和 echo。
-        add("php", 12, /^<\?php\b/i);
-        add("php", 4, /\$\w+\s*=/);
-        add("php", 3, /\becho\s+["']/);
+        addLine("php", 12, /^\s*<\?php\b/i, "以 <?php 开头");
+        addLine("php", 4, /\$\w+\s*=/, "出现 PHP 变量赋值");
+        addLine("php", 3, /\becho\s+["']/, "出现 echo 输出");
 
         // HTML：完整文档标签权重最高，成对的语义标签和普通标签依次降权。
-        add("html", 14, /^<!doctype\s+html\b/i);
-        add("html", 10, /<html\b[\s>][\s\S]*<\/html>/i);
-        add("html", 7, /<(head|body)\b[\s>][\s\S]*<\/\1>/i);
-        add("html", 5, /<(div|section|main|header|footer|article)\b[\s>][\s\S]*<\/\1>/i);
-        add("html", 3, /<(script|style)\b[\s>][\s\S]*<\/\1>/i);
-        add("html", 2, /<[a-z][\w-]*(?:\s+[^<>]*)?>/i);
+        addLine("html", 14, /^\s*<!doctype\s+html\b/i, "出现 HTML doctype");
+        addText("html", 10, /<html\b[\s>][\s\S]*<\/html>/i, "出现完整 html 根标签");
+        addLine("html", 4, /<(head|body)\b[\s>]|<\/(head|body)>/i, "出现 head/body 标签");
+        addLine("html", 3, /<(div|section|main|header|footer|article)\b[\s>]|<\/(div|section|main|header|footer|article)>/i, "出现 HTML 语义标签");
+        addLine("html", 3, /<(script|style)\b[\s>]|<\/(script|style)>/i, "出现 script/style 标签");
+        addLine("html", 2, /<[a-z][\w-]*(?:\s+[^<>]*)?>/i, "出现普通 HTML 标签");
 
         // XML：XML 声明是强特征；完整根节点和闭合标签作为辅助特征。
-        add("xml", 12, /^<\?xml\b/i);
-        add("xml", 7, /^<[\w:-]+(?:\s+[\w:-]+="[^"]*")*\s*>[\s\S]*<\/[\w:-]+>\s*$/i);
-        add("xml", 2, /<\/[\w:-]+>/);
+        addLine("xml", 12, /^\s*<\?xml\b/i, "以 XML 声明开头");
+        addText("xml", 7, /^<[\w:-]+(?:\s+[\w:-]+="[^"]*")*\s*>[\s\S]*<\/[\w:-]+>\s*$/i, "整体是完整 XML 根节点");
+        addLine("xml", 2, /<\/[\w:-]+>/, "出现 XML/HTML 闭合标签");
 
         // Markdown：代码围栏和井号标题都是强特征。
         // ```html 里的 html 表示内嵌代码，不表示整篇文档是 HTML。
-        const fencedLanguages = Array.from(
-          text.matchAll(/(^|\n)\s*```([a-zA-Z0-9_+-]*)[^\n]*$/g),
-          match => match[2].toLowerCase()
-        );
+        const fencedLanguages = lines
+          .map(line => line.match(/^\s*```([a-zA-Z0-9_+-]*)/))
+          .filter(Boolean)
+          .map(match => match[1].toLowerCase());
         if (fencedLanguages.length) {
-          scores.markdown += 10 + Math.min((fencedLanguages.length - 1) * 2, 6);
+          record(
+            "markdown",
+            10 + Math.min((fencedLanguages.length - 1) * 2, 6),
+            `出现 ${fencedLanguages.length} 个 Markdown 代码围栏`
+          );
 
           const fencedLanguageMap = {
             bash: "shell",
@@ -315,85 +353,82 @@
           fencedLanguages.forEach(label => {
             const embeddedLanguage = fencedLanguageMap[label];
             if (embeddedLanguage && embeddedLanguage !== "markdown" && scores[embeddedLanguage] !== undefined) {
-              scores[embeddedLanguage] -= 8;
+              record(
+                embeddedLanguage,
+                -8,
+                `代码围栏标记为 ${label}，它是内嵌代码而非外层文档`
+              );
             }
           });
         }
 
         // 井号后带空格的标题行是强特征，多级标题越多可信度越高。
-        add("markdown", 8, /(^|\n)\s{0,3}#{1,6}\s+\S/);
-        const markdownHeadingCount = (
-          text.match(/(^|\n)\s{0,3}#{1,6}\s+\S/g) || []
-        ).length;
-        scores.markdown += Math.min(
-          Math.max(markdownHeadingCount - 1, 0) * 2,
-          6
-        );
+        addLine("markdown", 8, /^\s{0,3}#{1,6}\s+\S/, "出现井号 Markdown 标题");
         // 其余结构用于继续叠加判断：链接、引用、列表、粗体和表格。
-        add("markdown", 3, /\[[^\]]+\]\([^)]+\)/);
-        add("markdown", 2, /(^|\n)\s*>\s+\S/);
-        add("markdown", 2, /(^|\n)\s*[-*+]\s+\S/);
-        add("markdown", 2, /(^|\n)\s*\d+\.\s+\S/);
-        add("markdown", 2, /(^|[^*])\*\*[^*\n]+\*\*/);
-        add("markdown", 2, /(^|\n)\s*\|.+\|\s*$/);
+        addLine("markdown", 3, /\[[^\]]+\]\([^)]+\)/, "出现 Markdown 链接");
+        addLine("markdown", 2, /^\s*>\s+\S/, "出现 Markdown 引用");
+        addLine("markdown", 2, /^\s*[-*+]\s+\S/, "出现无序列表");
+        addLine("markdown", 2, /^\s*\d+\.\s+\S/, "出现有序列表");
+        addLine("markdown", 2, /\*\*[^*]+\*\*/, "出现粗体标记");
+        addLine("markdown", 2, /^\s*\|.+\|\s*$/, "出现 Markdown 表格行");
         // 出现完整 HTML 文档时降低 Markdown 得分，避免被正文中的 # 或列表误导。
-        add("markdown", -4, /^<!doctype\s+html\b|<html\b[\s>]/i);
+        addLine("markdown", -4, /^\s*(?:<!doctype\s+html\b|<html\b[\s>])/i, "出现完整 HTML 文档特征");
         // 同时出现标题和另一种 Markdown 结构时，说明它更像一篇 Markdown 文档。
         if (
-          /(^|\n)\s{0,3}#{1,6}\s+\S/.test(text) &&
-          (
-            /(^|\n)\s*[-*+]\s+\S/.test(text) ||
-            /\[[^\]]+\]\([^)]+\)/.test(text) ||
-            /(^|[^*])\*\*[^*\n]+\*\*/.test(text) ||
-            /(^|\n)\s*```[\w-]*\s*$/.test(text)
+          lines.some(line => /^\s{0,3}#{1,6}\s+\S/.test(line)) &&
+          lines.some(line =>
+            /^\s*[-*+]\s+\S/.test(line) ||
+            /\[[^\]]+\]\([^)]+\)/.test(line) ||
+            /\*\*[^*]+\*\*/.test(line) ||
+            /^\s*```/.test(line)
           )
         ) {
-          scores.markdown += 4;
+          record("markdown", 4, "同时出现标题和其他 Markdown 结构");
         }
 
         // SQL：语句开头与 FROM、WHERE、JOIN 等子句组合出现时可信度较高。
-        add("sql", 6, /(^|\n)\s*(SELECT|INSERT\s+INTO|UPDATE|DELETE\s+FROM|CREATE\s+TABLE|ALTER\s+TABLE)\b/i);
-        add("sql", 3, /\b(FROM|VALUES|SET|TABLE|WHERE|JOIN|GROUP\s+BY|ORDER\s+BY)\b/i);
-        add("sql", 2, /;\s*$/);
+        addLine("sql", 6, /^\s*(SELECT|INSERT\s+INTO|UPDATE|DELETE\s+FROM|CREATE\s+TABLE|ALTER\s+TABLE)\b/i, "出现 SQL 主语句");
+        addLine("sql", 3, /\b(FROM|VALUES|SET|TABLE|WHERE|JOIN|GROUP\s+BY|ORDER\s+BY)\b/i, "出现 SQL 子句");
+        addLine("sql", 2, /;\s*$/, "以分号结束");
 
         // Go：package、func 和 fmt 输出调用是常见且较独特的语法。
-        add("go", 8, /(^|\n)\s*package\s+\w+/);
-        add("go", 5, /(^|\n)\s*func\s+\w+\s*\(/);
-        add("go", 3, /\bfmt\.(Print|Printf|Println)\s*\(/);
+        addLine("go", 8, /^\s*package\s+\w+/, "出现 Go package 声明");
+        addLine("go", 5, /^\s*func\s+\w+\s*\(/, "出现 Go func 函数");
+        addLine("go", 3, /\bfmt\.(Print|Printf|Println)\s*\(/, "出现 fmt 输出调用");
 
         // Java：访问修饰符、main 方法和 System.out.println 是主要特征。
-        add("java", 7, /\b(public|private|protected)\s+(class|interface|static|void)\b/);
-        add("java", 5, /\bSystem\.out\.println\s*\(/);
-        add("java", 3, /\bpublic\s+static\s+void\s+main\s*\(/);
+        addLine("java", 7, /\b(public|private|protected)\s+(class|interface|static|void)\b/, "出现 Java 访问修饰符和类型声明");
+        addLine("java", 5, /\bSystem\.out\.println\s*\(/, "出现 System.out.println");
+        addLine("java", 3, /\bpublic\s+static\s+void\s+main\s*\(/, "出现 Java main 方法");
 
         // Python：以冒号结尾的 def/class、导入语句、print 和缩进关键字用于判断。
-        add("python", 6, /(^|\n)\s*(def|class)\s+\w+.*:\s*$/);
-        add("python", 4, /(^|\n)\s*(from\s+\w+\s+import|import\s+\w+)/);
-        add("python", 3, /(^|\n)\s*print\s*\(/);
-        add("python", 2, /(^|\n)\s+(return|yield|pass)\b/);
+        addLine("python", 6, /^\s*(def|class)\s+\w+.*:\s*$/, "出现 Python def/class 和行尾冒号");
+        addLine("python", 4, /^\s*(from\s+\w+\s+import|import\s+\w+)/, "出现 Python import");
+        addLine("python", 3, /^\s*print\s*\(/, "出现 Python print");
+        addLine("python", 2, /^\s+(return|yield|pass)\b/, "出现 Python 缩进语句");
 
         // TypeScript：类型声明和类型标注用于区别普通 JavaScript。
-        add("typescript", 6, /(^|\n)\s*(interface|type|enum)\s+\w+/);
-        add("typescript", 5, /:\s*(string|number|boolean|unknown|never|void)(?:\[\])?\b/);
-        add("typescript", 3, /\b(import|export)\s+type\b/);
+        addLine("typescript", 6, /^\s*(interface|type|enum)\s+\w+/, "出现 TypeScript 类型声明");
+        addLine("typescript", 5, /:\s*(string|number|boolean|unknown|never|void)(?:\[\])?\b/, "出现 TypeScript 类型标注");
+        addLine("typescript", 3, /\b(import|export)\s+type\b/, "出现类型导入或导出");
 
         // CSS：选择器块、属性声明和 @media 等 at-rule 共同构成主要特征。
-        add("css", 5, /(^|\n)\s*[.#]?[a-zA-Z][\w-]*(?:\s+[.#]?[\w-]+)*\s*\{/);
-        add("css", 4, /[\w-]+\s*:\s*[^;{}]+;/);
-        add("css", 3, /(^|\n)\s*@(?:media|supports|keyframes|import)\b/);
+        addLine("css", 5, /^\s*[.#]?[a-zA-Z][\w-]*(?:\s+[.#]?[\w-]+)*\s*\{/, "出现 CSS 选择器块");
+        addLine("css", 4, /[\w-]+\s*:\s*[^;{}]+;/, "出现 CSS 属性声明");
+        addLine("css", 3, /^\s*@(?:media|supports|keyframes|import)\b/, "出现 CSS at-rule");
 
         // YAML：键值、数组项和缩进键用于判断；出现分号或花括号时主动扣分。
-        add("yaml", 4, /^[\w.-]+\s*:\s*(?:\S.*)?$/m);
-        add("yaml", 3, /(^|\n)\s+-\s+[\w"']/);
-        add("yaml", 2, /^\s{2,}[\w.-]+\s*:/m);
-        add("yaml", -5, /[;{}]/);
+        addLine("yaml", 4, /^[\w.-]+\s*:\s*(?:\S.*)?$/, "出现 YAML 顶层键值");
+        addLine("yaml", 3, /^\s+-\s+[\w"']/, "出现 YAML 数组项");
+        addLine("yaml", 2, /^\s{2,}[\w.-]+\s*:/, "出现 YAML 缩进键值");
+        addLine("yaml", -5, /[;{}]/, "出现分号或花括号，不像 YAML");
 
         // JavaScript：声明、console、箭头函数和模块语法加分；类型标注更偏向 TypeScript。
-        add("javascript", 4, /\b(function|const|let|var|class|async)\b/);
-        add("javascript", 4, /\bconsole\.(log|error|warn)\s*\(/);
-        add("javascript", 3, /=>/);
-        add("javascript", 2, /\b(import|export)\b/);
-        add("javascript", -3, /:\s*(string|number|boolean|unknown|never|void)(?:\[\])?\b/);
+        addLine("javascript", 4, /\b(function|const|let|var|class|async)\b/, "出现 JavaScript 声明关键字");
+        addLine("javascript", 4, /\bconsole\.(log|error|warn)\s*\(/, "出现 console 调用");
+        addLine("javascript", 3, /=>/, "出现箭头函数");
+        addLine("javascript", 2, /\b(import|export)\b/, "出现模块导入或导出");
+        addLine("javascript", -3, /:\s*(string|number|boolean|unknown|never|void)(?:\[\])?\b/, "出现类型标注，更像 TypeScript");
 
         const ranking = Object.entries(scores)
           .sort((left, right) => right[1] - left[1]);
@@ -408,7 +443,8 @@
 
         return {
           language,
-          ranking
+          ranking,
+          details
         };
       }
 
@@ -431,7 +467,48 @@
         autoSelect.disabled = result.ranking.length === 0;
       }
 
+      function logLanguageScore(result, language) {
+        const total = result.ranking.find(item => item[0] === language)?.[1] || 0;
+        const rows = (result.details[language] || []).map(item => ({
+          语言: language,
+          单次权重: item.unitPoints > 0 ? `+${item.unitPoints}` : item.unitPoints,
+          命中次数: item.count,
+          累计分数: item.points > 0 ? `+${item.points}` : item.points,
+          原因: item.reason
+        }));
+
+        console.groupCollapsed(`[语法识别] ${language} 总分：${total}`);
+        if (rows.length) {
+          console.table(rows);
+        } else {
+          console.log("没有命中任何评分规则。");
+        }
+        console.groupEnd();
+      }
+
+      function logDetection(result) {
+        console.groupCollapsed(
+          `[语法识别] 自动结果：${result.language || "未确定"}`
+        );
+        console.table(
+          result.ranking.map(([language, score]) => ({
+            语言: language,
+            总分: score
+          }))
+        );
+        console.groupEnd();
+
+        if (result.language) {
+          logLanguageScore(result, result.language);
+        }
+      }
+
       const initialValue = await loadSample("javascript");
+      let lastDetectionResult = {
+        language: null,
+        ranking: [],
+        details: {}
+      };
       editorNode.replaceChildren();
 
       const editor = monaco.editor.create(editorNode, {
@@ -488,6 +565,7 @@
           return;
         }
 
+        logLanguageScore(lastDetectionResult, autoSelect.value);
         languageSelect.value = autoSelect.value;
         monaco.editor.setModelLanguage(editor.getModel(), autoSelect.value);
         editor.focus();
@@ -507,7 +585,9 @@
         window.setTimeout(() => {
           const result = detectLanguage(editor.getValue());
           const language = result.language;
+          lastDetectionResult = result;
           renderAutoScores(result);
+          logDetection(result);
 
           if (!language || languageSelect.value === language) {
             return;
