@@ -7,7 +7,7 @@
 ### text
 
 - [文本工具](./text/) - 常用文本编码、摘要和随机内容生成。
-- [Monaco 编辑器](./text/monaco/) - 使用 Monaco Editor 在线编辑文本和代码。
+- [Monaco 编辑器](./text/monaco/) - 使用 Monaco Editor（VS Code 的核心编辑器）在线编辑文本和代码。
 - [JSON 查看](./text/json/) - 从日志或不规则文本中深度提取 JSON，支持转义解构与局部回填。
 
 ### data
@@ -37,8 +37,8 @@
 
 #### [Monaco 编辑器](./text/monaco/)
 
-使用 Monaco Editor `0.55.1` 提供在线文本和代码编辑能力，支持语言切换、
-深浅主题、自动布局和文档格式化。
+Monaco Editor 是 VS Code 的核心编辑器。此页面使用 `0.55.1` 版本提供在线文本
+和代码编辑能力，支持语言切换、深浅主题、自动布局和文档格式化。
 
 #### [JSON 查看](./text/json/)
 
