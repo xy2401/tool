@@ -2,7 +2,7 @@
 
 一个面向所有人的在线工具集合，无需安装，打开网页即可使用。
 
-## 功能列表
+## 功能导航
 
 ### text
 
@@ -23,6 +23,54 @@
 - [Monaco Editor](./human/monaco.html) - 在线体验多语言代码编辑器。
 - [Monaco Diff](./human/monaco-diff.html) - 并排或行内比较两段代码。
 - [Monaco Playground](./human/monaco-playground.html) - 编辑并运行 JavaScript、HTML 和 CSS。
+
+## 功能列表
+
+### text
+
+#### [文本工具](./text/)
+
+集中放置界面和操作方式相近的文本处理功能。计划包含 Base64、URL
+编解码、哈希摘要、UUID、密码和随机字符串等常用操作。
+
+### data
+
+#### [JSON 工具](./data/json.html)
+
+用于格式化、压缩和校验 JSON 数据。该页面为结构化数据工具预留独立的
+操作空间，目前仍处于页面骨架阶段。
+
+### time
+
+#### [时间戳工具](./time/)
+
+用于 Unix 时间戳与日期时间之间的转换，后续可支持秒、毫秒、时区和常用
+日期格式。
+
+### human
+
+#### [JSON 查看](./human/json.html)
+
+从混合文本中提取 JSON，对内容进行格式化，并按节点查看或修改数据。这是
+保存在 `human` 目录中的人工手写页面。
+
+#### [JSON Editor](./human/jsoneditor.html)
+
+基于 JSONEditor 提供可视化 JSON 查看和编辑能力，适合处理层级较深的对象
+与数组。
+
+#### [Monaco Editor](./human/monaco.html)
+
+基于 Monaco Editor 的多语言在线代码编辑页面，可以切换语言和编辑器主题。
+
+#### [Monaco Diff](./human/monaco-diff.html)
+
+使用 Monaco Diff Editor 比较两段代码，支持并排差异和行内差异显示。
+
+#### [Monaco Playground](./human/monaco-playground.html)
+
+提供 JavaScript、HTML 和 CSS 三个编辑区域，可以加载示例并直接运行查看
+结果。
 
 ## 项目原则
 
