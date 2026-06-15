@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <title>Monaco Editor Playground</title>
+    <link data-inline="yes-please" href="../lib/monaco-editor-website/./lib/bootstrap-cosmo.css" rel="stylesheet" />
+	<link data-inline="yes-please" href="../lib/monaco-editor-website/./lib/bootstrap-responsive.min.css" rel="stylesheet" />
+	<link data-inline="yes-please" href="../lib/monaco-editor-website/./all.css" rel="stylesheet" type="text/css" />
+	<link data-inline="yes-please" href="../lib/monaco-editor-website/./playground/spinner.css" rel="stylesheet" />
+	<link data-inline="yes-please" href="../lib/monaco-editor-website/./playground/playground.css" rel="stylesheet" />
+
+	<link data-name="vs/editor/editor.main" rel="stylesheet" href="../lib/monaco-editor-0.18.1/dev/vs/editor/editor.main.css">
+     
+</head>
+
+<body class="playground-page">
+  
+    <div id="loading">
+        <div class="spinner">
+            <div class="rect1"></div>
+            <div class="rect2"></div>
+            <div class="rect3"></div>
+            <div class="rect4"></div>
+            <div class="rect5"></div>
+        </div>
+    </div>
+
+    <section id="playground">
+    </section>
+
+    <!-- OR ANY OTHER AMD LOADER HERE INSTEAD OF loader.js -->
+    <script src="../lib/monaco-editor-0.18.1/min/vs/loader.js"></script>
+
+    <script data-inline="yes-please" src="../lib/monaco-editor-website/./playground/new-samples/all.js"></script>
+    <script data-inline="yes-please" src="monaco-playground.js"></script>
+
+    <script>
+        require.config({ paths: { 'vs': '../lib/monaco-editor-0.18.1/min/vs' } });
+ 
+
+    </script>
+
+
+</body>
+
+</html>
