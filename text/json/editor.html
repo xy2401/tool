@@ -338,9 +338,9 @@
       grid-template-columns: 1fr 1fr;
       align-items: stretch;
       gap: 1.5rem;
-      padding: 0 2rem 1.5rem;
-      height: calc(100vh - 275px);
-      min-height: 420px;
+      padding: 0.75rem 2rem 2.5rem;
+      height: calc(100vh - 225px);
+      min-height: 480px;
     }
  
     .editor-panel {
@@ -358,6 +358,50 @@
       margin-bottom: 0.75rem;
       border-bottom: 1px solid var(--panel-border);
       padding-bottom: 0.5rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      min-height: 36px;
+    }
+
+    .panel-header-btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.35rem;
+      padding: 0.25rem 0.65rem;
+      height: 26px;
+      font-size: 0.75rem;
+      font-weight: 600;
+      border-radius: 0.35rem;
+      cursor: pointer;
+      transition: all var(--transition-fast);
+      background: rgba(6, 182, 212, 0.1);
+      border: 1px solid rgba(6, 182, 212, 0.2);
+      color: var(--accent-cyan) !important;
+      outline: none;
+      user-select: none;
+    }
+
+    .panel-header-btn:hover {
+      background: var(--accent-cyan);
+      color: var(--text-dark) !important;
+      box-shadow: 0 0 8px var(--accent-cyan-glow);
+    }
+
+    .panel-header-btn:active {
+      transform: translateY(1px);
+    }
+
+    .theme-light .panel-header-btn {
+      background: rgba(8, 145, 178, 0.08);
+      border-color: rgba(8, 145, 178, 0.15);
+      color: var(--accent-cyan) !important;
+    }
+
+    .theme-light .panel-header-btn:hover {
+      background: var(--accent-cyan);
+      color: #ffffff !important;
     }
  
     .editor-container {
@@ -368,26 +412,15 @@
       border: 1px solid var(--panel-border);
     }
  
-    /* Bottom Actions / Control Bar styling */
-    .action-bar {
+    /* Instructions Bar styling */
+    .instructions-bar {
       display: flex;
-      justify-content: space-between;
+      justify-content: center;
       align-items: center;
-      gap: 2rem;
-      padding: 0.85rem 1.5rem;
-      box-shadow: var(--glass-shadow);
-      transition: all var(--transition-normal);
-    }
-
-    .sync-actions-group {
-      display: flex;
-      gap: 0.75rem;
-      align-items: center;
-    }
-
-    .sync-actions-group .btn {
-      white-space: nowrap;
-      min-height: 38px;
+      gap: 1.5rem;
+      padding: 0.25rem 2rem;
+      margin: 0.25rem 2rem 0.5rem;
+      border-radius: 0.5rem;
     }
 
     .instructions-row {
@@ -842,23 +875,8 @@
       </div>
     </div>
 
-    <!-- Workspace Actions bar -->
-    <div class="glass-card action-bar" style="margin: 0 2rem 0.75rem;">
-      <div class="sync-actions-group">
-        <button class="btn btn-secondary" @click="copyToRight" title="将左侧代码同步到右侧树形">
-          <span>左侧同步到右侧</span>
-          <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" style="stroke-width: 2px;">
-            <path stroke-linecap="round" stroke-linejoin="round" d="M13 5l7 7-7 7M5 5l7 7-7 7" />
-          </svg>
-        </button>
-        <button class="btn btn-secondary" @click="copyToLeft" title="将右侧树形同步到左侧代码">
-          <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" style="stroke-width: 2px;">
-            <path stroke-linecap="round" stroke-linejoin="round" d="M11 19l-7-7 7-7M19 19l-7-7 7-7" />
-          </svg>
-          <span>右侧同步到左侧</span>
-        </button>
-      </div>
-
+    <!-- Instructions Bar -->
+    <div class="instructions-bar">
       <div class="instructions-row">
         <div class="instruction-item">
           <span class="step-num">1</span>
@@ -874,20 +892,36 @@
         </div>
         <div class="instruction-item">
           <span class="step-num">4</span>
-          <span class="step-text">点击同步按钮双向互传数据</span>
+          <span class="step-text">点击标题栏同步按钮双向互传数据</span>
         </div>
       </div>
     </div>
-
+ 
     <!-- Editor Layout workspace -->
     <main class="editor-workspace">
       <div class="glass-card editor-panel">
-        <div class="panel-header">代码编辑器 (Left)</div>
+        <div class="panel-header">
+          <span>代码编辑器 (Left)</span>
+          <button class="panel-header-btn" @click="copyToRight" title="将左侧代码同步到右侧树形">
+            <span>同步到右侧</span>
+            <svg width="12" height="12" fill="none" viewBox="0 0 24 24" stroke="currentColor" style="stroke-width: 2.5px;">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M13 5l7 7-7 7M5 5l7 7-7 7" />
+            </svg>
+          </button>
+        </div>
         <div id="editor-left" class="editor-container"></div>
       </div>
       
       <div class="glass-card editor-panel">
-        <div class="panel-header">树形编辑器 (Right)</div>
+        <div class="panel-header">
+          <button class="panel-header-btn" @click="copyToLeft" title="将右侧树形同步到左侧代码">
+            <svg width="12" height="12" fill="none" viewBox="0 0 24 24" stroke="currentColor" style="stroke-width: 2.5px;">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M11 19l-7-7 7-7M19 19l-7-7 7-7" />
+            </svg>
+            <span>同步到左侧</span>
+          </button>
+          <span>树形编辑器 (Right)</span>
+        </div>
         <div id="editor-right" class="editor-container"></div>
       </div>
     </main>
