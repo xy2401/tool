@@ -27,7 +27,7 @@
 
     #app {
       display: grid;
-      grid-template-rows: auto minmax(0, 1fr);
+      grid-template-rows: auto auto minmax(0, 1fr);
     }
 
     .toolbar {
@@ -39,6 +39,24 @@
       padding: 10px 14px;
       border-bottom: 1px solid #30363d;
       background: #161b22;
+    }
+
+    .feature-bar {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      min-height: 44px;
+      padding: 6px 14px;
+      border-bottom: 1px solid #30363d;
+      background: #0d1117;
+    }
+
+    .feature-bar select:disabled {
+      opacity: 0.55;
+    }
+
+    .html-preview-control[hidden] {
+      display: none;
     }
 
     .title {
@@ -112,10 +130,34 @@
       white-space: nowrap;
     }
 
+    #workspace {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr);
+      min-width: 0;
+      min-height: 0;
+    }
+
+    #workspace.is-previewing {
+      grid-template-columns: minmax(0, 1fr) minmax(320px, 1fr);
+    }
+
     #editor {
       position: relative;
       min-width: 0;
       min-height: 0;
+    }
+
+    #html-preview {
+      display: none;
+      width: 100%;
+      height: 100%;
+      border: 0;
+      border-left: 1px solid #30363d;
+      background: #fff;
+    }
+
+    #workspace.is-previewing #html-preview {
+      display: block;
     }
 
     #editor.is-dragging::after {
@@ -152,6 +194,16 @@
       select {
         flex: 1;
         min-width: 0;
+      }
+
+      #workspace.is-previewing {
+        grid-template-columns: minmax(0, 1fr);
+        grid-template-rows: minmax(240px, 1fr) minmax(240px, 1fr);
+      }
+
+      #html-preview {
+        border-top: 1px solid #30363d;
+        border-left: 0;
       }
     }
   </style>
@@ -202,11 +254,38 @@
         <input id="minimap" type="checkbox">
         小地图
       </label>
-
     </header>
 
-    <main id="editor">
-      <p class="status">正在加载 Monaco Editor...</p>
+    <div class="feature-bar" aria-label="功能区域">
+      <label class="checkbox-label">
+        <input id="diff-enabled" type="checkbox">
+        文本对比
+      </label>
+
+      <label>
+        对比模式
+        <select id="diff-mode" disabled>
+          <option value="side-by-side">并排</option>
+          <option value="inline">行内</option>
+        </select>
+      </label>
+
+      <label class="checkbox-label html-preview-control" hidden>
+        <input id="html-preview-enabled" type="checkbox">
+        HTML 预览
+      </label>
+    </div>
+
+    <main id="workspace">
+      <div id="editor">
+        <p class="status">正在加载 Monaco Editor...</p>
+      </div>
+      <iframe
+        id="html-preview"
+        title="HTML 预览"
+        sandbox="allow-scripts"
+        referrerpolicy="no-referrer"
+      ></iframe>
     </main>
   </div>
 
@@ -247,12 +326,22 @@
     });
 
     require(["vs/editor/editor.main"], async () => {
+      const workspaceNode = document.getElementById("workspace");
       const editorNode = document.getElementById("editor");
+      const htmlPreviewFrame = document.getElementById("html-preview");
       const languageSelect = document.getElementById("language");
       const autoSelect = document.getElementById("auto");
       const demoSelect = document.getElementById("demo");
       const themeSelect = document.getElementById("theme");
       const minimapInput = document.getElementById("minimap");
+      const diffEnabledInput = document.getElementById("diff-enabled");
+      const diffModeSelect = document.getElementById("diff-mode");
+      const htmlPreviewControl = document.querySelector(
+        ".html-preview-control"
+      );
+      const htmlPreviewInput = document.getElementById(
+        "html-preview-enabled"
+      );
       const openFileButton = document.getElementById("open-file");
       const fileInput = document.getElementById("file-input");
       const fileStatus = document.getElementById("file-status");
@@ -723,10 +812,7 @@
       };
       editorNode.replaceChildren();
 
-      const editor = monaco.editor.create(editorNode, {
-        value: initialValue,
-        language: "javascript",
-        theme: "vs-dark",
+      const editorOptions = {
         automaticLayout: true,
         minimap: {
           enabled: false
@@ -736,7 +822,125 @@
           top: 14
         },
         scrollBeyondLastLine: false
-      });
+      };
+      const primaryModel = monaco.editor.createModel(
+        initialValue,
+        "javascript"
+      );
+      let editor = null;
+      let diffEditor = null;
+      let diffOriginalModel = null;
+      let diffModifiedModel = null;
+      let pasteDisposable = null;
+      let contentChangeDisposable = null;
+      let previewTimer = null;
+
+      const getActiveEditor = () =>
+        diffEditor ? diffEditor.getModifiedEditor() : editor;
+      const getActiveModel = () => getActiveEditor().getModel();
+      const focusEditor = () => getActiveEditor().focus();
+
+      function renderHtmlPreview() {
+        if (!htmlPreviewInput.checked) {
+          return;
+        }
+
+        window.clearTimeout(previewTimer);
+        previewTimer = window.setTimeout(() => {
+          htmlPreviewFrame.srcdoc = getActiveEditor().getValue();
+        }, 120);
+      }
+
+      function bindPasteDetection(codeEditor) {
+        pasteDisposable?.dispose();
+        contentChangeDisposable?.dispose();
+        pasteDisposable = codeEditor.onDidPaste(() => {
+          window.setTimeout(() => {
+            applyDetectedLanguage(codeEditor.getValue());
+          }, 0);
+        });
+        contentChangeDisposable = codeEditor.onDidChangeModelContent(() => {
+          renderHtmlPreview();
+        });
+      }
+
+      function closeHtmlPreview() {
+        htmlPreviewInput.checked = false;
+        workspaceNode.classList.remove("is-previewing");
+        htmlPreviewFrame.srcdoc = "";
+      }
+
+      function syncHtmlPreviewAvailability() {
+        const isHtml = languageSelect.value === "html";
+        htmlPreviewControl.hidden = !isHtml;
+
+        if (!isHtml) {
+          closeHtmlPreview();
+        }
+      }
+
+      function createStandaloneEditor() {
+        editorNode.replaceChildren();
+        editor = monaco.editor.create(editorNode, {
+          ...editorOptions,
+          model: primaryModel,
+          minimap: {
+            enabled: minimapInput.checked
+          },
+          theme: themeSelect.value
+        });
+        bindPasteDetection(editor);
+      }
+
+      function createDiffEditor() {
+        closeHtmlPreview();
+        const language = languageSelect.value || "plaintext";
+        diffOriginalModel = monaco.editor.createModel(
+          primaryModel.getValue(),
+          language
+        );
+        diffModifiedModel = monaco.editor.createModel(
+          primaryModel.getValue(),
+          language
+        );
+        editor?.dispose();
+        editor = null;
+        editorNode.replaceChildren();
+        diffEditor = monaco.editor.createDiffEditor(editorNode, {
+          ...editorOptions,
+          renderSideBySide: diffModeSelect.value === "side-by-side",
+          originalEditable: true,
+          theme: themeSelect.value
+        });
+        diffEditor.setModel({
+          original: diffOriginalModel,
+          modified: diffModifiedModel
+        });
+        diffEditor.getOriginalEditor().updateOptions({
+          minimap: {
+            enabled: minimapInput.checked
+          }
+        });
+        diffEditor.getModifiedEditor().updateOptions({
+          minimap: {
+            enabled: minimapInput.checked
+          }
+        });
+        bindPasteDetection(diffEditor.getModifiedEditor());
+      }
+
+      function closeDiffEditor() {
+        primaryModel.setValue(diffModifiedModel.getValue());
+        diffEditor.dispose();
+        diffEditor = null;
+        diffOriginalModel.dispose();
+        diffOriginalModel = null;
+        diffModifiedModel.dispose();
+        diffModifiedModel = null;
+        createStandaloneEditor();
+      }
+
+      createStandaloneEditor();
 
       const languageDefinitions = monaco.languages.getLanguages();
       const languages = languageDefinitions
@@ -822,7 +1026,12 @@
         }
 
         languageSelect.value = language;
-        monaco.editor.setModelLanguage(editor.getModel(), language);
+        monaco.editor.setModelLanguage(primaryModel, language);
+        monaco.editor.setModelLanguage(getActiveModel(), language);
+        if (diffOriginalModel) {
+          monaco.editor.setModelLanguage(diffOriginalModel, language);
+        }
+        syncHtmlPreviewAvailability();
       }
 
       async function openFile(file) {
@@ -837,12 +1046,13 @@
             throw new Error("不支持二进制文件");
           }
 
-          editor.setValue(value);
-          editor.setPosition({ lineNumber: 1, column: 1 });
+          const activeEditor = getActiveEditor();
+          activeEditor.setValue(value);
+          activeEditor.setPosition({ lineNumber: 1, column: 1 });
           applyDetectedLanguage(value, file.name);
           fileStatus.textContent = file.name;
           fileStatus.title = file.name;
-          editor.focus();
+          focusEditor();
         } catch (error) {
           fileStatus.textContent = error.message || "文件读取失败";
           fileStatus.title = "";
@@ -907,8 +1117,16 @@
       });
 
       languageSelect.addEventListener("change", async () => {
-        monaco.editor.setModelLanguage(editor.getModel(), languageSelect.value);
-        editor.focus();
+        monaco.editor.setModelLanguage(primaryModel, languageSelect.value);
+        monaco.editor.setModelLanguage(getActiveModel(), languageSelect.value);
+        if (diffOriginalModel) {
+          monaco.editor.setModelLanguage(
+            diffOriginalModel,
+            languageSelect.value
+          );
+        }
+        syncHtmlPreviewAvailability();
+        focusEditor();
       });
 
       autoSelect.addEventListener("change", () => {
@@ -918,24 +1136,29 @@
 
         logLanguageScore(lastDetectionResult, autoSelect.value);
         languageSelect.value = autoSelect.value;
-        monaco.editor.setModelLanguage(editor.getModel(), autoSelect.value);
-        editor.focus();
+        monaco.editor.setModelLanguage(primaryModel, autoSelect.value);
+        monaco.editor.setModelLanguage(getActiveModel(), autoSelect.value);
+        if (diffOriginalModel) {
+          monaco.editor.setModelLanguage(diffOriginalModel, autoSelect.value);
+        }
+        syncHtmlPreviewAvailability();
+        focusEditor();
       });
 
       demoSelect.addEventListener("change", async () => {
         const language = demoSelect.value;
         const value = await loadSample(language);
         languageSelect.value = language;
-        monaco.editor.setModelLanguage(editor.getModel(), language);
-        editor.setValue(value);
-        editor.setPosition({ lineNumber: 1, column: 1 });
-        editor.focus();
-      });
-
-      editor.onDidPaste(() => {
-        window.setTimeout(() => {
-          applyDetectedLanguage(editor.getValue());
-        }, 0);
+        monaco.editor.setModelLanguage(primaryModel, language);
+        monaco.editor.setModelLanguage(getActiveModel(), language);
+        if (diffOriginalModel) {
+          monaco.editor.setModelLanguage(diffOriginalModel, language);
+        }
+        const activeEditor = getActiveEditor();
+        activeEditor.setValue(value);
+        activeEditor.setPosition({ lineNumber: 1, column: 1 });
+        syncHtmlPreviewAvailability();
+        focusEditor();
       });
 
       themeSelect.addEventListener("change", () => {
@@ -943,13 +1166,62 @@
       });
 
       minimapInput.addEventListener("change", () => {
-        editor.updateOptions({
-          minimap: {
-            enabled: minimapInput.checked
-          }
+        const minimap = {
+          enabled: minimapInput.checked
+        };
+        getActiveEditor().updateOptions({
+          minimap
         });
-        editor.focus();
+        if (diffEditor) {
+          diffEditor.getOriginalEditor().updateOptions({
+            minimap
+          });
+        }
+        focusEditor();
       });
+
+      diffEnabledInput.addEventListener("change", () => {
+        diffModeSelect.disabled = !diffEnabledInput.checked;
+
+        if (diffEnabledInput.checked) {
+          createDiffEditor();
+        } else {
+          closeDiffEditor();
+        }
+
+        focusEditor();
+      });
+
+      htmlPreviewInput.addEventListener("change", () => {
+        if (htmlPreviewInput.checked) {
+          if (diffEnabledInput.checked) {
+            diffEnabledInput.checked = false;
+            diffModeSelect.disabled = true;
+            closeDiffEditor();
+          }
+
+          workspaceNode.classList.add("is-previewing");
+          renderHtmlPreview();
+        } else {
+          closeHtmlPreview();
+        }
+
+        getActiveEditor().layout();
+        focusEditor();
+      });
+
+      diffModeSelect.addEventListener("change", () => {
+        if (!diffEditor) {
+          return;
+        }
+
+        diffEditor.updateOptions({
+          renderSideBySide: diffModeSelect.value === "side-by-side"
+        });
+        focusEditor();
+      });
+
+      syncHtmlPreviewAvailability();
 
     });
   </script>
