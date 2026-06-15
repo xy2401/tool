@@ -256,6 +256,50 @@
       color: var(--accent-cyan);
     }
 
+    .badge-secondary.badge-active {
+      background: rgba(6, 182, 212, 0.2);
+      color: var(--accent-cyan);
+      border-color: rgba(6, 182, 212, 0.4);
+    }
+
+    .property-item {
+      font-size: 0.82rem;
+      opacity: 0.85;
+      margin-bottom: 0.25rem;
+      cursor: pointer;
+      color: var(--text-muted);
+      border: 1px dashed transparent;
+      display: flex;
+      align-items: center;
+      padding: 0.45rem 0.65rem;
+      border-radius: 0.45rem;
+      user-select: none;
+    }
+
+    .property-item:hover {
+      color: var(--text-main);
+      background: rgba(255, 255, 255, 0.02);
+    }
+
+    .property-checkbox {
+      margin-right: 0.5rem;
+      cursor: pointer;
+      accent-color: var(--accent-cyan);
+      width: 0.85rem;
+      height: 0.85rem;
+    }
+
+    .property-name {
+      font-family: var(--font-mono);
+      font-size: 0.8rem;
+    }
+
+    .property-badge {
+      font-size: 0.65rem;
+      padding: 0.1rem 0.25rem;
+      opacity: 0.7;
+    }
+
     /* Right Main Panel */
     .content-area {
       display: flex;
@@ -581,6 +625,14 @@
       border-color: rgba(6, 182, 212, 0.3);
     }
 
+    .toast-warning .toast-icon {
+      background: rgba(245, 158, 11, 0.2);
+      color: #f59e0b;
+    }
+    .toast-warning {
+      border-color: rgba(245, 158, 11, 0.3);
+    }
+
     .toast-content {
       flex: 1;
     }
@@ -783,6 +835,7 @@
         <div class="toast-icon">
           <span v-if="toast.type === 'success'">✓</span>
           <span v-else-if="toast.type === 'error'">✗</span>
+          <span v-else-if="toast.type === 'warning'">!</span>
           <span v-else>i</span>
         </div>
         <div class="toast-content">
@@ -852,8 +905,18 @@
       <aside class="sidebar glass-card">
         <div class="sidebar-header">
           <span>数据层级</span>
-          <span class="badge-secondary" v-text="`${nodes.length} 节点`"></span>
+          <div style="display: flex; gap: 0.35rem; align-items: center; text-transform: none;">
+            <span 
+              :class="['badge-secondary', { 'badge-active': showPropertiesInTree }]" 
+              style="cursor: pointer; user-select: none;"
+              @click="showPropertiesInTree = !showPropertiesInTree"
+              v-text="showPropertiesInTree ? '显示属性' : '隐藏属性'"
+            ></span>
+            <span class="badge-secondary" v-text="`${nodes.length} 节点`"></span>
+          </div>
         </div>
+        
+
         
         <!-- Empty State for Sidebar -->
         <div v-if="nodes.length === 0" class="empty-state" style="padding: 2rem 1rem; border: none;">
@@ -862,17 +925,47 @@
 
         <!-- Scrollable Tree List -->
         <div v-else class="node-list-container">
-          <div 
-            v-for="node in filteredNodes" 
-            :key="node.id"
-            :class="['node-item', { active: selectedNodeId === node.id }]"
-            @click="selectNode(node.id)"
-            :style="{ paddingLeft: `${Math.max(0.85, node.path.length * 0.6)}rem` }"
-            :title="node.id"
-          >
-            <span class="node-name" v-text="node.name"></span>
-            <span class="node-badge" v-text="node.type"></span>
-          </div>
+          <template v-for="node in filteredNodes" :key="node.id">
+            <!-- Node Item -->
+            <div 
+              :class="['node-item', { active: selectedNodeId === node.id }]"
+              @click="node.id === 'main' ? selectNode(node.id) : toggleNodeCheckbox(node.id)"
+              :style="{ paddingLeft: `${Math.max(0.85, node.path.length * 0.6)}rem` }"
+              :title="node.id"
+            >
+              <!-- Node Checkbox (Root node 'main' has no parent, so show checkbox for all sub-nodes) -->
+              <input 
+                v-if="node.id !== 'main'"
+                type="checkbox" 
+                :checked="!excludedNodes.includes(node.id)"
+                @click.stop="toggleNodeCheckbox(node.id)"
+                class="property-checkbox"
+                style="margin-right: 0.4rem;"
+              >
+              <span class="node-name" @click.stop="selectNode(node.id)" v-text="node.name"></span>
+              <span class="node-badge" @click.stop="selectNode(node.id)" v-text="node.type"></span>
+            </div>
+
+            <!-- Primitive Properties of selected node -->
+            <template v-if="selectedNodeId === node.id && showPropertiesInTree && selectedNodeProperties.length > 0">
+              <div 
+                v-for="prop in selectedNodeProperties" 
+                :key="prop.key"
+                class="node-item property-item"
+                :style="{ paddingLeft: `${Math.max(0.85, node.path.length * 0.6) + 1.2}rem` }"
+                @click.stop="toggleProperty(prop.key)"
+              >
+                <input 
+                  type="checkbox" 
+                  :checked="!excludedProperties.includes(prop.key)"
+                  @click.stop="toggleProperty(prop.key)"
+                  class="property-checkbox"
+                >
+                <span class="node-name property-name" v-text="prop.key"></span>
+                <span class="node-badge property-badge" v-text="prop.type"></span>
+              </div>
+            </template>
+          </template>
         </div>
       </aside>
 
@@ -893,14 +986,6 @@
                 <span class="badge-secondary" v-if="selectedNode" v-text="`路径: ${selectedNode.id}`"></span>
               </div>
               <div class="btn-group" v-if="selectedNode" @dblclick.stop>
-                <input 
-                  type="text" 
-                  v-model="replacerText" 
-                  @input="applyFormatting"
-                  class="input-field input-field-mono input-sm" 
-                  placeholder="过滤字段 (空格分隔)"
-                  style="width: 130px;"
-                >
                 <select 
                   v-model="indentSpaces" 
                   @change="applyFormatting"
@@ -948,6 +1033,7 @@
                 class="editor-textarea" 
                 rows="18" 
                 v-model="editText"
+                @input="isTextareaDirty = true"
                 :style="{ whiteSpace: wordWrap ? 'pre-wrap' : 'pre', wordBreak: wordWrap ? 'break-all' : 'normal' }"
                 placeholder="{"
                 id="nodeJSONTextarea"
@@ -985,8 +1071,11 @@
         const parsedRoot = ref(null); // { raw: '', obj: null, startIndex: 0, endIndex: 0 }
         const nodes = ref([]); // Array of nodes: { id, path: [], name, val, isStringifiedInParent, type }
         const selectedNodeId = ref('');
-        const replacerText = ref('');
         const indentSpaces = ref('4');
+        const isTextareaDirty = ref(false);
+        const showPropertiesInTree = ref(true);
+        const excludedProperties = ref([]);
+        const excludedNodes = ref([]);
         const wordWrap = ref(true);
         const editText = ref('');
         const toasts = ref([]);
@@ -1113,9 +1202,6 @@
         watch(indentSpaces, () => {
           applyFormatting();
         });
-        watch(replacerText, () => {
-          applyFormatting();
-        });
 
         // Load self-describing list of demo files
         const loadDemoList = async () => {
@@ -1158,6 +1244,59 @@
         const filteredNodes = computed(() => {
           return nodes.value; // No complex search filter specified, show all nodes
         });
+
+
+
+        const selectedNodeProperties = computed(() => {
+          if (!selectedNode.value || !selectedNode.value.val || typeof selectedNode.value.val !== 'object' || Array.isArray(selectedNode.value.val)) {
+            return [];
+          }
+          const val = selectedNode.value.val;
+          return Object.keys(val).filter(key => {
+            const type = typeof val[key];
+            return val[key] === null || type === 'string' || type === 'number' || type === 'boolean';
+          }).map(key => {
+            const valItem = val[key];
+            let displayType = 'Null';
+            if (valItem !== null) {
+              displayType = typeof valItem;
+              displayType = displayType.charAt(0).toUpperCase() + displayType.slice(1);
+            }
+            return {
+              key,
+              type: displayType,
+              path: [...selectedNode.value.path, key]
+            };
+          });
+        });
+
+        const toggleProperty = (key) => {
+          const index = excludedProperties.value.indexOf(key);
+          if (index === -1) {
+            excludedProperties.value.push(key);
+          } else {
+            excludedProperties.value.splice(index, 1);
+          }
+          applyFormatting();
+        };
+
+        watch(excludedProperties, () => {
+          applyFormatting();
+        }, { deep: true });
+
+        const toggleNodeCheckbox = (nodeId) => {
+          const index = excludedNodes.value.indexOf(nodeId);
+          if (index === -1) {
+            excludedNodes.value.push(nodeId);
+          } else {
+            excludedNodes.value.splice(index, 1);
+          }
+          applyFormatting();
+        };
+
+        watch(excludedNodes, () => {
+          applyFormatting();
+        }, { deep: true });
 
         // Add Toast Notification
         const showToast = (title, message, type = 'info', duration = 3000) => {
@@ -1288,6 +1427,9 @@
             // Set selection
             selectedNodeId.value = 'main';
             editText.value = ''; // Clear current editText to force load from the new root value
+            isTextareaDirty.value = false; // Reset dirty state
+            excludedProperties.value = []; // Reset excluded properties
+            excludedNodes.value = []; // Reset excluded nodes
             applyFormatting();
             if (!silent) {
               showToast('提取成功', '成功从文本中提取出主 JSON 结构，已生成节点树。', 'success');
@@ -1346,10 +1488,74 @@
 
         // Formatter implementation (JSON.stringify with selected parameters)
         const formatJSON = (val) => {
-          let replacer = null;
-          if (replacerText.value.trim().length > 0) {
-            replacer = replacerText.value.split(/\s+/).filter(Boolean);
+          let targetVal = val;
+          const pathMap = new Map();
+          
+          if (Array.isArray(val)) {
+            targetVal = [];
+            val.forEach((item, idx) => {
+              const itemPath = [...selectedNode.value.path, String(idx)];
+              const itemId = itemPath.join('.');
+              if (!excludedNodes.value.includes(itemId)) {
+                targetVal.push(item);
+                if (item && typeof item === 'object') {
+                  pathMap.set(item, itemPath);
+                }
+              }
+            });
           }
+          
+          pathMap.set(targetVal, selectedNode.value.path);
+
+          const replacer = function(key, value) {
+            if (key === '') return value;
+
+            const parentPath = pathMap.get(this);
+            if (!parentPath) return value;
+
+            let currentPath;
+            if (value && typeof value === 'object' && pathMap.has(value)) {
+              currentPath = pathMap.get(value);
+            } else {
+              currentPath = [...parentPath, key];
+            }
+            
+            const currentId = currentPath.join('.');
+
+            if (value && typeof value === 'object') {
+              pathMap.set(value, currentPath);
+            }
+
+            // 1. Check if excluded by node tree checkbox (bypass if parent is an array)
+            if (!Array.isArray(this) && excludedNodes.value.includes(currentId)) {
+              return undefined;
+            }
+
+            // 2. Check if excluded by properties checklist under selected node
+            const isDirectChild = parentPath.join('.') === selectedNode.value.id;
+            if (!Array.isArray(this) && isDirectChild && excludedProperties.value.includes(key)) {
+              return undefined;
+            }
+
+            // If the value is a nested array, pre-filter it to completely omit excluded items instead of turning them to null
+            if (Array.isArray(value)) {
+              const filteredArray = [];
+              value.forEach((item, idx) => {
+                const itemPath = [...currentPath, String(idx)];
+                const itemId = itemPath.join('.');
+                if (!excludedNodes.value.includes(itemId)) {
+                  filteredArray.push(item);
+                  if (item && typeof item === 'object') {
+                    pathMap.set(item, itemPath);
+                  }
+                }
+              });
+              pathMap.set(filteredArray, currentPath);
+              return filteredArray;
+            }
+
+            return value;
+          };
 
           let space = '';
           if (indentSpaces.value === '2') {
@@ -1362,14 +1568,14 @@
             space = '';
           }
 
-          return JSON.stringify(val, replacer, space);
+          return JSON.stringify(targetVal, replacer, space);
         };
 
         const applyFormatting = () => {
           if (!selectedNode.value) return;
 
-          // If the user has edited the text, try to format the current edited text
-          if (editText.value && editText.value.trim()) {
+          // If the user has edited the text AND no filter is active (no excludedProperties or excludedNodes), reformat the current edited text
+          if (isTextareaDirty.value && excludedProperties.value.length === 0 && excludedNodes.value.length === 0 && editText.value && editText.value.trim()) {
             try {
               const parsed = JSON.parse(editText.value);
               editText.value = formatJSON(parsed);
@@ -1387,6 +1593,9 @@
         const selectNode = (nodeId) => {
           selectedNodeId.value = nodeId;
           editText.value = ''; // Clear current editText to force load from selectedNode.value.val
+          isTextareaDirty.value = false; // Reset dirty state
+          excludedProperties.value = []; // Reset excluded properties when switching nodes
+          excludedNodes.value = []; // Reset excluded nodes when switching nodes
           applyFormatting();
         };
 
@@ -1425,6 +1634,11 @@
         // Save modifications to current node and bubble up to the root log string
         const saveNodeChanges = () => {
           if (!selectedNode.value) return;
+
+          if (excludedProperties.value.length > 0 || excludedNodes.value.length > 0) {
+            showToast('无法保存', '当前隐藏了节点或属性，请先在左侧勾选所有节点与属性再保存，以防止数据丢失。', 'warning');
+            return;
+          }
 
           let newObjValue = null;
           try {
@@ -1495,6 +1709,9 @@
 
             // Update text area view
             editText.value = ''; // Clear current editText to force load the newly saved value
+            isTextareaDirty.value = false; // Reset dirty state after saving
+            excludedProperties.value = []; // Reset excluded properties after saving
+            excludedNodes.value = []; // Reset excluded nodes after saving
             applyFormatting();
             showToast('同步成功', '修改已顺利保存并反向合并更新了原始日志文本！', 'success');
           }
@@ -1511,6 +1728,9 @@
             nodes.value = [];
             selectedNodeId.value = '';
             editText.value = '';
+            isTextareaDirty.value = false; // Reset dirty state
+            excludedProperties.value = []; // Reset excluded properties
+            excludedNodes.value = []; // Reset excluded nodes
             showToast('已清空', '工作区和解析记录已成功复位。', 'info');
             event.target.value = '';
             return;
@@ -1589,7 +1809,6 @@
           selectedNodeId,
           selectedNode,
           filteredNodes,
-          replacerText,
           indentSpaces,
           wordWrap,
           editText,
@@ -1599,6 +1818,13 @@
           isEditFullscreen,
           historyItems,
           isDragging,
+          isTextareaDirty,
+          showPropertiesInTree,
+          excludedProperties,
+          selectedNodeProperties,
+          toggleProperty,
+          excludedNodes,
+          toggleNodeCheckbox,
           
           toggleRawFullscreen,
           toggleEditFullscreen,
