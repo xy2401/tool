@@ -59,6 +59,15 @@
       display: none;
     }
 
+    .conversion-status {
+      color: #8b949e;
+      font-size: 0.78rem;
+    }
+
+    .conversion-status.is-error {
+      color: #f85149;
+    }
+
     .title {
       margin-right: auto;
       font-size: 1rem;
@@ -287,6 +296,16 @@
         <input id="markdown-preview-enabled" type="checkbox">
         Markdown 预览
       </label>
+
+      <button id="json-to-yaml" type="button" hidden>
+        JSON 转 YAML
+      </button>
+
+      <button id="yaml-to-json" type="button" hidden>
+        YAML 转 JSON
+      </button>
+
+      <span id="conversion-status" class="conversion-status" aria-live="polite"></span>
     </div>
 
     <main id="workspace">
@@ -332,6 +351,7 @@
   <script src="https://cdn.jsdelivr.net/npm/marked@18.0.5/lib/marked.umd.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/dompurify@3.4.10/dist/purify.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/turndown@7.2.4/lib/turndown.browser.umd.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/js-yaml@4.1.1/dist/js-yaml.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/@highlightjs/cdn-assets@11.11.1/highlight.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/monaco-editor@0.55.1/min/vs/loader.js"></script>
   <script>
@@ -370,6 +390,9 @@
       const markdownPreviewInput = document.getElementById(
         "markdown-preview-enabled"
       );
+      const jsonToYamlButton = document.getElementById("json-to-yaml");
+      const yamlToJsonButton = document.getElementById("yaml-to-json");
+      const conversionStatus = document.getElementById("conversion-status");
       const openFileButton = document.getElementById("open-file");
       const fileInput = document.getElementById("file-input");
       const fileStatus = document.getElementById("file-status");
@@ -949,9 +972,13 @@
       function syncPreviewAvailability() {
         const isHtml = languageSelect.value === "html";
         const isMarkdown = languageSelect.value === "markdown";
+        const isJson = languageSelect.value === "json";
+        const isYaml = languageSelect.value === "yaml";
         htmlPreviewControl.hidden = !isHtml;
         htmlToMarkdownButton.hidden = !isHtml;
         markdownPreviewControl.hidden = !isMarkdown;
+        jsonToYamlButton.hidden = !isJson;
+        yamlToJsonButton.hidden = !isYaml;
 
         if (
           (!isHtml && htmlPreviewInput.checked) ||
@@ -960,6 +987,40 @@
         ) {
           closePreview();
         }
+      }
+
+      function setConversionStatus(message, isError = false) {
+        conversionStatus.textContent = message;
+        conversionStatus.classList.toggle("is-error", isError);
+      }
+
+      function replaceContentAfterConversion(value, language, source) {
+        const activeEditor = getActiveEditor();
+        const model = activeEditor.getModel();
+
+        activeEditor.pushUndoStop();
+        activeEditor.executeEdits(source, [{
+          range: model.getFullModelRange(),
+          text: value
+        }]);
+        activeEditor.pushUndoStop();
+        languageSelect.value = language;
+        monaco.editor.setModelLanguage(primaryModel, language);
+        monaco.editor.setModelLanguage(model, language);
+        if (diffOriginalModel) {
+          monaco.editor.setModelLanguage(diffOriginalModel, language);
+        }
+        syncPreviewAvailability();
+        activeEditor.setPosition({ lineNumber: 1, column: 1 });
+        focusEditor();
+      }
+
+      function describeConversionError(error) {
+        if (error?.mark) {
+          return `${error.reason || error.message}（第 ${error.mark.line + 1} 行，第 ${error.mark.column + 1} 列）`;
+        }
+
+        return error?.message || "转换失败";
       }
 
       function createStandaloneEditor() {
@@ -1302,6 +1363,46 @@
         handlePreviewChange(markdownPreviewInput, htmlPreviewInput);
       });
 
+      jsonToYamlButton.addEventListener("click", () => {
+        if (!window.jsyaml) {
+          return;
+        }
+
+        try {
+          const value = JSON.parse(getActiveEditor().getValue());
+          const yaml = jsyaml.dump(value, {
+            noRefs: true,
+            lineWidth: -1,
+            noCompatMode: true
+          });
+          replaceContentAfterConversion(yaml, "yaml", "json-to-yaml");
+          setConversionStatus("已转换为 YAML");
+        } catch (error) {
+          setConversionStatus(describeConversionError(error), true);
+          focusEditor();
+        }
+      });
+
+      yamlToJsonButton.addEventListener("click", () => {
+        if (!window.jsyaml) {
+          return;
+        }
+
+        try {
+          const value = jsyaml.load(getActiveEditor().getValue());
+          if (value === undefined) {
+            throw new Error("YAML 内容为空");
+          }
+
+          const json = `${JSON.stringify(value, null, 2)}\n`;
+          replaceContentAfterConversion(json, "json", "yaml-to-json");
+          setConversionStatus("已转换为 JSON");
+        } catch (error) {
+          setConversionStatus(describeConversionError(error), true);
+          focusEditor();
+        }
+      });
+
       htmlToMarkdownButton.addEventListener("click", () => {
         if (!window.TurndownService) {
           return;
@@ -1401,6 +1502,12 @@
       if (!window.TurndownService) {
         htmlToMarkdownButton.disabled = true;
         htmlToMarkdownButton.title = "HTML 转 Markdown 组件加载失败";
+      }
+      if (!window.jsyaml) {
+        jsonToYamlButton.disabled = true;
+        yamlToJsonButton.disabled = true;
+        jsonToYamlButton.title = "JSON/YAML 转换组件加载失败";
+        yamlToJsonButton.title = "JSON/YAML 转换组件加载失败";
       }
 
       syncPreviewAvailability();
