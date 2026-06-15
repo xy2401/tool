@@ -203,9 +203,18 @@
                   type="button"
                   :class="['btn', 'btn-sm', wordWrap ? 'btn-primary' : 'btn-secondary']" 
                   @click="wordWrap = !wordWrap" 
-                  :data-tooltip="wordWrap ? '禁用自动折行' : '启用自动折行'"
+                  :data-tooltip="wordWrap ? '禁用自动软换行' : '启用自动软换行'"
                 >
-                  折行
+                  软换行
+                </button>
+
+                <button 
+                  type="button"
+                  class="btn btn-sm btn-secondary" 
+                  @click="reorderKeys" 
+                  data-tooltip="按自然排序（A-Z）递归重新排序所有属性名"
+                >
+                  重排序
                 </button>
 
                 <button class="btn btn-sm btn-success" @click="saveNodeChanges" id="saveBtn">

@@ -750,6 +750,47 @@
           }
         };
 
+        const sortObjectKeys = (val) => {
+          if (val === null || typeof val !== 'object') {
+            return val;
+          }
+          if (Array.isArray(val)) {
+            return val.map(sortObjectKeys);
+          }
+          
+          const sortedKeys = Object.keys(val).sort((a, b) => {
+            return a.localeCompare(b, undefined, { numeric: true, sensitivity: 'base' });
+          });
+
+          const sortedObj = {};
+          sortedKeys.forEach(key => {
+            sortedObj[key] = sortObjectKeys(val[key]);
+          });
+          return sortedObj;
+        };
+
+        const reorderKeys = () => {
+          if (!selectedNode.value) return;
+          
+          let currentJsonText = editText.value;
+          if (!currentJsonText || !currentJsonText.trim()) {
+            currentJsonText = formatJSON(selectedNode.value.val);
+          }
+          
+          let parsed = null;
+          try {
+            parsed = JSON.parse(currentJsonText);
+          } catch (e) {
+            showToast('解析失败', '无法解析当前编辑区中的 JSON，请检查语法后再排序。', 'error');
+            return;
+          }
+          
+          const sorted = sortObjectKeys(parsed);
+          editText.value = formatJSON(sorted);
+          isTextareaDirty.value = true;
+          showToast('排序成功', '所有属性名已递归自然排序（尚未保存同步）。', 'success');
+        };
+
         // Load Data dynamically from select (Demo datasets or User history)
         const handleDataSelect = async (event) => {
           const val = event.target.value;
@@ -874,6 +915,7 @@
           applyThemePreference,
           saveNodeChanges,
           handleDataSelect,
+          reorderKeys,
           removeToast
         };
       }
