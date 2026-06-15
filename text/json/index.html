@@ -30,11 +30,17 @@
       --glass-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
       --transition-fast: 0.15s ease;
       --transition-normal: 0.25s ease;
-      
       --text-active: #ffffff;
       --bg-solid-fallback: #0b0f19;
       --toast-bg: rgba(17, 24, 39, 0.9);
       --toast-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.5);
+
+      --input-bg: rgba(15, 23, 42, 0.6);
+      --input-focus-bg: rgba(15, 23, 42, 0.8);
+      --input-color: var(--text-main);
+      --input-border: var(--panel-border);
+      --input-option-bg: #1e293b;
+      --input-option-color: #f3f4f6;
     }
 
     .theme-light {
@@ -59,6 +65,13 @@
       --bg-solid-fallback: #f8fafc;
       --toast-bg: rgba(255, 255, 255, 0.95);
       --toast-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
+
+      --input-bg: rgba(255, 255, 255, 0.8);
+      --input-focus-bg: rgba(255, 255, 255, 0.95);
+      --input-color: #1e293b;
+      --input-border: rgba(0, 0, 0, 0.1);
+      --input-option-bg: #ffffff;
+      --input-option-color: #1e293b;
     }
 
     /* Light Theme Element Customizations */
@@ -72,24 +85,8 @@
       background: rgba(0, 0, 0, 0.2);
     }
     
-    .theme-light .input-field {
-      background: rgba(255, 255, 255, 0.8);
-      border-color: rgba(0, 0, 0, 0.1);
-      color: #1e293b;
-    }
-
-    .theme-light .input-field:focus {
-      background: rgba(255, 255, 255, 0.95);
-      border-color: var(--panel-border-focus);
-    }
-    
     .theme-light select.input-field {
       background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%2364748b'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M19 9l-7 7-7-7'/%3E%3C/svg%3E");
-    }
-
-    .theme-light .input-field option {
-      background-color: #ffffff;
-      color: #1e293b;
     }
 
     .theme-light textarea.editor-textarea {
@@ -469,10 +466,10 @@
     /* Formatting settings integrated inline in viewer-header */
 
     .input-field {
-      background: rgba(15, 23, 42, 0.6);
-      border: 1px solid var(--panel-border);
+      background-color: var(--input-bg);
+      border: 1px solid var(--input-border);
       border-radius: 0.5rem;
-      color: var(--text-main);
+      color: var(--input-color);
       padding: 0.5rem 0.75rem;
       font-family: var(--font-sans);
       font-size: 0.85rem;
@@ -482,7 +479,7 @@
 
     .input-field:focus {
       border-color: var(--panel-border-focus);
-      background: rgba(15, 23, 42, 0.8);
+      background-color: var(--input-focus-bg);
     }
 
     .input-field-mono {
@@ -506,8 +503,8 @@
     }
 
     .input-field option {
-      background-color: #1e293b;
-      color: #f3f4f6;
+      background-color: var(--input-option-bg);
+      color: var(--input-option-color);
     }
 
     /* Buttons */
@@ -987,7 +984,7 @@
           <p>从混合文本中提取 JSON，自动解构多次转义内容，支持节点树局部修改与向源合并。</p>
         </div>
         <div class="theme-selector-container" @dblclick.stop>
-          <select class="input-field input-sm" v-model="themePreference" @change="applyThemePreference" style="width: 110px;">
+          <select class="input-field input-sm" v-model="themePreference" @change="applyThemePreference" style="width: 10em;">
             <option value="system">🌓 跟随系统</option>
             <option value="light">☀️ 浅色模式</option>
             <option value="dark">🌙 深色模式</option>
