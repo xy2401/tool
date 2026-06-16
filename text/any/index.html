@@ -59,266 +59,310 @@
         <!-- Collapsed preview -->
         <div class="panel-preview" v-if="panel.collapsed && panel.value">{{ panel.value.substring(0, 80) }}{{ panel.value.length > 80 ? '…' : '' }}</div>
 
-        <!-- Panel body (hideable) -->
-        <template v-if="!panel.collapsed">
+        <!-- ═══ Panel body: LEFT / RIGHT split ═══ -->
+        <div class="panel-body" v-if="!panel.collapsed">
 
-          <!-- Textarea -->
-          <textarea
-            class="panel-input"
-            v-model="panel.value"
-            @input="onInput($event, panel)"
-            placeholder="粘贴任意内容：哈希、时间戳、Base64、JSON、UUID、IP、MAC、颜色、URL、Cron…&#10;也可拖放文件到此处"
-          ></textarea>
+          <!-- ──── LEFT SIDE: Input + Operations ──── -->
+          <div class="panel-left">
 
-          <!-- Generator bar -->
-          <div class="gen-bar">
-            <span class="gen-label">生成</span>
-            <button class="btn-gen" @click="genUUID(panel)">🎲 UUID</button>
-            <button class="btn-gen" @click="genTimestamp(panel)">⏱ 时间戳</button>
-            <button class="btn-gen" @click="genNow(panel)">📅 当前时间</button>
-          </div>
+            <!-- Textarea -->
+            <textarea
+              class="panel-input"
+              v-model="panel.value"
+              @input="onInput($event, panel)"
+              placeholder="粘贴任意内容：哈希、时间戳、Base64、JSON、UUID、IP、MAC、颜色、URL、Cron…&#10;也可拖放文件到此处"
+            ></textarea>
 
-          <!-- Input footer -->
-          <div class="input-footer" v-if="panel.value">
-            <span class="char-count">{{ panel.value.length }} 字符 · {{ byteLen(panel.value) }} 字节 · {{ panel.value.split('\n').length }} 行</span>
-            <div class="input-actions">
-              <button class="btn-xs" @click="doTrim(panel)">去首尾空白</button>
-              <button class="btn-xs" @click="doFormat(panel)">格式化 JSON</button>
+            <!-- Generator bar -->
+            <div class="gen-bar">
+              <span class="gen-label">生成</span>
+              <button class="btn-gen" @click="genUUID(panel)">🎲 UUID</button>
+              <button class="btn-gen" @click="genTimestamp(panel)">⏱ 时间戳</button>
+              <button class="btn-gen" @click="genNow(panel)">📅 当前时间</button>
             </div>
-          </div>
 
-          <!-- Detections -->
-          <div class="detections" v-if="panel.value">
-            <span class="det-label">识别</span>
-            <template v-if="panel.detections && panel.detections.length">
-              <span
-                v-for="d in panel.detections" :key="d.type"
-                class="badge"
-                :style="{ background: d.color+'1e', color: d.color, border: '1px solid '+d.color+'50' }"
-              >{{ d.label }}</span>
+            <!-- Input footer -->
+            <div class="input-footer" v-if="panel.value">
+              <span class="char-count">{{ panel.value.length }} 字符 · {{ byteLen(panel.value) }} 字节 · {{ panel.value.split('\n').length }} 行</span>
+              <div class="input-actions">
+                <button class="btn-xs" @click="doTrim(panel)">去首尾空白</button>
+                <button class="btn-xs" @click="doFormat(panel)">格式化 JSON</button>
+              </div>
+            </div>
+
+            <!-- Detections badges -->
+            <div class="detections" v-if="panel.value">
+              <span class="det-label">识别</span>
+              <template v-if="panel.detections && panel.detections.length">
+                <span
+                  v-for="d in panel.detections" :key="d.type"
+                  class="badge"
+                  :style="{ background: d.color+'1e', color: d.color, border: '1px solid '+d.color+'50' }"
+                >{{ d.label }}</span>
+              </template>
+              <span v-else class="no-detect">未识别特定格式，可通过下方操作计算</span>
+            </div>
+
+            <!-- Operations (grouped) -->
+            <div class="ops-section">
+              <div class="ops-title">计算操作</div>
+              <div v-for="group in opGroups" :key="group.name" class="ops-group">
+                <div class="ops-group-name">{{ group.name }}</div>
+                <div class="ops-grid">
+                  <button
+                    v-for="op in group.ops" :key="op.id"
+                    class="btn-op"
+                    :class="{ active: panel.activeOps[op.id] }"
+                    @click="compute(panel, op)"
+                  >{{ op.label }}</button>
+                </div>
+              </div>
+            </div>
+
+          </div>
+          <!-- /panel-left -->
+
+          <!-- ──── RIGHT SIDE: Results ──── -->
+          <div class="panel-right">
+
+            <!-- Empty state -->
+            <div class="empty-right" v-if="!panel.value">
+              <span class="empty-right-icon">⚡</span>
+              <span class="empty-right-text">在左侧输入内容后<br>识别结果与计算结果将在此展示</span>
+            </div>
+
+            <!-- Has content but no results -->
+            <div class="empty-right" v-else-if="(!panel.detections || !panel.detections.length) && (!panel.computedList || !panel.computedList.length)">
+              <span class="empty-right-icon">🔍</span>
+              <span class="empty-right-text">未识别到特定格式<br>可点击左侧操作按钮计算</span>
+            </div>
+
+            <!-- Results content -->
+            <template v-else>
+
+              <!-- Auto detection results -->
+              <template v-if="panel.detections && panel.detections.length">
+                <div class="right-section-title">
+                  <span class="title-dot" style="background:#60a5fa"></span>
+                  自动识别
+                </div>
+                <div class="auto-results">
+                  <div class="result-block" v-for="d in panel.detections" :key="'r'+d.type">
+                    <div class="rblock-title">
+                      <span class="dot" :style="{ color: d.color }">●</span>
+                      {{ d.label }}
+                    </div>
+
+                    <!-- Timestamp (s or ms) -->
+                    <div class="result-rows" v-if="d.type==='ts_s'||d.type==='ts_ms'">
+                      <div class="rrow"><span class="rrow-l">本地时间</span><span class="rrow-v em copyable" @click="copyEl($event)">{{ fmtLocal(d.ts) }}</span></div>
+                      <div class="rrow"><span class="rrow-l">UTC 时间</span><span class="rrow-v copyable" @click="copyEl($event)">{{ fmtUtc(d.ts) }}</span></div>
+                      <div class="rrow"><span class="rrow-l">ISO 8601</span><span class="rrow-v copyable" @click="copyEl($event)">{{ new Date(d.ts).toISOString() }}</span></div>
+                      <div class="rrow"><span class="rrow-l">距今</span><span class="rrow-v hi copyable" @click="copyEl($event)">{{ relTime(d.ts) }}</span></div>
+                      <div class="rrow" v-if="d.type==='ts_s'"><span class="rrow-l">毫秒戳</span><span class="rrow-v copyable" @click="copyEl($event)">{{ d.ts }}</span></div>
+                      <div class="rrow" v-if="d.type==='ts_ms'"><span class="rrow-l">秒级戳</span><span class="rrow-v copyable" @click="copyEl($event)">{{ Math.floor(d.ts/1000) }}</span></div>
+                    </div>
+
+                    <!-- Hashes -->
+                    <div class="result-rows" v-else-if="['md5','sha1','sha256','sha512'].includes(d.type)">
+                      <div class="rrow"><span class="rrow-l">算法</span><span class="rrow-v em copyable" @click="copyEl($event)">{{ d.label }}（{{ panel.value.trim().length * 4 }} 位）</span></div>
+                      <div class="rrow"><span class="rrow-l">大写</span><span class="rrow-v copyable" @click="copyEl($event)">{{ panel.value.trim().toUpperCase() }}</span></div>
+                      <div class="rrow"><span class="rrow-l">小写</span><span class="rrow-v copyable" @click="copyEl($event)">{{ panel.value.trim().toLowerCase() }}</span></div>
+                    </div>
+
+                    <!-- UUID -->
+                    <div class="result-rows" v-else-if="d.type==='uuid'">
+                      <div class="rrow"><span class="rrow-l">版本</span><span class="rrow-v em copyable" @click="copyEl($event)">UUID v{{ panel.value.trim()[14] }}</span></div>
+                      <div class="rrow"><span class="rrow-l">大写</span><span class="rrow-v copyable" @click="copyEl($event)">{{ panel.value.trim().toUpperCase() }}</span></div>
+                      <div class="rrow"><span class="rrow-l">无分隔符</span><span class="rrow-v copyable" @click="copyEl($event)">{{ panel.value.trim().replace(/-/g,'') }}</span></div>
+                    </div>
+
+                    <!-- Base64 -->
+                    <div class="result-rows" v-else-if="d.type==='base64'">
+                      <div class="rrow"><span class="rrow-l">解码结果</span><span class="rrow-v em copyable" @click="copyEl($event)" style="word-break:break-all">{{ d.decoded }}</span></div>
+                      <div class="rrow" v-if="isJson(d.decoded)"><span class="rrow-l">内含</span><span class="rrow-v" style="color:#fcd34d">✓ 有效 JSON</span></div>
+                    </div>
+
+                    <!-- JWT -->
+                    <div class="result-rows" v-else-if="d.type==='jwt'">
+                      <div class="rrow"><span class="rrow-l">算法</span><span class="rrow-v em copyable" @click="copyEl($event)">{{ (d.header||{}).alg }}</span></div>
+                      <div class="rrow" v-if="(d.payload||{}).exp"><span class="rrow-l">过期</span><span class="rrow-v copyable" @click="copyEl($event)">{{ fmtLocal(d.payload.exp*1000) }}</span></div>
+                      <div class="rrow" v-if="(d.payload||{}).iat"><span class="rrow-l">签发</span><span class="rrow-v copyable" @click="copyEl($event)">{{ fmtLocal(d.payload.iat*1000) }}</span></div>
+                      <div class="rrow" v-if="(d.payload||{}).sub"><span class="rrow-l">Subject</span><span class="rrow-v copyable" @click="copyEl($event)">{{ d.payload.sub }}</span></div>
+                      <div class="rrow"><span class="rrow-l">Header</span><span class="rrow-v copyable" @click="copyEl($event)" style="white-space:pre;font-size:11px">{{ JSON.stringify(d.header,null,2) }}</span></div>
+                      <div class="rrow"><span class="rrow-l">Payload</span><span class="rrow-v copyable" @click="copyEl($event)" style="white-space:pre;font-size:11px">{{ JSON.stringify(d.payload,null,2) }}</span></div>
+                    </div>
+
+                    <!-- IPv4 -->
+                    <div class="result-rows" v-else-if="d.type==='ipv4'">
+                      <div class="rrow"><span class="rrow-l">地址类型</span><span class="rrow-v em copyable" @click="copyEl($event)">{{ ip4Type(panel.value.trim()) }}</span></div>
+                      <div class="rrow"><span class="rrow-l">整数</span><span class="rrow-v copyable" @click="copyEl($event)">{{ ip4Int(panel.value.trim()) }}</span></div>
+                      <div class="rrow"><span class="rrow-l">十六进制</span><span class="rrow-v copyable" @click="copyEl($event)">{{ ip4Hex(panel.value.trim()) }}</span></div>
+                      <div class="rrow"><span class="rrow-l">二进制</span><span class="rrow-v copyable" @click="copyEl($event)" style="font-size:11px;letter-spacing:1px">{{ ip4Bin(panel.value.trim()) }}</span></div>
+                    </div>
+
+                    <!-- Hex color -->
+                    <div class="color-rows" v-else-if="d.type==='color'">
+                      <div class="color-swatch" :style="{ background: panel.value.trim() }"></div>
+                      <div class="result-rows" style="flex:1">
+                        <div class="rrow"><span class="rrow-l">HEX</span><span class="rrow-v em copyable" @click="copyEl($event)">{{ panel.value.trim().toUpperCase() }}</span></div>
+                        <div class="rrow"><span class="rrow-l">RGB</span><span class="rrow-v copyable" @click="copyEl($event)">{{ hex2rgb(panel.value.trim()) }}</span></div>
+                        <div class="rrow"><span class="rrow-l">HSL</span><span class="rrow-v copyable" @click="copyEl($event)">{{ hex2hsl(panel.value.trim()) }}</span></div>
+                      </div>
+                    </div>
+
+                    <!-- URL -->
+                    <div class="result-rows" v-else-if="d.type==='url'">
+                      <div class="rrow"><span class="rrow-l">协议</span><span class="rrow-v em copyable" @click="copyEl($event)">{{ d.url.protocol }}</span></div>
+                      <div class="rrow"><span class="rrow-l">主机</span><span class="rrow-v copyable" @click="copyEl($event)">{{ d.url.host }}</span></div>
+                      <div class="rrow" v-if="d.url.pathname && d.url.pathname!=='/'"><span class="rrow-l">路径</span><span class="rrow-v copyable" @click="copyEl($event)">{{ d.url.pathname }}</span></div>
+                      <div class="rrow" v-if="d.url.search"><span class="rrow-l">查询参数</span><span class="rrow-v copyable" @click="copyEl($event)">{{ d.url.search }}</span></div>
+                      <div class="rrow" v-if="d.url.hash"><span class="rrow-l">锚点</span><span class="rrow-v copyable" @click="copyEl($event)">{{ d.url.hash }}</span></div>
+                    </div>
+
+                    <!-- Email -->
+                    <div class="result-rows" v-else-if="d.type==='email'">
+                      <div class="rrow"><span class="rrow-l">用户名</span><span class="rrow-v em copyable" @click="copyEl($event)">{{ panel.value.trim().split('@')[0] }}</span></div>
+                      <div class="rrow"><span class="rrow-l">域名</span><span class="rrow-v copyable" @click="copyEl($event)">{{ panel.value.trim().split('@')[1] }}</span></div>
+                      <div class="rrow"><span class="rrow-l">Mailto</span><span class="rrow-v copyable" @click="copyEl($event)">mailto:{{ panel.value.trim() }}</span></div>
+                    </div>
+
+                    <!-- Number -->
+                    <div class="result-rows" v-else-if="d.type==='number'">
+                      <div class="rrow"><span class="rrow-l">十进制</span><span class="rrow-v em copyable" @click="copyEl($event)">{{ d.num }}</span></div>
+                      <div class="rrow"><span class="rrow-l">十六进制</span><span class="rrow-v copyable" @click="copyEl($event)">0x{{ Math.trunc(d.num).toString(16).toUpperCase() }}</span></div>
+                      <div class="rrow"><span class="rrow-l">八进制</span><span class="rrow-v copyable" @click="copyEl($event)">0o{{ Math.trunc(d.num).toString(8) }}</span></div>
+                      <div class="rrow"><span class="rrow-l">二进制</span><span class="rrow-v copyable" @click="copyEl($event)" style="font-size:11px">{{ Math.trunc(d.num).toString(2) }}</span></div>
+                    </div>
+
+                    <!-- Hex number -->
+                    <div class="result-rows" v-else-if="d.type==='hexnum'">
+                      <div class="rrow"><span class="rrow-l">十进制</span><span class="rrow-v em copyable" @click="copyEl($event)">{{ d.num }}</span></div>
+                      <div class="rrow"><span class="rrow-l">八进制</span><span class="rrow-v copyable" @click="copyEl($event)">0o{{ d.num.toString(8) }}</span></div>
+                      <div class="rrow"><span class="rrow-l">二进制</span><span class="rrow-v copyable" @click="copyEl($event)" style="font-size:11px">{{ d.num.toString(2) }}</span></div>
+                      <div class="rrow" v-if="d.num<=0x10ffff"><span class="rrow-l">Unicode 字符</span><span class="rrow-v copyable" @click="copyEl($event)">{{ String.fromCodePoint(d.num) }}</span></div>
+                    </div>
+
+                    <!-- Binary -->
+                    <div class="result-rows" v-else-if="d.type==='binary'||d.type==='binraw'">
+                      <div class="rrow"><span class="rrow-l">十进制</span><span class="rrow-v em copyable" @click="copyEl($event)">{{ d.num }}</span></div>
+                      <div class="rrow"><span class="rrow-l">十六进制</span><span class="rrow-v copyable" @click="copyEl($event)">0x{{ d.num.toString(16).toUpperCase() }}</span></div>
+                      <div class="rrow" v-if="d.num<=0x10ffff"><span class="rrow-l">Unicode 字符</span><span class="rrow-v copyable" @click="copyEl($event)">{{ String.fromCodePoint(d.num) }}</span></div>
+                    </div>
+
+                    <!-- JSON -->
+                    <div class="result-rows" v-else-if="d.type==='json'">
+                      <div class="rrow"><span class="rrow-l">类型</span><span class="rrow-v em copyable" @click="copyEl($event)">{{ d.isArray ? 'Array (数组)' : 'Object (对象)' }}</span></div>
+                      <div class="rrow"><span class="rrow-l">{{ d.isArray ? '元素数' : '键数量' }}</span><span class="rrow-v copyable" @click="copyEl($event)">{{ d.count }}</span></div>
+                      <div class="rrow"><span class="rrow-l">嵌套深度</span><span class="rrow-v copyable" @click="copyEl($event)">{{ d.depth }}</span></div>
+                      <div class="rrow"><span class="rrow-l">大小</span><span class="rrow-v copyable" @click="copyEl($event)">{{ d.size }} 字节</span></div>
+                    </div>
+
+                    <!-- Date String -->
+                    <div class="result-rows" v-else-if="d.type==='datestr'">
+                      <div class="rrow"><span class="rrow-l">本地时间</span><span class="rrow-v em copyable" @click="copyEl($event)">{{ fmtLocal(d.ts) }}</span></div>
+                      <div class="rrow"><span class="rrow-l">UTC</span><span class="rrow-v copyable" @click="copyEl($event)">{{ fmtUtc(d.ts) }}</span></div>
+                      <div class="rrow"><span class="rrow-l">ISO 8601</span><span class="rrow-v copyable" @click="copyEl($event)">{{ new Date(d.ts).toISOString() }}</span></div>
+                      <div class="rrow"><span class="rrow-l">秒级时间戳</span><span class="rrow-v copyable" @click="copyEl($event)">{{ Math.floor(d.ts/1000) }}</span></div>
+                      <div class="rrow"><span class="rrow-l">毫秒时间戳</span><span class="rrow-v copyable" @click="copyEl($event)">{{ d.ts }}</span></div>
+                      <div class="rrow"><span class="rrow-l">距今</span><span class="rrow-v hi copyable" @click="copyEl($event)">{{ relTime(d.ts) }}</span></div>
+                    </div>
+
+                    <!-- IPv6 -->
+                    <div class="result-rows" v-else-if="d.type==='ipv6'">
+                      <div class="rrow"><span class="rrow-l">类型</span><span class="rrow-v em copyable" @click="copyEl($event)">{{ d.addrType }}</span></div>
+                      <div class="rrow"><span class="rrow-l">完整形式</span><span class="rrow-v copyable" @click="copyEl($event)" style="font-size:11px">{{ d.expanded }}</span></div>
+                    </div>
+
+                    <!-- MAC -->
+                    <div class="result-rows" v-else-if="d.type==='mac'">
+                      <div class="rrow"><span class="rrow-l">冒号格式</span><span class="rrow-v em copyable" @click="copyEl($event)">{{ panel.value.trim().replace(/[:-]/g,':').toUpperCase() }}</span></div>
+                      <div class="rrow"><span class="rrow-l">连字符</span><span class="rrow-v copyable" @click="copyEl($event)">{{ panel.value.trim().replace(/[:-]/g,'-').toUpperCase() }}</span></div>
+                      <div class="rrow"><span class="rrow-l">无分隔符</span><span class="rrow-v copyable" @click="copyEl($event)">{{ panel.value.trim().replace(/[:-]/g,'').toUpperCase() }}</span></div>
+                      <div class="rrow"><span class="rrow-l">类型</span><span class="rrow-v copyable" @click="copyEl($event)">{{ macType(panel.value.trim()) }}</span></div>
+                    </div>
+
+                    <!-- CIDR -->
+                    <div class="result-rows" v-else-if="d.type==='cidr'">
+                      <div class="rrow"><span class="rrow-l">网络地址</span><span class="rrow-v em copyable" @click="copyEl($event)">{{ d.calc.network }}/{{ d.prefix }}</span></div>
+                      <div class="rrow"><span class="rrow-l">子网掩码</span><span class="rrow-v copyable" @click="copyEl($event)">{{ d.calc.mask }}</span></div>
+                      <div class="rrow"><span class="rrow-l">广播地址</span><span class="rrow-v copyable" @click="copyEl($event)">{{ d.calc.broadcast }}</span></div>
+                      <div class="rrow"><span class="rrow-l">可用主机</span><span class="rrow-v copyable" @click="copyEl($event)">{{ d.calc.hosts.toLocaleString() }}</span></div>
+                      <div class="rrow"><span class="rrow-l">地址范围</span><span class="rrow-v copyable" @click="copyEl($event)">{{ d.calc.first }} – {{ d.calc.last }}</span></div>
+                    </div>
+
+                    <!-- Domain -->
+                    <div class="result-rows" v-else-if="d.type==='domain'">
+                      <div class="rrow"><span class="rrow-l">域名</span><span class="rrow-v em copyable" @click="copyEl($event)">{{ panel.value.trim() }}</span></div>
+                      <div class="rrow"><span class="rrow-l">顶级域</span><span class="rrow-v copyable" @click="copyEl($event)">.{{ panel.value.trim().split('.').pop() }}</span></div>
+                      <div class="rrow"><span class="rrow-l">HTTPS</span><span class="rrow-v copyable" @click="copyEl($event)">https://{{ panel.value.trim() }}</span></div>
+                    </div>
+
+                    <!-- Phone (CN) -->
+                    <div class="result-rows" v-else-if="d.type==='phone_cn'">
+                      <div class="rrow"><span class="rrow-l">格式化</span><span class="rrow-v em copyable" @click="copyEl($event)">{{ panel.value.trim().replace(/(\d{3})(\d{4})(\d{4})/, '$1 $2 $3') }}</span></div>
+                      <div class="rrow"><span class="rrow-l">运营商</span><span class="rrow-v copyable" @click="copyEl($event)">{{ d.carrier }}</span></div>
+                    </div>
+
+                    <!-- Semver -->
+                    <div class="result-rows" v-else-if="d.type==='semver'">
+                      <div class="rrow"><span class="rrow-l">Major</span><span class="rrow-v em copyable" @click="copyEl($event)">{{ d.major }}</span></div>
+                      <div class="rrow"><span class="rrow-l">Minor</span><span class="rrow-v copyable" @click="copyEl($event)">{{ d.minor }}</span></div>
+                      <div class="rrow"><span class="rrow-l">Patch</span><span class="rrow-v copyable" @click="copyEl($event)">{{ d.patch }}</span></div>
+                      <div class="rrow" v-if="d.pre"><span class="rrow-l">预发布</span><span class="rrow-v copyable" @click="copyEl($event)">{{ d.pre }}</span></div>
+                      <div class="rrow" v-if="d.build"><span class="rrow-l">构建</span><span class="rrow-v copyable" @click="copyEl($event)">{{ d.build }}</span></div>
+                    </div>
+
+                    <!-- Cron -->
+                    <div class="result-rows" v-else-if="d.type==='cron'">
+                      <div class="rrow"><span class="rrow-l">描述</span><span class="rrow-v em copyable" @click="copyEl($event)">{{ d.desc }}</span></div>
+                      <div class="rrow"><span class="rrow-l">分钟</span><span class="rrow-v copyable" @click="copyEl($event)">{{ d.parts[0] }}</span></div>
+                      <div class="rrow"><span class="rrow-l">小时</span><span class="rrow-v copyable" @click="copyEl($event)">{{ d.parts[1] }}</span></div>
+                      <div class="rrow"><span class="rrow-l">日</span><span class="rrow-v copyable" @click="copyEl($event)">{{ d.parts[2] }}</span></div>
+                      <div class="rrow"><span class="rrow-l">月</span><span class="rrow-v copyable" @click="copyEl($event)">{{ d.parts[3] }}</span></div>
+                      <div class="rrow"><span class="rrow-l">星期</span><span class="rrow-v copyable" @click="copyEl($event)">{{ d.parts[4] }}</span></div>
+                    </div>
+
+                    <!-- Regex -->
+                    <div class="result-rows" v-else-if="d.type==='regex'">
+                      <div class="rrow"><span class="rrow-l">模式</span><span class="rrow-v em copyable" @click="copyEl($event)">{{ d.pattern }}</span></div>
+                      <div class="rrow"><span class="rrow-l">标志</span><span class="rrow-v copyable" @click="copyEl($event)">{{ d.flags || '(无)' }}</span></div>
+                      <div class="rrow"><span class="rrow-l">状态</span><span class="rrow-v" style="color:#86efac">✓ 有效正则表达式</span></div>
+                    </div>
+
+                  </div>
+                </div>
+              </template>
+
+              <!-- Divider between auto-results and computed -->
+              <div class="results-divider" v-if="panel.detections && panel.detections.length && panel.computedList && panel.computedList.length"></div>
+
+              <!-- Computed results -->
+              <template v-if="panel.computedList && panel.computedList.length">
+                <div class="right-section-title">
+                  <span class="title-dot" style="background:#a78bfa"></span>
+                  计算结果
+                </div>
+                <div class="computed-section">
+                  <div class="cr-item" v-for="cr in panel.computedList" :key="cr.id">
+                    <div class="cr-label">{{ cr.label }}</div>
+                    <div class="cr-value">{{ cr.value }}<div class="cr-btns">
+                        <button class="cr-send" @click.stop="sendToPanel(cr.value)" title="发送到新面板">→</button>
+                        <button class="cr-copy" @click.stop="copy(cr.value)" title="复制">⎘</button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </template>
+
             </template>
-            <span v-else class="no-detect">未识别特定格式，可通过下方操作计算</span>
+
           </div>
+          <!-- /panel-right -->
 
-          <!-- Auto results -->
-          <div class="auto-results" v-if="panel.value && panel.detections && panel.detections.length">
-            <div class="result-block" v-for="d in panel.detections" :key="'r'+d.type">
-              <div class="rblock-title">
-                <span class="dot" :style="{ color: d.color }">●</span>
-                {{ d.label }}
-              </div>
+        </div>
+        <!-- /panel-body -->
 
-              <!-- Timestamp (s or ms) -->
-              <div class="result-rows" v-if="d.type==='ts_s'||d.type==='ts_ms'">
-                <div class="rrow"><span class="rrow-l">本地时间</span><span class="rrow-v em copyable" @click="copyEl($event)">{{ fmtLocal(d.ts) }}</span></div>
-                <div class="rrow"><span class="rrow-l">UTC 时间</span><span class="rrow-v copyable" @click="copyEl($event)">{{ fmtUtc(d.ts) }}</span></div>
-                <div class="rrow"><span class="rrow-l">ISO 8601</span><span class="rrow-v copyable" @click="copyEl($event)">{{ new Date(d.ts).toISOString() }}</span></div>
-                <div class="rrow"><span class="rrow-l">距今</span><span class="rrow-v hi copyable" @click="copyEl($event)">{{ relTime(d.ts) }}</span></div>
-                <div class="rrow" v-if="d.type==='ts_s'"><span class="rrow-l">毫秒戳</span><span class="rrow-v copyable" @click="copyEl($event)">{{ d.ts }}</span></div>
-                <div class="rrow" v-if="d.type==='ts_ms'"><span class="rrow-l">秒级戳</span><span class="rrow-v copyable" @click="copyEl($event)">{{ Math.floor(d.ts/1000) }}</span></div>
-              </div>
-
-              <!-- Hashes -->
-              <div class="result-rows" v-else-if="['md5','sha1','sha256','sha512'].includes(d.type)">
-                <div class="rrow"><span class="rrow-l">算法</span><span class="rrow-v em copyable" @click="copyEl($event)">{{ d.label }}（{{ panel.value.trim().length * 4 }} 位）</span></div>
-                <div class="rrow"><span class="rrow-l">大写</span><span class="rrow-v copyable" @click="copyEl($event)">{{ panel.value.trim().toUpperCase() }}</span></div>
-                <div class="rrow"><span class="rrow-l">小写</span><span class="rrow-v copyable" @click="copyEl($event)">{{ panel.value.trim().toLowerCase() }}</span></div>
-              </div>
-
-              <!-- UUID -->
-              <div class="result-rows" v-else-if="d.type==='uuid'">
-                <div class="rrow"><span class="rrow-l">版本</span><span class="rrow-v em copyable" @click="copyEl($event)">UUID v{{ panel.value.trim()[14] }}</span></div>
-                <div class="rrow"><span class="rrow-l">大写</span><span class="rrow-v copyable" @click="copyEl($event)">{{ panel.value.trim().toUpperCase() }}</span></div>
-                <div class="rrow"><span class="rrow-l">无分隔符</span><span class="rrow-v copyable" @click="copyEl($event)">{{ panel.value.trim().replace(/-/g,'') }}</span></div>
-              </div>
-
-              <!-- Base64 -->
-              <div class="result-rows" v-else-if="d.type==='base64'">
-                <div class="rrow"><span class="rrow-l">解码结果</span><span class="rrow-v em copyable" @click="copyEl($event)" style="word-break:break-all">{{ d.decoded }}</span></div>
-                <div class="rrow" v-if="isJson(d.decoded)"><span class="rrow-l">内含</span><span class="rrow-v" style="color:#fcd34d">✓ 有效 JSON</span></div>
-              </div>
-
-              <!-- JWT -->
-              <div class="result-rows" v-else-if="d.type==='jwt'">
-                <div class="rrow"><span class="rrow-l">算法</span><span class="rrow-v em copyable" @click="copyEl($event)">{{ (d.header||{}).alg }}</span></div>
-                <div class="rrow" v-if="(d.payload||{}).exp"><span class="rrow-l">过期</span><span class="rrow-v copyable" @click="copyEl($event)">{{ fmtLocal(d.payload.exp*1000) }}</span></div>
-                <div class="rrow" v-if="(d.payload||{}).iat"><span class="rrow-l">签发</span><span class="rrow-v copyable" @click="copyEl($event)">{{ fmtLocal(d.payload.iat*1000) }}</span></div>
-                <div class="rrow" v-if="(d.payload||{}).sub"><span class="rrow-l">Subject</span><span class="rrow-v copyable" @click="copyEl($event)">{{ d.payload.sub }}</span></div>
-                <div class="rrow"><span class="rrow-l">Header</span><span class="rrow-v copyable" @click="copyEl($event)" style="white-space:pre;font-size:11px">{{ JSON.stringify(d.header,null,2) }}</span></div>
-                <div class="rrow"><span class="rrow-l">Payload</span><span class="rrow-v copyable" @click="copyEl($event)" style="white-space:pre;font-size:11px">{{ JSON.stringify(d.payload,null,2) }}</span></div>
-              </div>
-
-              <!-- IPv4 -->
-              <div class="result-rows" v-else-if="d.type==='ipv4'">
-                <div class="rrow"><span class="rrow-l">地址类型</span><span class="rrow-v em copyable" @click="copyEl($event)">{{ ip4Type(panel.value.trim()) }}</span></div>
-                <div class="rrow"><span class="rrow-l">整数</span><span class="rrow-v copyable" @click="copyEl($event)">{{ ip4Int(panel.value.trim()) }}</span></div>
-                <div class="rrow"><span class="rrow-l">十六进制</span><span class="rrow-v copyable" @click="copyEl($event)">{{ ip4Hex(panel.value.trim()) }}</span></div>
-                <div class="rrow"><span class="rrow-l">二进制</span><span class="rrow-v copyable" @click="copyEl($event)" style="font-size:11px;letter-spacing:1px">{{ ip4Bin(panel.value.trim()) }}</span></div>
-              </div>
-
-              <!-- Hex color -->
-              <div class="color-rows" v-else-if="d.type==='color'">
-                <div class="color-swatch" :style="{ background: panel.value.trim() }"></div>
-                <div class="result-rows" style="flex:1">
-                  <div class="rrow"><span class="rrow-l">HEX</span><span class="rrow-v em copyable" @click="copyEl($event)">{{ panel.value.trim().toUpperCase() }}</span></div>
-                  <div class="rrow"><span class="rrow-l">RGB</span><span class="rrow-v copyable" @click="copyEl($event)">{{ hex2rgb(panel.value.trim()) }}</span></div>
-                  <div class="rrow"><span class="rrow-l">HSL</span><span class="rrow-v copyable" @click="copyEl($event)">{{ hex2hsl(panel.value.trim()) }}</span></div>
-                </div>
-              </div>
-
-              <!-- URL -->
-              <div class="result-rows" v-else-if="d.type==='url'">
-                <div class="rrow"><span class="rrow-l">协议</span><span class="rrow-v em copyable" @click="copyEl($event)">{{ d.url.protocol }}</span></div>
-                <div class="rrow"><span class="rrow-l">主机</span><span class="rrow-v copyable" @click="copyEl($event)">{{ d.url.host }}</span></div>
-                <div class="rrow" v-if="d.url.pathname && d.url.pathname!=='/'"><span class="rrow-l">路径</span><span class="rrow-v copyable" @click="copyEl($event)">{{ d.url.pathname }}</span></div>
-                <div class="rrow" v-if="d.url.search"><span class="rrow-l">查询参数</span><span class="rrow-v copyable" @click="copyEl($event)">{{ d.url.search }}</span></div>
-                <div class="rrow" v-if="d.url.hash"><span class="rrow-l">锚点</span><span class="rrow-v copyable" @click="copyEl($event)">{{ d.url.hash }}</span></div>
-              </div>
-
-              <!-- Email -->
-              <div class="result-rows" v-else-if="d.type==='email'">
-                <div class="rrow"><span class="rrow-l">用户名</span><span class="rrow-v em copyable" @click="copyEl($event)">{{ panel.value.trim().split('@')[0] }}</span></div>
-                <div class="rrow"><span class="rrow-l">域名</span><span class="rrow-v copyable" @click="copyEl($event)">{{ panel.value.trim().split('@')[1] }}</span></div>
-                <div class="rrow"><span class="rrow-l">Mailto</span><span class="rrow-v copyable" @click="copyEl($event)">mailto:{{ panel.value.trim() }}</span></div>
-              </div>
-
-              <!-- Number -->
-              <div class="result-rows" v-else-if="d.type==='number'">
-                <div class="rrow"><span class="rrow-l">十进制</span><span class="rrow-v em copyable" @click="copyEl($event)">{{ d.num }}</span></div>
-                <div class="rrow"><span class="rrow-l">十六进制</span><span class="rrow-v copyable" @click="copyEl($event)">0x{{ Math.trunc(d.num).toString(16).toUpperCase() }}</span></div>
-                <div class="rrow"><span class="rrow-l">八进制</span><span class="rrow-v copyable" @click="copyEl($event)">0o{{ Math.trunc(d.num).toString(8) }}</span></div>
-                <div class="rrow"><span class="rrow-l">二进制</span><span class="rrow-v copyable" @click="copyEl($event)" style="font-size:11px">{{ Math.trunc(d.num).toString(2) }}</span></div>
-              </div>
-
-              <!-- Hex number -->
-              <div class="result-rows" v-else-if="d.type==='hexnum'">
-                <div class="rrow"><span class="rrow-l">十进制</span><span class="rrow-v em copyable" @click="copyEl($event)">{{ d.num }}</span></div>
-                <div class="rrow"><span class="rrow-l">八进制</span><span class="rrow-v copyable" @click="copyEl($event)">0o{{ d.num.toString(8) }}</span></div>
-                <div class="rrow"><span class="rrow-l">二进制</span><span class="rrow-v copyable" @click="copyEl($event)" style="font-size:11px">{{ d.num.toString(2) }}</span></div>
-                <div class="rrow" v-if="d.num<=0x10ffff"><span class="rrow-l">Unicode 字符</span><span class="rrow-v copyable" @click="copyEl($event)">{{ String.fromCodePoint(d.num) }}</span></div>
-              </div>
-
-              <!-- Binary -->
-              <div class="result-rows" v-else-if="d.type==='binary'||d.type==='binraw'">
-                <div class="rrow"><span class="rrow-l">十进制</span><span class="rrow-v em copyable" @click="copyEl($event)">{{ d.num }}</span></div>
-                <div class="rrow"><span class="rrow-l">十六进制</span><span class="rrow-v copyable" @click="copyEl($event)">0x{{ d.num.toString(16).toUpperCase() }}</span></div>
-                <div class="rrow" v-if="d.num<=0x10ffff"><span class="rrow-l">Unicode 字符</span><span class="rrow-v copyable" @click="copyEl($event)">{{ String.fromCodePoint(d.num) }}</span></div>
-              </div>
-
-              <!-- ═══ NEW DETECTION DISPLAYS ═══ -->
-
-              <!-- JSON -->
-              <div class="result-rows" v-else-if="d.type==='json'">
-                <div class="rrow"><span class="rrow-l">类型</span><span class="rrow-v em copyable" @click="copyEl($event)">{{ d.isArray ? 'Array (数组)' : 'Object (对象)' }}</span></div>
-                <div class="rrow"><span class="rrow-l">{{ d.isArray ? '元素数' : '键数量' }}</span><span class="rrow-v copyable" @click="copyEl($event)">{{ d.count }}</span></div>
-                <div class="rrow"><span class="rrow-l">嵌套深度</span><span class="rrow-v copyable" @click="copyEl($event)">{{ d.depth }}</span></div>
-                <div class="rrow"><span class="rrow-l">大小</span><span class="rrow-v copyable" @click="copyEl($event)">{{ d.size }} 字节</span></div>
-              </div>
-
-              <!-- Date String -->
-              <div class="result-rows" v-else-if="d.type==='datestr'">
-                <div class="rrow"><span class="rrow-l">本地时间</span><span class="rrow-v em copyable" @click="copyEl($event)">{{ fmtLocal(d.ts) }}</span></div>
-                <div class="rrow"><span class="rrow-l">UTC</span><span class="rrow-v copyable" @click="copyEl($event)">{{ fmtUtc(d.ts) }}</span></div>
-                <div class="rrow"><span class="rrow-l">ISO 8601</span><span class="rrow-v copyable" @click="copyEl($event)">{{ new Date(d.ts).toISOString() }}</span></div>
-                <div class="rrow"><span class="rrow-l">秒级时间戳</span><span class="rrow-v copyable" @click="copyEl($event)">{{ Math.floor(d.ts/1000) }}</span></div>
-                <div class="rrow"><span class="rrow-l">毫秒时间戳</span><span class="rrow-v copyable" @click="copyEl($event)">{{ d.ts }}</span></div>
-                <div class="rrow"><span class="rrow-l">距今</span><span class="rrow-v hi copyable" @click="copyEl($event)">{{ relTime(d.ts) }}</span></div>
-              </div>
-
-              <!-- IPv6 -->
-              <div class="result-rows" v-else-if="d.type==='ipv6'">
-                <div class="rrow"><span class="rrow-l">类型</span><span class="rrow-v em copyable" @click="copyEl($event)">{{ d.addrType }}</span></div>
-                <div class="rrow"><span class="rrow-l">完整形式</span><span class="rrow-v copyable" @click="copyEl($event)" style="font-size:11px">{{ d.expanded }}</span></div>
-              </div>
-
-              <!-- MAC -->
-              <div class="result-rows" v-else-if="d.type==='mac'">
-                <div class="rrow"><span class="rrow-l">冒号格式</span><span class="rrow-v em copyable" @click="copyEl($event)">{{ panel.value.trim().replace(/[:-]/g,':').toUpperCase() }}</span></div>
-                <div class="rrow"><span class="rrow-l">连字符</span><span class="rrow-v copyable" @click="copyEl($event)">{{ panel.value.trim().replace(/[:-]/g,'-').toUpperCase() }}</span></div>
-                <div class="rrow"><span class="rrow-l">无分隔符</span><span class="rrow-v copyable" @click="copyEl($event)">{{ panel.value.trim().replace(/[:-]/g,'').toUpperCase() }}</span></div>
-                <div class="rrow"><span class="rrow-l">类型</span><span class="rrow-v copyable" @click="copyEl($event)">{{ macType(panel.value.trim()) }}</span></div>
-              </div>
-
-              <!-- CIDR -->
-              <div class="result-rows" v-else-if="d.type==='cidr'">
-                <div class="rrow"><span class="rrow-l">网络地址</span><span class="rrow-v em copyable" @click="copyEl($event)">{{ d.calc.network }}/{{ d.prefix }}</span></div>
-                <div class="rrow"><span class="rrow-l">子网掩码</span><span class="rrow-v copyable" @click="copyEl($event)">{{ d.calc.mask }}</span></div>
-                <div class="rrow"><span class="rrow-l">广播地址</span><span class="rrow-v copyable" @click="copyEl($event)">{{ d.calc.broadcast }}</span></div>
-                <div class="rrow"><span class="rrow-l">可用主机</span><span class="rrow-v copyable" @click="copyEl($event)">{{ d.calc.hosts.toLocaleString() }}</span></div>
-                <div class="rrow"><span class="rrow-l">地址范围</span><span class="rrow-v copyable" @click="copyEl($event)">{{ d.calc.first }} – {{ d.calc.last }}</span></div>
-              </div>
-
-              <!-- Domain -->
-              <div class="result-rows" v-else-if="d.type==='domain'">
-                <div class="rrow"><span class="rrow-l">域名</span><span class="rrow-v em copyable" @click="copyEl($event)">{{ panel.value.trim() }}</span></div>
-                <div class="rrow"><span class="rrow-l">顶级域</span><span class="rrow-v copyable" @click="copyEl($event)">.{{ panel.value.trim().split('.').pop() }}</span></div>
-                <div class="rrow"><span class="rrow-l">HTTPS</span><span class="rrow-v copyable" @click="copyEl($event)">https://{{ panel.value.trim() }}</span></div>
-              </div>
-
-              <!-- Phone (CN) -->
-              <div class="result-rows" v-else-if="d.type==='phone_cn'">
-                <div class="rrow"><span class="rrow-l">格式化</span><span class="rrow-v em copyable" @click="copyEl($event)">{{ panel.value.trim().replace(/(\d{3})(\d{4})(\d{4})/, '$1 $2 $3') }}</span></div>
-                <div class="rrow"><span class="rrow-l">运营商</span><span class="rrow-v copyable" @click="copyEl($event)">{{ d.carrier }}</span></div>
-              </div>
-
-              <!-- Semver -->
-              <div class="result-rows" v-else-if="d.type==='semver'">
-                <div class="rrow"><span class="rrow-l">Major</span><span class="rrow-v em copyable" @click="copyEl($event)">{{ d.major }}</span></div>
-                <div class="rrow"><span class="rrow-l">Minor</span><span class="rrow-v copyable" @click="copyEl($event)">{{ d.minor }}</span></div>
-                <div class="rrow"><span class="rrow-l">Patch</span><span class="rrow-v copyable" @click="copyEl($event)">{{ d.patch }}</span></div>
-                <div class="rrow" v-if="d.pre"><span class="rrow-l">预发布</span><span class="rrow-v copyable" @click="copyEl($event)">{{ d.pre }}</span></div>
-                <div class="rrow" v-if="d.build"><span class="rrow-l">构建</span><span class="rrow-v copyable" @click="copyEl($event)">{{ d.build }}</span></div>
-              </div>
-
-              <!-- Cron -->
-              <div class="result-rows" v-else-if="d.type==='cron'">
-                <div class="rrow"><span class="rrow-l">描述</span><span class="rrow-v em copyable" @click="copyEl($event)">{{ d.desc }}</span></div>
-                <div class="rrow"><span class="rrow-l">分钟</span><span class="rrow-v copyable" @click="copyEl($event)">{{ d.parts[0] }}</span></div>
-                <div class="rrow"><span class="rrow-l">小时</span><span class="rrow-v copyable" @click="copyEl($event)">{{ d.parts[1] }}</span></div>
-                <div class="rrow"><span class="rrow-l">日</span><span class="rrow-v copyable" @click="copyEl($event)">{{ d.parts[2] }}</span></div>
-                <div class="rrow"><span class="rrow-l">月</span><span class="rrow-v copyable" @click="copyEl($event)">{{ d.parts[3] }}</span></div>
-                <div class="rrow"><span class="rrow-l">星期</span><span class="rrow-v copyable" @click="copyEl($event)">{{ d.parts[4] }}</span></div>
-              </div>
-
-              <!-- Regex -->
-              <div class="result-rows" v-else-if="d.type==='regex'">
-                <div class="rrow"><span class="rrow-l">模式</span><span class="rrow-v em copyable" @click="copyEl($event)">{{ d.pattern }}</span></div>
-                <div class="rrow"><span class="rrow-l">标志</span><span class="rrow-v copyable" @click="copyEl($event)">{{ d.flags || '(无)' }}</span></div>
-                <div class="rrow"><span class="rrow-l">状态</span><span class="rrow-v" style="color:#86efac">✓ 有效正则表达式</span></div>
-              </div>
-
-            </div>
-          </div>
-
-          <!-- Operations (grouped) -->
-          <div class="ops-section" v-if="panel.value">
-            <div class="ops-title">计算操作</div>
-            <div v-for="group in opGroups" :key="group.name" class="ops-group">
-              <div class="ops-group-name">{{ group.name }}</div>
-              <div class="ops-grid">
-                <button
-                  v-for="op in group.ops" :key="op.id"
-                  class="btn-op"
-                  :class="{ active: panel.activeOps[op.id] }"
-                  @click="compute(panel, op)"
-                >{{ op.label }}</button>
-              </div>
-            </div>
-          </div>
-
-          <!-- Computed results -->
-          <div class="computed-section" v-if="panel.computedList && panel.computedList.length">
-            <div class="cr-item" v-for="cr in panel.computedList" :key="cr.id">
-              <div class="cr-label">{{ cr.label }}</div>
-              <div class="cr-value">{{ cr.value }}<div class="cr-btns">
-                  <button class="cr-send" @click.stop="sendToPanel(cr.value)" title="发送到新面板">→</button>
-                  <button class="cr-copy" @click.stop="copy(cr.value)" title="复制">⎘</button>
-                </div>
-              </div>
-            </div>
-          </div>
-
-        </template>
       </div>
       <!-- ── /PANEL CARD ── -->
 
@@ -333,6 +377,9 @@
 
   <!-- Toast -->
   <div class="toast" v-if="toast">{{ toast }}</div>
+
+  <!-- Selection length indicator -->
+  <div class="sel-indicator" v-if="selLen > 0">已选 {{ selLen }} 字符</div>
 
 </div>
 

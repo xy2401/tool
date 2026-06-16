@@ -264,11 +264,13 @@ createApp({
       ],
       _uid: 3,
       toast: '',
+      selLen: 0,
 
       opGroups: [
         { name: '哈希', ops: [
           { id: 'md5', label: 'MD5' }, { id: 'sha1', label: 'SHA-1' },
           { id: 'sha256', label: 'SHA-256' }, { id: 'sha512', label: 'SHA-512' },
+          { id: 'sha512x1000', label: 'SHA-512 ×1000' },
         ]},
         { name: '编码 / 解码', ops: [
           { id: 'b64enc', label: 'Base64 编码' }, { id: 'b64dec', label: 'Base64 解码' },
@@ -320,6 +322,11 @@ createApp({
         el.style.height = 'auto';
         el.style.height = Math.min(el.scrollHeight, 380) + 'px';
       });
+    });
+    // Track text selection length for manual copy
+    document.addEventListener('selectionchange', () => {
+      const sel = window.getSelection();
+      this.selLen = sel ? sel.toString().length : 0;
     });
   },
 
@@ -486,6 +493,13 @@ createApp({
           case 'sha1':      return CryptoJS.SHA1(v).toString();
           case 'sha256':    return CryptoJS.SHA256(v).toString();
           case 'sha512':    return CryptoJS.SHA512(v).toString();
+          case 'sha512x1000': {
+            let hash = CryptoJS.SHA512(v);
+            for (let i = 1; i < 1000; i++) hash = CryptoJS.SHA512(hash);
+            const hex = hash.toString();
+            const b64 = hash.toString(CryptoJS.enc.Base64);
+            return `HEX (128字符):\n${hex}\n\nBase64 (88字符):\n${b64}`;
+          }
           case 'b64enc':    return b64Encode(v);
           case 'b64dec':    try { return b64Decode(v); } catch(e) { return '❌ 无效的 Base64 字符串'; }
           case 'urlenc':    return encodeURIComponent(v);
