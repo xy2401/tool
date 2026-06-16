@@ -1,5 +1,5 @@
 import { 
-  JSONEditor, 
+  createJSONEditor, 
   jmespathQueryLanguage, 
   lodashQueryLanguage, 
   javascriptQueryLanguage 
@@ -562,7 +562,7 @@ createApp({
         javascriptQueryLanguage
       ];
 
-      editorLeft = new JSONEditor({
+      editorLeft = createJSONEditor({
         target: document.getElementById('editor-left'),
         props: {
           content: { json: initialJson },
@@ -577,7 +577,7 @@ createApp({
         }
       });
 
-      editorRight = new JSONEditor({
+      editorRight = createJSONEditor({
         target: document.getElementById('editor-right'),
         props: {
           content: { json: initialJson },
