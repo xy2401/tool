@@ -120,6 +120,7 @@
                       v-for="op in pair" :key="op.id"
                       class="btn-op"
                       :class="{ active: panel.activeOps[op.id] }"
+                      :title="op.desc || op.label"
                       @click="compute(panel, op)"
                     >{{ op.label }}</button>
                   </div>
@@ -130,6 +131,7 @@
                     v-for="op in group.ops" :key="op.id"
                     class="btn-op"
                     :class="{ active: panel.activeOps[op.id] }"
+                    :title="op.desc || op.label"
                     @click="compute(panel, op)"
                   >{{ op.label }}</button>
                 </div>
