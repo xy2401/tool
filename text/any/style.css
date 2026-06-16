@@ -217,10 +217,28 @@ body {
 .ops-group { margin-bottom: 8px; }
 .ops-group:last-child { margin-bottom: 0; }
 .ops-group-name {
-  font-size: 10px; color: var(--subtle); font-weight: 500;
+  font-size: 10px; color: var(--muted); font-weight: 600;
   margin-bottom: 4px; letter-spacing: 0.3px;
+  cursor: pointer; display: flex; align-items: center; gap: 5px;
+  padding: 3px 4px; border-radius: 4px;
+  transition: background 0.15s, color 0.15s;
+  user-select: none;
+}
+.ops-group-name:hover { background: var(--surf2); color: var(--text); }
+.ops-toggle { font-size: 8px; width: 10px; text-align: center; flex-shrink: 0; }
+.ops-group-count {
+  font-size: 9px; color: var(--subtle); margin-left: auto;
+  background: rgba(255,255,255,0.05); padding: 0 5px; border-radius: 3px;
 }
 .ops-grid { display: flex; flex-wrap: wrap; gap: 5px; }
+.ops-grid-paired { display: flex; flex-wrap: wrap; gap: 6px; }
+.op-pair {
+  display: flex; flex-direction: column; gap: 2px;
+}
+.op-pair .btn-op {
+  font-size: 11px; padding: 3px 10px;
+  border-radius: 4px;
+}
 .btn-op {
   padding: 4px 11px; border: 1px solid var(--border);
   background: transparent; color: var(--muted);

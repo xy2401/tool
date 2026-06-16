@@ -161,6 +161,10 @@ function runDetect(raw) {
     }
   }
 
+  // ── MAC address (AA:BB:CC:DD:EE:FF or AA-BB-CC-DD-EE-FF)
+  if (/^([0-9a-fA-F]{2}[:-]){5}[0-9a-fA-F]{2}$/.test(v))
+    r.push({ type: 'mac', label: 'MAC 地址', color: '#c084fc' });
+
   // ── Email
   if (/^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/.test(v))
     r.push({ type: 'email', label: '邮箱地址', color: '#f472b6' });
@@ -265,6 +269,7 @@ createApp({
       _uid: 3,
       toast: '',
       selLen: 0,
+      opsCollapsed: {},
 
       opGroups: [
         { name: '哈希', ops: [
@@ -272,12 +277,14 @@ createApp({
           { id: 'sha256', label: 'SHA-256' }, { id: 'sha512', label: 'SHA-512' },
           { id: 'sha512x1000', label: 'SHA-512 ×1000' },
         ]},
-        { name: '编码 / 解码', ops: [
-          { id: 'b64enc', label: 'Base64 编码' }, { id: 'b64dec', label: 'Base64 解码' },
-          { id: 'urlenc', label: 'URL 编码' }, { id: 'urldec', label: 'URL 解码' },
-          { id: 'hexenc', label: 'Hex 编码' }, { id: 'hexdec', label: 'Hex 解码' },
-          { id: 'htmlenc', label: 'HTML 编码' }, { id: 'htmldec', label: 'HTML 解码' },
-          { id: 'uniesc', label: 'Unicode 转义' }, { id: 'uniunesc', label: 'Unicode 反转义' },
+        { name: '编码 / 解码', paired: true, ops: [
+          [{ id: 'b64enc', label: 'Base64 编码' }, { id: 'b64dec', label: 'Base64 解码' }],
+          [{ id: 'urlenc', label: 'URL 编码' }, { id: 'urldec', label: 'URL 解码' }],
+          [{ id: 'hexenc', label: 'Hex 编码' }, { id: 'hexdec', label: 'Hex 解码' }],
+          [{ id: 'htmlenc', label: 'HTML 编码' }, { id: 'htmldec', label: 'HTML 解码' }],
+          [{ id: 'uniesc', label: 'Unicode 转义' }, { id: 'uniunesc', label: 'Unicode 反转义' }],
+          [{ id: 'escjson', label: 'JSON 转义' }, { id: 'unescjson', label: 'JSON 反转义' }],
+          [{ id: 'escnl', label: '转义换行符' }, { id: 'unescnl', label: '反转义换行符' }],
         ]},
         { name: '文本变换', ops: [
           { id: 'upper', label: '转大写' }, { id: 'lower', label: '转小写' },
@@ -288,13 +295,14 @@ createApp({
         { name: '行操作', ops: [
           { id: 'sortasc', label: '行排序 ↑' }, { id: 'sortdesc', label: '行排序 ↓' },
           { id: 'dedup', label: '去重行' },
+          { id: 'rmempty', label: '去空行' }, { id: 'addln', label: '添加行号' },
         ]},
-        { name: 'JSON', ops: [
-          { id: 'escjson', label: 'JSON 转义' }, { id: 'unescjson', label: 'JSON 反转义' },
-          { id: 'jsonmin', label: '压缩 JSON' },
+        { name: '提取', ops: [
+          { id: 'exturls', label: '提取 URL' }, { id: 'extemails', label: '提取邮箱' },
+          { id: 'extips', label: '提取 IP' }, { id: 'extnums', label: '提取数字' },
         ]},
-        { name: '转义', ops: [
-          { id: 'escnl', label: '转义换行符' }, { id: 'unescnl', label: '反转义换行符' },
+        { name: '格式化', ops: [
+          { id: 'numfmt', label: '千分位格式化' },
         ]},
         { name: '统计 & 匹配', ops: [
           { id: 'count', label: '字符统计' }, { id: 'regmatch', label: '正则提取' },
@@ -304,7 +312,7 @@ createApp({
   },
 
   computed: {
-    allOps() { return this.opGroups.flatMap(g => g.ops); },
+    allOps() { return this.opGroups.flatMap(g => g.paired ? g.ops.flat() : g.ops); },
   },
 
   created() {
@@ -375,6 +383,17 @@ createApp({
         this.recompute(p);
         this.showToast('JSON 已格式化 ✓');
       } catch(e) { this.showToast('❌ 非有效 JSON'); }
+    },
+    doMinify(p) {
+      try {
+        p.value = JSON.stringify(JSON.parse(p.value.trim()));
+        this.updateDetections(p);
+        this.recompute(p);
+        this.showToast('JSON 已压缩 ✓');
+      } catch(e) { this.showToast('❌ 非有效 JSON'); }
+    },
+    hasDetection(p, type) {
+      return p.detections && p.detections.some(d => d.type === type);
     },
 
     // ── Detection ──
@@ -525,11 +544,18 @@ createApp({
           case 'sortasc':   return v.split('\n').sort((a, b) => a.localeCompare(b, 'zh-CN')).join('\n');
           case 'sortdesc':  return v.split('\n').sort((a, b) => b.localeCompare(a, 'zh-CN')).join('\n');
           case 'dedup':     { const lines = v.split('\n'), u = [...new Set(lines)]; return u.join('\n') + `\n\n(${lines.length} 行 → ${u.length} 行，去除 ${lines.length - u.length} 行重复)`; }
+          case 'rmempty':   { const lines = v.split('\n'), kept = lines.filter(l => l.trim()); return kept.join('\n') + `\n\n(${lines.length} 行 → ${kept.length} 行，移除 ${lines.length - kept.length} 个空行)`; }
+          case 'addln':     return v.split('\n').map((l, i) => `${String(i + 1).padStart(4)} | ${l}`).join('\n');
           case 'escjson':   return JSON.stringify(v).slice(1,-1);
           case 'unescjson': try { return JSON.parse('"' + v + '"'); } catch(e) { return '❌ 转义解析失败'; }
           case 'jsonmin':   try { return JSON.stringify(JSON.parse(v)); } catch(e) { return '❌ 非有效 JSON'; }
           case 'escnl':     return v.replace(/\\/g, '\\\\').replace(/\n/g, '\\n').replace(/\r/g, '\\r').replace(/\t/g, '\\t');
           case 'unescnl':   return v.replace(/\\n/g, '\n').replace(/\\r/g, '\r').replace(/\\t/g, '\t').replace(/\\\\/g, '\\');
+          case 'exturls':   { const m = v.match(/https?:\/\/[^\s<>"']+/gi) || []; return m.length ? `找到 ${m.length} 个 URL：\n${[...new Set(m)].join('\n')}` : '未找到 URL'; }
+          case 'extemails': { const m = v.match(/[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/gi) || []; return m.length ? `找到 ${m.length} 个邮箱：\n${[...new Set(m)].join('\n')}` : '未找到邮箱'; }
+          case 'extips':    { const m = v.match(/\b(?:\d{1,3}\.){3}\d{1,3}\b/g) || []; const valid = m.filter(ip => ip.split('.').every(n => +n >= 0 && +n <= 255)); return valid.length ? `找到 ${valid.length} 个 IP：\n${[...new Set(valid)].join('\n')}` : '未找到 IP 地址'; }
+          case 'extnums':   { const m = v.match(/-?\d+(\.\d+)?/g) || []; return m.length ? `找到 ${m.length} 个数字：\n${m.join('\n')}` : '未找到数字'; }
+          case 'numfmt':    { const nums = v.match(/-?\d+(\.\d+)?/g); if (!nums) return v; let out = v; nums.sort((a,b) => b.length - a.length).forEach(n => { const parts = n.split('.'); parts[0] = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, ','); out = out.replace(n, parts.join('.')); }); return out; }
           case 'count': {
             const zh  = (v.match(/[\u4e00-\u9fa5]/g)||[]).length;
             const wds = v.trim().split(/\s+/).filter(Boolean).length;

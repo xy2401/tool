@@ -86,7 +86,8 @@
               <span class="char-count">{{ panel.value.length }} 字符 · {{ byteLen(panel.value) }} 字节 · {{ panel.value.split('\n').length }} 行</span>
               <div class="input-actions">
                 <button class="btn-xs" @click="doTrim(panel)">去首尾空白</button>
-                <button class="btn-xs" @click="doFormat(panel)">格式化 JSON</button>
+                <button class="btn-xs" v-if="hasDetection(panel, 'json')" @click="doFormat(panel)">格式化 JSON</button>
+                <button class="btn-xs" v-if="hasDetection(panel, 'json')" @click="doMinify(panel)">压缩 JSON</button>
               </div>
             </div>
 
@@ -103,12 +104,28 @@
               <span v-else class="no-detect">未识别特定格式，可通过下方操作计算</span>
             </div>
 
-            <!-- Operations (grouped) -->
+            <!-- Operations (grouped, collapsible) -->
             <div class="ops-section">
               <div class="ops-title">计算操作</div>
               <div v-for="group in opGroups" :key="group.name" class="ops-group">
-                <div class="ops-group-name">{{ group.name }}</div>
-                <div class="ops-grid">
+                <div class="ops-group-name" @click="opsCollapsed[group.name] = !opsCollapsed[group.name]">
+                  <span class="ops-toggle">{{ opsCollapsed[group.name] ? '▶' : '▼' }}</span>
+                  {{ group.name }}
+                  <span class="ops-group-count">{{ group.paired ? group.ops.flat().length : group.ops.length }}</span>
+                </div>
+                <!-- Paired layout (encode/decode stacked) -->
+                <div class="ops-grid ops-grid-paired" v-if="group.paired" v-show="!opsCollapsed[group.name]">
+                  <div class="op-pair" v-for="(pair, pi) in group.ops" :key="pi">
+                    <button
+                      v-for="op in pair" :key="op.id"
+                      class="btn-op"
+                      :class="{ active: panel.activeOps[op.id] }"
+                      @click="compute(panel, op)"
+                    >{{ op.label }}</button>
+                  </div>
+                </div>
+                <!-- Regular flat layout -->
+                <div class="ops-grid" v-else v-show="!opsCollapsed[group.name]">
                   <button
                     v-for="op in group.ops" :key="op.id"
                     class="btn-op"
