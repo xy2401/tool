@@ -320,12 +320,62 @@
           });
         });
 
+        const allPropertiesSelected = computed(() => {
+          if (!selectedNode.value || selectedNodeProperties.value.length === 0) return false;
+          return selectedNodeProperties.value.every(prop => !excludedProperties.value.includes(prop.key));
+        });
+
+        const allNodesSelected = computed(() => {
+          if (nodes.value.length <= 1) return false;
+          return nodes.value.every(node => node.id === 'main' || !excludedNodes.value.includes(node.id));
+        });
+
         const toggleProperty = (key) => {
           const index = excludedProperties.value.indexOf(key);
           if (index === -1) {
             excludedProperties.value.push(key);
           } else {
             excludedProperties.value.splice(index, 1);
+          }
+          applyFormatting();
+        };
+
+        const toggleAllProperties = () => {
+          if (!selectedNode.value) return;
+          if (allPropertiesSelected.value) {
+            selectedNodeProperties.value.forEach(prop => {
+              if (!excludedProperties.value.includes(prop.key)) {
+                excludedProperties.value.push(prop.key);
+              }
+            });
+          } else {
+            selectedNodeProperties.value.forEach(prop => {
+              const index = excludedProperties.value.indexOf(prop.key);
+              if (index !== -1) {
+                excludedProperties.value.splice(index, 1);
+              }
+            });
+          }
+          applyFormatting();
+        };
+
+        const toggleAllNodes = () => {
+          if (nodes.value.length <= 1) return;
+          if (allNodesSelected.value) {
+            nodes.value.forEach(node => {
+              if (node.id !== 'main' && !excludedNodes.value.includes(node.id)) {
+                excludedNodes.value.push(node.id);
+              }
+            });
+          } else {
+            nodes.value.forEach(node => {
+              if (node.id !== 'main') {
+                const index = excludedNodes.value.indexOf(node.id);
+                if (index !== -1) {
+                  excludedNodes.value.splice(index, 1);
+                }
+              }
+            });
           }
           applyFormatting();
         };
@@ -1080,6 +1130,10 @@
           excludedProperties,
           selectedNodeProperties,
           toggleProperty,
+          allPropertiesSelected,
+          toggleAllProperties,
+          allNodesSelected,
+          toggleAllNodes,
           excludedNodes,
           toggleNodeCheckbox,
           

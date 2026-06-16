@@ -112,13 +112,20 @@
         <div class="sidebar-header">
           <span>数据层级</span>
           <div style="display: flex; gap: 0.35rem; align-items: center; text-transform: none;">
+            <template v-if="selectedNode && selectedNodeProperties.length > 0">
+              <span 
+                :class="['badge-secondary', { 'badge-active': allPropertiesSelected }]" 
+                style="cursor: pointer; user-select: none;"
+                @click="toggleAllProperties"
+              >属性 ({{ selectedNodeProperties.length }})</span>
+            </template>
             <span 
-              :class="['badge-secondary', { 'badge-active': showPropertiesInTree }]" 
+              v-if="nodes.length > 1"
+              :class="['badge-secondary', { 'badge-active': allNodesSelected }]" 
               style="cursor: pointer; user-select: none;"
-              @click="showPropertiesInTree = !showPropertiesInTree"
-              v-text="showPropertiesInTree ? '显示属性' : '隐藏属性'"
-            ></span>
-            <span class="badge-secondary" v-text="`${nodes.length} 节点`"></span>
+              @click="toggleAllNodes"
+            >节点 ({{ nodes.length - 1 }})</span>
+            <span v-else class="badge-secondary">节点 (0)</span>
           </div>
         </div>
         
@@ -153,7 +160,7 @@
             </div>
 
             <!-- Primitive Properties of selected node -->
-            <template v-if="selectedNodeId === node.id && showPropertiesInTree && selectedNodeProperties.length > 0">
+            <template v-if="selectedNodeId === node.id && selectedNodeProperties.length > 0">
               <div 
                 v-for="prop in selectedNodeProperties" 
                 :key="prop.key"
