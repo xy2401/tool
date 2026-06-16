@@ -531,6 +531,87 @@ createApp({
       }
     };
 
+    const getContentText = (editor) => {
+      if (!editor) return '';
+      try {
+        const content = editor.get();
+        if (content.text !== undefined) {
+          return content.text;
+        }
+        if (content.json !== undefined) {
+          return JSON.stringify(content.json, null, 2);
+        }
+      } catch (e) {}
+      return '';
+    };
+
+    const copyTextToClipboard = async (text) => {
+      if (!text) return false;
+      try {
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+          await navigator.clipboard.writeText(text);
+          return true;
+        }
+      } catch (e) {}
+      try {
+        const textArea = document.createElement('textarea');
+        textArea.value = text;
+        textArea.style.top = '0';
+        textArea.style.left = '0';
+        textArea.style.position = 'fixed';
+        textArea.style.opacity = '0';
+        document.body.appendChild(textArea);
+        textArea.focus();
+        textArea.select();
+        const successful = document.execCommand('copy');
+        document.body.removeChild(textArea);
+        return successful;
+      } catch (err) {
+        return false;
+      }
+    };
+
+    const copyEditor = async (side) => {
+      const editor = side === 'left' ? editorLeft : editorRight;
+      const label = side === 'left' ? '左侧' : '右侧';
+      const text = getContentText(editor);
+      if (!text) {
+        showToast('复制失败', `${label}内容为空。`, 'warning');
+        return;
+      }
+      const success = await copyTextToClipboard(text);
+      if (success) {
+        showToast('复制成功', `已复制${label}代码至剪贴板！`, 'success');
+      } else {
+        showToast('复制失败', '剪切板写入失败。', 'error');
+      }
+    };
+
+    const downloadEditor = (side) => {
+      const editor = side === 'left' ? editorLeft : editorRight;
+      const label = side === 'left' ? '左侧' : '右侧';
+      const filename = side === 'left' ? 'left_editor.json' : 'right_editor.json';
+      const text = getContentText(editor);
+      if (!text) {
+        showToast('下载失败', `${label}内容为空。`, 'warning');
+        return;
+      }
+      try {
+        const blob = new Blob([text], { type: 'application/json;charset=utf-8;' });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.setAttribute('download', filename);
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        URL.revokeObjectURL(url);
+        showToast('下载成功', `${label}内容已下载。`, 'success');
+      } catch (err) {
+        showToast('下载失败', '创建文件失败。', 'error');
+      }
+    };
+
     onMounted(async () => {
       // Load translations dynamically from data directory
       try {
@@ -668,7 +749,9 @@ createApp({
       handleDataSelect,
       extractRootJSON,
       copyToRight,
-      copyToLeft
+      copyToLeft,
+      copyEditor,
+      downloadEditor
     };
   }
 }).mount('#app');
