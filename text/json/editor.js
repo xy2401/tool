@@ -104,6 +104,19 @@ function onRenderContextMenu(items) {
 
 function translateDOM(node) {
   if (!node) return;
+
+  // Skip translating actual JSON content (keys, values, and CodeMirror editor text)
+  const element = node.nodeType === Node.ELEMENT_NODE ? node : node.parentElement;
+  if (element && (
+    element.closest('.jse-contents') || 
+    element.closest('.cm-editor') || 
+    element.closest('.cm-content') ||
+    element.closest('.jse-key') || 
+    element.closest('.jse-value')
+  )) {
+    return;
+  }
+
   if (node.nodeType === Node.TEXT_NODE) {
     const text = node.nodeValue.trim();
     if (domTranslations[text]) {
@@ -134,10 +147,10 @@ function translateDOM(node) {
 const i18nObserver = new MutationObserver((mutations) => {
   mutations.forEach((mutation) => {
     mutation.addedNodes.forEach((node) => {
-      translateDOM(node);
+      setTimeout(() => translateDOM(node), 0);
     });
     if (mutation.type === 'characterData') {
-      translateDOM(mutation.target);
+      setTimeout(() => translateDOM(mutation.target), 0);
     }
   });
 });
