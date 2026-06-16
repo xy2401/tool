@@ -74,25 +74,26 @@
 
 #### [JSON 查看](./human/json.html)
 
-手写原生页面。从混合文本中提取并格式化 JSON，支持自动解构多次转义的 JSON
+Aug 5, 2019 , 手写原生页面。从混合文本中提取并格式化 JSON，支持自动解构多次转义的 JSON
 字符串，递归解析内部嵌套 JSON 并生成节点树，支持字段过滤与局部修改反向合并。
+
 
 #### [JSON Editor](./human/jsoneditor.html)
 
-基于 `jsoneditor` 库的页面。支持从混合文本提取 JSON，通过代码编辑器与树形
+Jul 30, 2019 , 基于 `jsoneditor` 库的页面。支持从混合文本提取 JSON，通过代码编辑器与树形
 编辑器双栏同步展示，便于对深层嵌套的对象与数组进行可视化查看和编辑。
 
 #### [Monaco Editor](./human/monaco.html)
 
-基于 Monaco Editor 的多语言在线代码编辑页面，可以切换语言和编辑器主题。
+Sep 21, 2019 , 基于 Monaco Editor 的多语言在线代码编辑页面，可以切换语言和编辑器主题。
 
 #### [Monaco Diff](./human/monaco-diff.html)
 
-使用 Monaco Diff Editor 比较两段代码，支持并排差异和行内差异显示。
+Sep 21, 2019 , 使用 Monaco Diff Editor 比较两段代码，支持并排差异和行内差异显示。
 
 #### [Monaco Playground](./human/monaco-playground.html)
 
-提供 JavaScript、HTML 和 CSS 三个编辑区域，可以加载示例并直接运行查看
+Sep 21, 2019 , 提供 JavaScript、HTML 和 CSS 三个编辑区域，可以加载示例并直接运行查看
 结果。
 
 ## 项目原则
