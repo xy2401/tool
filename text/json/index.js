@@ -498,8 +498,63 @@
           }
         };
 
+        const extractJSONSubstrings = (str) => {
+          const results = [];
+          let index = 0;
+          while (index < str.length) {
+            const nextBrace = str.indexOf('{', index);
+            const nextBracket = str.indexOf('[', index);
+            let startIdx = -1;
+            let openChar = '';
+            let closeChar = '';
+            
+            if (nextBrace !== -1 && (nextBracket === -1 || nextBrace < nextBracket)) {
+              startIdx = nextBrace;
+              openChar = '{';
+              closeChar = '}';
+            } else if (nextBracket !== -1) {
+              startIdx = nextBracket;
+              openChar = '[';
+              closeChar = ']';
+            } else {
+              break;
+            }
+
+            let foundJSON = null;
+            let searchStart = startIdx + 1;
+            let closingIndices = [];
+            let cIdx = str.indexOf(closeChar, searchStart);
+            while (cIdx !== -1) {
+              closingIndices.push(cIdx);
+              cIdx = str.indexOf(closeChar, cIdx + 1);
+            }
+
+            for (let i = closingIndices.length - 1; i >= 0; i--) {
+              const endIdx = closingIndices[i];
+              const substring = str.substring(startIdx, endIdx + 1);
+              const parsed = tryParseJSONString(substring);
+              if (parsed !== null) {
+                foundJSON = {
+                  obj: parsed,
+                  start: startIdx,
+                  end: endIdx + 1
+                };
+                break;
+              }
+            }
+
+            if (foundJSON) {
+              results.push(foundJSON);
+              index = foundJSON.end;
+            } else {
+              index = startIdx + 1;
+            }
+          }
+          return results;
+        };
+
         // Recursive tree node extractor
-        // ONLY checks if the direct string values are JSON. No inner substring search is run here.
+        // Checks direct string values, and also extracts nested JSON substrings from plain string values.
         const extractJSONTree = (val, path, isStringifiedInParent) => {
           const id = path.join('.');
           const name = path[path.length - 1];
@@ -526,6 +581,27 @@
                   if (parsedChild !== null) {
                     // Stringified JSON node found. Recurse into it.
                     extractJSONTree(parsedChild, [...path, key], true);
+                  } else {
+                    // Plain string. Check for nested JSON substrings.
+                    const substrings = extractJSONSubstrings(childVal);
+                    if (substrings.length > 0) {
+                      // 1. Add the log string itself to the nodes list
+                      const stringNodeId = [...path, key].join('.');
+                      nodes.value.push({
+                        id: stringNodeId,
+                        path: [...path, key],
+                        name: key,
+                        val: childVal,
+                        isStringifiedInParent: false,
+                        type: 'String(Log)'
+                      });
+
+                      // 2. Recurse into each JSON substring found inside the string
+                      substrings.forEach((sub, subIdx) => {
+                        const subName = `json_${subIdx}`;
+                        extractJSONTree(sub.obj, [...path, key, subName], true);
+                      });
+                    }
                   }
                 } else if (childVal && typeof childVal === 'object') {
                   // Direct object/array child. Recurse.
@@ -749,8 +825,27 @@
             const currentNodeObj = nodes.value.find(n => n.id === currentId);
 
             if (currentNodeObj && currentNodeObj.isStringifiedInParent) {
-              parentNode.value = parentNode.val; // Reference helper
-              parentNode.val[propName] = JSON.stringify(currentVal);
+              if (typeof parentNode.val === 'string') {
+                // Parent is a string (e.g. String(Log) containing JSON substrings)
+                const parentStr = parentNode.val;
+                const substrings = extractJSONSubstrings(parentStr);
+                let targetSubIndex = -1;
+                substrings.forEach((sub, idx) => {
+                  const subName = `json_${idx}`;
+                  if (subName === propName) {
+                    targetSubIndex = idx;
+                  }
+                });
+
+                if (targetSubIndex !== -1) {
+                  const sub = substrings[targetSubIndex];
+                  const newParentStr = parentStr.substring(0, sub.start) + JSON.stringify(currentVal) + parentStr.substring(sub.end);
+                  parentNode.val = newParentStr;
+                }
+              } else {
+                parentNode.value = parentNode.val; // Reference helper
+                parentNode.val[propName] = JSON.stringify(currentVal);
+              }
             } else {
               parentNode.val[propName] = currentVal;
             }

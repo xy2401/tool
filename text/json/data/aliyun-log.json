@@ -1,0 +1,10 @@
+{
+  "__time__": "1781618400",
+  "__topic__": "app-log-prod",
+  "__source__": "10.244.3.45",
+  "__tag__:__hostname__": "pod-order-service-bc9f6f8d-7b2de",
+  "app": "order-service",
+  "ip": "10.244.3.45",
+  "env": "prod",
+  "content": "2026-06-16 22:15:30.123 INFO 1204 --- [io-8080-exec-1] c.e.gateway.LoggingFilter : Request info: {\"method\":\"POST\",\"uri\":\"/api/users\",\"userId\":3081,\"address\":{\"city\":\"Guangzhou\",\"zip\":\"510000\",\"detail\":\"{\\\"street\\\":\\\"No.100 Road\\\",\\\"building\\\":\\\"Room 201\\\",\\\"status\\\":{\\\"active\\\":true}}\"},\"tags\":[\"admin\",\"billing\"]} | Response info: {\"code\":200,\"message\":\"success\",\"data\":{\"userId\":3081,\"status\":\"ACTIVE\"}}"
+}
