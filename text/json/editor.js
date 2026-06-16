@@ -11,6 +11,63 @@ const menuTranslations = {};
 const domTranslations = {};
 const domTooltipTranslations = {};
 
+// Try to parse string as JSON safely (Standard JSON parse, unescaped fallback)
+function tryParseJSONString(str) {
+  if (typeof str !== 'string') return null;
+  str = str.trim();
+  
+  // Must begin with { or [ and end with } or ] to be a JSON object/array candidates
+  if (!((str.startsWith('{') && str.endsWith('}')) || (str.startsWith('[') && str.endsWith(']')))) {
+    return null;
+  }
+
+  // 1. Direct JSON parse
+  try {
+    return JSON.parse(str);
+  } catch (e) {}
+
+  // 2. Safe JSON-specific double-escaping unescaper
+  try {
+    let unescaped = str
+      .replace(/\\"/g, '"')
+      .replace(/\\\\/g, '\\')
+      .replace(/\\\//g, '/')
+      .replace(/\\b/g, '\b')
+      .replace(/\\f/g, '\f')
+      .replace(/\\n/g, '\n')
+      .replace(/\\r/g, '\r')
+      .replace(/\\t/g, '\t');
+    return JSON.parse(unescaped);
+  } catch (e) {}
+
+  // 3. More aggressive character-by-character unescaper mimicking safe template unescaping
+  try {
+    let unescaped = str.replace(/\\(u[0-9a-fA-F]{4}|x[0-9a-fA-F]{2}|.)/g, (match, p1) => {
+      if (p1.startsWith('u')) {
+        return String.fromCharCode(parseInt(p1.slice(1), 16));
+      }
+      if (p1.startsWith('x')) {
+        return String.fromCharCode(parseInt(p1.slice(1), 16));
+      }
+      switch (p1) {
+        case 'n': return '\n';
+        case 'r': return '\r';
+        case 't': return '\t';
+        case 'b': return '\b';
+        case 'f': return '\f';
+        case '"': return '"';
+        case "'": return "'";
+        case '\\': return '\\';
+        case '/': return '/';
+        default: return p1;
+      }
+    });
+    return JSON.parse(unescaped);
+  } catch (e) {}
+
+  return null;
+}
+
 function translateText(text) {
   if (!text) return text;
   if (menuTranslations[text]) return menuTranslations[text];
@@ -407,10 +464,11 @@ createApp({
           if (cl.index > op.index) {
             if ((op.char === '{' && cl.char === '}') || (op.char === '[' && cl.char === ']')) {
               const substring = text.substring(op.index, cl.index + 1);
-              try {
-                matchedRootObj = JSON.parse(substring);
+              const parsed = tryParseJSONString(substring);
+              if (parsed !== null) {
+                matchedRootObj = parsed;
                 break;
-              } catch (e) {}
+              }
             }
           }
         }
