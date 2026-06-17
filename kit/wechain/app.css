@@ -180,6 +180,8 @@ footer .primary,
 .matrix-wrap {
   margin-top: 12px;
   overflow: auto;
+  overscroll-behavior: none;
+  -webkit-overflow-scrolling: touch;
   border: 1px solid var(--line);
   border-radius: 8px;
   background: var(--panel);
@@ -204,6 +206,7 @@ footer .primary,
   left: 0;
   z-index: 8;
   background: var(--panel);
+  will-change: transform;
 }
 
 .head {
@@ -218,6 +221,7 @@ footer .primary,
   gap: 3px;
   font-size: 13px;
   font-weight: 700;
+  will-change: transform;
 }
 
 .corner {
