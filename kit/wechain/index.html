@@ -1,0 +1,173 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <title>微信群接龙统计助手</title>
+    <link rel="stylesheet" href="./css/app.css" />
+  </head>
+  <body>
+    <div id="app" v-cloak>
+      <header class="app-header">
+        <div>
+          <p class="eyebrow">微信群接龙助手</p>
+          <h1>{{ activeList.name }}</h1>
+        </div>
+        <button class="icon-btn" type="button" title="管理列表" @click="openListPanel">☰</button>
+      </header>
+
+      <main class="app-shell">
+        <section class="toolbar">
+          <button type="button" @click="openAddMembers">+ 人员</button>
+          <button type="button" @click="openPasteForToday">粘贴接龙</button>
+          <button type="button" @click="openCsv">CSV</button>
+          <button type="button" @click="randomizeNotice">换一句</button>
+        </section>
+
+        <section class="matrix-wrap" aria-label="打卡矩阵">
+          <div class="matrix" :style="{ '--date-count': visibleDates.length }">
+            <div class="corner cell head name-cell" @click="openAddMembers">
+              <span>人员</span>
+              <small>{{ activeMembers.length }}</small>
+            </div>
+
+            <button
+              v-for="date in visibleDates"
+              :key="'head-' + date.key"
+              class="cell head date-head"
+              :class="{ today: date.key === todayKey, selected: dateModes[date.key] && dateModes[date.key] !== 'none' }"
+              type="button"
+              @click="openPaste(date.key)"
+            >
+              <span>{{ date.label }}</span>
+              <small>{{ date.weekday }}</small>
+              <b
+                class="mode-chip"
+                :class="'mode-' + getDateMode(date.key)"
+                @click.stop="cycleDateMode(date.key)"
+              >{{ modeSymbol(getDateMode(date.key)) }}</b>
+            </button>
+
+            <template v-for="group in groupedMembers" :key="group.key">
+              <div class="group-row name-cell">{{ group.title }}</div>
+              <div class="group-fill" :style="{ gridColumn: '2 / span ' + visibleDates.length }"></div>
+
+              <template v-for="member in group.members" :key="member.id">
+                <div
+                  class="cell person name-cell"
+                  :class="{ deleted: member.deleted }"
+                  @touchstart="startSwipe($event, member.id)"
+                  @touchend="endSwipe($event, member.id)"
+                >
+                  <span>{{ member.name }}</span>
+                  <div class="person-actions">
+                    <button v-if="!member.deleted" type="button" title="移入删除" @click="softDeleteMember(member.id)">删</button>
+                    <button v-if="member.deleted" type="button" title="恢复" @click="restoreMember(member.id)">回</button>
+                    <button v-if="member.deleted" type="button" title="彻底删除" @click="hardDeleteMember(member.id)">清</button>
+                  </div>
+                </div>
+                <button
+                  v-for="date in visibleDates"
+                  :key="member.id + '-' + date.key"
+                  class="cell mark"
+                  :class="{ done: isDone(member.id, date.key), missing: !isDone(member.id, date.key), deleted: member.deleted }"
+                  type="button"
+                  @click="toggleMark(member.id, date.key)"
+                >{{ isDone(member.id, date.key) ? '✓' : '-' }}</button>
+              </template>
+            </template>
+          </div>
+        </section>
+
+        <section class="notice-card" :class="{ celebrate: noticeSpark }">
+          <div class="notice-top">
+            <div>
+              <p class="eyebrow">通知文案</p>
+              <strong>{{ noticeMeta }}</strong>
+            </div>
+            <select v-model="timeOverride" @change="randomizeNotice">
+              <option value="auto">自动</option>
+              <option value="morning">早上</option>
+              <option value="noon">中午</option>
+              <option value="afternoon">下午</option>
+              <option value="evening">晚上</option>
+              <option value="late">深夜</option>
+            </select>
+          </div>
+          <textarea readonly :value="noticeText" aria-label="生成的通知文案"></textarea>
+          <div class="notice-actions">
+            <button type="button" @click="copyText(noticeText)">复制通知</button>
+            <button type="button" @click="copyText(currentNamesLine)">复制@名单</button>
+            <button type="button" @click="randomizeNotice">换一句</button>
+          </div>
+          <div class="confetti" aria-hidden="true">
+            <span v-for="n in 10" :key="n">🎉</span>
+          </div>
+        </section>
+      </main>
+
+      <div v-if="modal" class="modal-backdrop" @click.self="closeModal">
+        <section class="modal">
+          <header>
+            <h2>{{ modalTitle }}</h2>
+            <button class="icon-btn" type="button" @click="closeModal">×</button>
+          </header>
+
+          <template v-if="modal === 'paste'">
+            <p class="hint">当前日期：{{ pasteDate }}</p>
+            <textarea v-model="pasteText" placeholder="#接龙&#10;&#10;1. 小羊&#10;2. 风里跑&#10;3. 阿宁今天练腿"></textarea>
+            <div v-if="pendingNames.length" class="new-names">
+              <strong>发现新人员</strong>
+              <label v-for="name in pendingNames" :key="name">
+                <input type="checkbox" v-model="selectedPendingNames" :value="name" />
+                {{ name }}
+              </label>
+            </div>
+            <footer>
+              <button type="button" @click="previewPaste">识别</button>
+              <button class="primary" type="button" @click="applyPaste">更新当天</button>
+            </footer>
+          </template>
+
+          <template v-if="modal === 'members'">
+            <p class="hint">可以粘贴微信群 @ 人文本，也可以一行一个名字。</p>
+            <textarea v-model="memberText" placeholder="@小羊 @风里跑 @阿宁今天练腿"></textarea>
+            <footer>
+              <button class="primary" type="button" @click="addMembersFromText">添加</button>
+            </footer>
+          </template>
+
+          <template v-if="modal === 'lists'">
+            <div class="list-manager">
+              <button
+                v-for="list in store.lists"
+                :key="list.id"
+                type="button"
+                :class="{ active: list.id === store.activeListId }"
+                @click="switchList(list.id)"
+              >{{ list.name }}</button>
+            </div>
+            <input v-model="listNameDraft" placeholder="列表名，例如 健身群" />
+            <footer>
+              <button type="button" @click="createList">新建</button>
+              <button type="button" @click="renameList">重命名</button>
+              <button type="button" @click="cloneList">复制</button>
+              <button type="button" @click="deleteList">删除</button>
+            </footer>
+          </template>
+
+          <template v-if="modal === 'csv'">
+            <textarea readonly :value="csvText"></textarea>
+            <footer>
+              <button type="button" @click="copyText(csvText)">复制 CSV</button>
+              <button class="primary" type="button" @click="downloadCsv">下载 CSV</button>
+            </footer>
+          </template>
+        </section>
+      </div>
+    </div>
+
+    <script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
+    <script src="./js/app.js"></script>
+  </body>
+</html>
