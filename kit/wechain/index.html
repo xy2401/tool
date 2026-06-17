@@ -45,7 +45,10 @@
             </button>
 
             <template v-for="group in groupedMembers" :key="group.key">
-              <div class="group-row name-cell">{{ group.title }}</div>
+              <div class="group-row name-cell">
+                <span>{{ group.label }}</span>
+                <small>{{ group.count }}</small>
+              </div>
               <div class="group-fill" :style="{ gridColumn: '2 / span ' + visibleDates.length }"></div>
 
               <template v-for="member in group.members" :key="member.id">

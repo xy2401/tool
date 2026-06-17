@@ -161,12 +161,13 @@
 
         const result = sortedKeys.map((key) => ({
           key,
-          title: `---${key}(${groups.get(key).length})---`,
+          label: key,
+          count: groups.get(key).length,
           members: groups.get(key)
         }));
 
         if (deleted.length) {
-          result.push({ key: "deleted", title: `---删除(${deleted.length})---`, members: deleted });
+          result.push({ key: "deleted", label: "删除", count: deleted.length, members: deleted });
         }
 
         return result;

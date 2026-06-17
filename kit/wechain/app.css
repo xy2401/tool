@@ -257,12 +257,35 @@ footer .primary,
 .group-row,
 .group-fill {
   min-height: 28px;
-  padding: 6px 10px;
+  padding: 5px 8px;
   border-bottom: 1px solid var(--line);
   background: #ecefe7;
   color: var(--muted);
   font-size: 12px;
   font-weight: 700;
+}
+
+.group-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.group-row span {
+  display: inline-grid;
+  place-items: center;
+  min-width: 22px;
+  height: 20px;
+  padding: 0 7px;
+  border-radius: 999px;
+  background: #fff;
+  color: var(--ink);
+  text-transform: uppercase;
+}
+
+.group-row small {
+  color: var(--muted);
+  font-size: 12px;
 }
 
 .person {
