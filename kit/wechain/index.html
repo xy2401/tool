@@ -86,6 +86,7 @@
           </div>
         </section>
 
+        <div v-if="showNoticePanel" class="modal-backdrop" @click.self="toggleNoticePanel" style="z-index: 30;"></div>
         <section v-if="showNoticePanel" class="notice-card" :class="{ celebrate: noticeSpark }">
           <div class="notice-top">
             <div>
@@ -134,11 +135,16 @@
 
       <div v-if="modal" class="modal-backdrop" @click.self="closeModal">
         <section class="modal">
-          <header :class="{ 'paste-header': modal === 'paste' }">
+          <header :class="{ 'paste-header': modal === 'paste' || modal === 'members' }">
             <template v-if="modal === 'paste'">
               <h2>粘贴接龙</h2>
               <span class="paste-date">{{ pasteDate }}</span>
               <button class="primary compact-action" type="button" @click="applyPaste">更新</button>
+            </template>
+            <template v-else-if="modal === 'members'">
+              <h2>新增人员</h2>
+              <span class="paste-date"></span>
+              <button class="primary compact-action" type="button" @click="addMembersFromText">添加</button>
             </template>
             <h2 v-else-if="modalTitle">{{ modalTitle }}</h2>
             <button class="icon-btn" type="button" @click="closeModal">×</button>
@@ -166,9 +172,6 @@
           <template v-if="modal === 'members'">
             <p class="hint">可以粘贴微信群 @ 人文本，也可以一行一个名字。</p>
             <textarea v-model="memberText" placeholder="@小羊 @风里跑 @阿宁今天练腿"></textarea>
-            <footer>
-              <button class="primary" type="button" @click="addMembersFromText">添加</button>
-            </footer>
           </template>
 
           <template v-if="modal === 'lists'">
