@@ -59,12 +59,8 @@
       lists: [
         {
           id: listId,
-          name: "健身群",
-          members: [
-            { id: makeId("member"), name: "小羊", deleted: false },
-            { id: makeId("member"), name: "风里跑", deleted: false },
-            { id: makeId("member"), name: "阿宁今天练腿", deleted: false }
-          ],
+          name: "未命名列表",
+          members: [],
           marks: {},
           dateModes: {}
         }
