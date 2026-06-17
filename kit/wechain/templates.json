@@ -9,38 +9,52 @@
     "{date} 今日接龙完成\n\n{names}\n{count}人已到位。把该做的事做完，本身就很了不起。",
     "{date} 完成记录\n\n{names}\n{count}人已经补上今天这一格，继续轻轻稳住。",
     "{date} 打卡小红榜\n\n{names}\n{count}人完成今日接龙。不是声势浩大，但很扎实。",
-    "{date} 今日已完成\n\n{names}\n{count}人完成接龙。每一次按时出现，都算数 🎉"
+    "{date} 今日已完成\n\n{names}\n{count}人完成接龙。每一次按时出现，都算数 🎉",
+    "{date} 今日打卡到账\n\n{names}\n{count}人已经完成。很好，今天的小任务被你们拿捏住了。",
+    "{date} 进度条亮灯\n\n{names}\n{count}人完成接龙。今天这格，亮得很安心。",
+    "{date} 小队上线\n\n{names}\n{count}人已完成。状态不错，继续保持这个手感。",
+    "{date} 打卡完成播报\n\n{names}\n{count}人已经到位。今天的自己：靠谱。"
   ],
   "singleMissing": {
     "morning": [
       "早上好，今天可以慢慢进入节奏。\n\n{names}\n还有{count}人未完成接龙，不急，但别忘了给自己一个开始。",
       "{date} 早间提醒\n\n{names}\n还有{count}人没接龙。先补这一小步，今天就更稳一点。",
       "早上这会儿很适合把第一件小事做掉。\n\n{names}\n还有{count}人未完成接龙，顺手点亮今天。",
-      "{date} 早安打卡\n\n{names}\n还有{count}人没接龙。给今天一个轻轻的开头就好。"
+      "{date} 早安打卡\n\n{names}\n还有{count}人没接龙。给今天一个轻轻的开头就好。",
+      "早上好，今日份启动键还差几位。\n\n{names}\n还有{count}人未完成接龙，点一下，今天就算正式开机。",
+      "{date} 早起进度提醒\n\n{names}\n还有{count}人没接龙。别急，先把这一格点亮。"
     ],
     "noon": [
       "午间小提醒。\n\n{names}\n还有{count}人未完成接龙，吃完饭顺手补一下也刚好。",
       "{date} 午间进度\n\n{names}\n还有{count}人没接龙。今天已经过半，给自己留个完整记录。",
       "中午到了，给进度条补一格。\n\n{names}\n还有{count}人未完成接龙，趁现在顺手完成。",
-      "{date} 午间轻提醒\n\n{names}\n还有{count}人还没接龙。忙归忙，别把自己的记录落下。"
+      "{date} 午间轻提醒\n\n{names}\n还有{count}人还没接龙。忙归忙，别把自己的记录落下。",
+      "午间路过，顺手捞一下进度。\n\n{names}\n还有{count}人未完成接龙，点完再继续忙。",
+      "{date} 午间补给站\n\n{names}\n还有{count}人没接龙。给记录也补一口能量。"
     ],
     "afternoon": [
       "下午加油，别让今天悄悄溜走。\n\n{names}\n还有{count}人未完成接龙，把这一卡拿下。",
       "{date} 下午提醒\n\n{names}\n还有{count}人没接龙。现在补上，晚上会轻松很多。",
       "下午适合把悬着的小事收一收。\n\n{names}\n还有{count}人未完成接龙，补上就清爽了。",
-      "{date} 进度收拢\n\n{names}\n还有{count}人还没接龙。今天还有时间，把这一格稳稳放进去。"
+      "{date} 进度收拢\n\n{names}\n还有{count}人还没接龙。今天还有时间，把这一格稳稳放进去。",
+      "下午场提醒来了。\n\n{names}\n还有{count}人未完成接龙。别让今天偷偷下班，先补这一格。",
+      "{date} 下午小推一把\n\n{names}\n还有{count}人没接龙。现在补上，晚上少惦记一件事。"
     ],
     "evening": [
       "晚上收尾提醒。\n\n{names}\n还有{count}人未完成接龙，今天还没结束，补上就算数。",
       "{date} 今日收尾\n\n{names}\n还有{count}人没接龙。差这一卡可惜了，顺手补齐。",
       "晚上了，给今天一个完整结尾。\n\n{names}\n还有{count}人未完成接龙，补上这一格就很好。",
-      "{date} 睡前进度\n\n{names}\n还有{count}人还没接龙。今天的记录还等你点亮。"
+      "{date} 睡前进度\n\n{names}\n还有{count}人还没接龙。今天的记录还等你点亮。",
+      "晚上收工前，进度再对齐一下。\n\n{names}\n还有{count}人未完成接龙。补上这一格，今天更圆满。",
+      "{date} 夜间收尾\n\n{names}\n还有{count}人没接龙。别把今天的小尾巴留到明天。"
     ],
     "late": [
       "夜深了，轻轻提醒一下。\n\n{names}\n还有{count}人还没接龙。能补就补，太晚了也记得休息。",
       "{date} 深夜轻提醒\n\n{names}\n还有{count}人未完成。记录重要，休息也重要，量力补上。",
       "夜深了，不加重压力，只轻轻放个提醒。\n\n{names}\n还有{count}人没接龙。能完成就完成，困了也别硬撑。",
-      "{date} 夜间提醒\n\n{names}\n还有{count}人未完成接龙。补上很好，早点休息也很重要。"
+      "{date} 夜间提醒\n\n{names}\n还有{count}人未完成接龙。补上很好，早点休息也很重要。",
+      "深夜轻轻敲门，不吵。\n\n{names}\n还有{count}人没接龙。能补就补，困了就先睡，明天也要好好的。",
+      "{date} 深夜小尾巴\n\n{names}\n还有{count}人未完成。今天快结束了，量力把这一格收一下。"
     ],
     "common": [
       "{date} 打卡提醒\n\n{names}\n还有{count}人未完成接龙。差一点点也是很接近完成，补上它。",
@@ -50,7 +64,10 @@
       "{date} 待完成名单\n\n{names}\n还有{count}人未完成。已经很接近了，把最后这点补齐。",
       "{date} 接龙提醒\n\n{names}\n还有{count}人没接龙。给自己一个完成的小确认。",
       "{date} 轻轻敲一下\n\n{names}\n还有{count}人未完成接龙。忙完手头事，记得回来补这一格。",
-      "{date} 今日还差一点\n\n{names}\n还有{count}人没接龙。补上之后，今天就更完整了。"
+      "{date} 今日还差一点\n\n{names}\n还有{count}人没接龙。补上之后，今天就更完整了。",
+      "{date} 进度捞人\n\n{names}\n还有{count}人没接龙。队伍很近了，差你这一格。",
+      "{date} 接龙小喇叭\n\n{names}\n还有{count}人未完成。别让名字在名单里孤单太久。",
+      "{date} 今日待点亮\n\n{names}\n还有{count}人没接龙。来，把灰色小格变亮。"
     ]
   },
   "rangeDone": [
@@ -61,7 +78,10 @@
     "{range} 完整记录\n\n{names}\n{count}人把这{days}天都稳稳接住了，值得认真表扬。",
     "{range} 全勤名单\n\n{names}\n{count}人完成全部接龙。看起来只是几格，其实每一格都不容易。",
     "{range} 打卡完成\n\n{names}\n{count}人没有断开节奏。稳定，就是最朴素也最厉害的能力。",
-    "{range} 阶段小结\n\n{names}\n{count}人完成全部接龙。你们把这段时间照顾得很好 🎉"
+    "{range} 阶段小结\n\n{names}\n{count}人完成全部接龙。你们把这段时间照顾得很好 🎉",
+    "{range} 完成播报\n\n{names}\n{count}人一路在线。不是偶尔努力，是持续靠谱。",
+    "{range} 稳定发挥\n\n{names}\n{count}人完成全部接龙。这波节奏，真的很漂亮。",
+    "{range} 记录满格\n\n{names}\n{count}人全部完成。看着这一排 1，就很舒坦。"
   ],
   "rangeMissing": [
     "{range} 打卡提醒\n\n{names}\n{count}人存在未完成记录。别急着追求完美，先把能补的那一格补上。",
@@ -71,7 +91,10 @@
     "{range} 待补名单\n\n{names}\n{count}人还没完成全部接龙。慢慢补，不用慌，但别放着不管。",
     "{range} 小结提醒\n\n{names}\n{count}人存在缺卡。不是要一次做到完美，是把断掉的地方接回来。",
     "{range} 补卡提示\n\n{names}\n{count}人还差几格。能补一格是一格，进度会重新连起来。",
-    "{range} 阶段待完成\n\n{names}\n{count}人还有未完成接龙。今天先向前挪一步，就很好。"
+    "{range} 阶段待完成\n\n{names}\n{count}人还有未完成接龙。今天先向前挪一步，就很好。",
+    "{range} 进度召回\n\n{names}\n{count}人还有缺口。别慌，先补一格，节奏就回来了。",
+    "{range} 补格提醒\n\n{names}\n{count}人还没补齐。灰色格子不多说话，但它一直在等你。",
+    "{range} 小队进度\n\n{names}\n{count}人还有未完成。已经走了一段了，别在这里掉线。"
   ],
   "weekDone": [
     "{range} 一周打卡\n\n{names}\n{count}人完成了一周全部接龙。不是每天都容易，但你们都做到了 🎉",
@@ -81,7 +104,10 @@
     "{range} 周打卡完成\n\n{names}\n{count}人完成一周全部接龙。连续出现，本身就很厉害。",
     "{range} 一周全勤\n\n{names}\n{count}人没有缺席。给这一周的自己，一个认真掌声 🎉",
     "{range} 周期小结\n\n{names}\n{count}人完成了一整周接龙。不是靠热血，是靠每天一点点。",
-    "{range} 七天完成\n\n{names}\n{count}人七天都在。这样的稳定，很值得被看见 👑"
+    "{range} 七天完成\n\n{names}\n{count}人七天都在。这样的稳定，很值得被看见 👑",
+    "{range} 一周封顶\n\n{names}\n{count}人完成整周接龙。七天在线，皇冠戴好 👑",
+    "{range} 周榜亮灯\n\n{names}\n{count}人一周全勤。每天一小步，合起来很有分量。",
+    "{range} 七日连击\n\n{names}\n{count}人完成一周全部接龙。这不是运气，是稳定发挥。"
   ],
   "all": [
     "{range} 打卡统计\n\n已完成全部接龙：{doneCount}人\n{doneNames}\n\n未完成全部接龙：{missCount}人\n{missNames}\n\n完成的继续稳住，没补齐的今天安排上。",
@@ -89,20 +115,27 @@
     "{range} 接龙小结\n\n全部完成：{doneCount}人\n{doneNames}\n\n还需补齐：{missCount}人\n{missNames}\n\n已经完成的很稳，还没补齐的也还有机会。",
     "{range} 今日统计\n\n完成全部接龙：{doneCount}人\n{doneNames}\n\n未完成全部接龙：{missCount}人\n{missNames}\n\n进度摆在这里，接下来就更清楚了。",
     "{range} 打卡看板\n\n全勤：{doneCount}人\n{doneNames}\n\n待补：{missCount}人\n{missNames}\n\n完成的人继续保持，待补的人先补一格。",
-    "{range} 统计结果\n\n已全部完成：{doneCount}人\n{doneNames}\n\n还有缺口：{missCount}人\n{missNames}\n\n每个人都在自己的节奏里，今天能补上的就补上。"
+    "{range} 统计结果\n\n已全部完成：{doneCount}人\n{doneNames}\n\n还有缺口：{missCount}人\n{missNames}\n\n每个人都在自己的节奏里，今天能补上的就补上。",
+    "{range} 接龙看板\n\n皇冠区：{doneCount}人\n{doneNames}\n\n小红花待补区：{missCount}人\n{missNames}\n\n完成的稳，待补的也别慌，补一格就前进一步。",
+    "{range} 今日战况\n\n满格完成：{doneCount}人\n{doneNames}\n\n还差一点：{missCount}人\n{missNames}\n\n队伍还在，进度还能追。",
+    "{range} 进度广播\n\n全部完成：{doneCount}人\n{doneNames}\n\n待补名单：{missCount}人\n{missNames}\n\n已经亮的继续亮，没亮的也快来点灯。"
   ],
   "emptyDone": [
     "{date}\n\n暂时还没有人完成接龙，第一位从容开局的人在哪里。",
     "{date}\n\n完成名单还在等待点亮，先来一位开个好头。",
     "{date}\n\n今天的完成名单还空着。没关系，第一格从现在开始也来得及。",
     "{date}\n\n目前还没有完成记录。谁先点亮今天，谁就开个好头。",
-    "{date}\n\n完成区暂时安静。等第一位把今天这一格点亮。"
+    "{date}\n\n完成区暂时安静。等第一位把今天这一格点亮。",
+    "{date}\n\n今天的第一顶皇冠还没出现，谁来开个头 👑",
+    "{date}\n\n进度条还没亮灯，第一位上场的人在哪里。"
   ],
   "emptyMissing": [
     "{date}\n\n今天没有未完成名单，全员到齐 🎉",
     "{date}\n\n没有需要提醒的人，今天的队形很整齐。",
     "{date}\n\n未完成名单为空，大家都很稳 🎉",
     "{date}\n\n今天不用催，全员已经到位。舒服。",
-    "{date}\n\n没有缺口，今天这一轮很完整。"
+    "{date}\n\n没有缺口，今天这一轮很完整。",
+    "{date}\n\n未完成名单空空如也，舒服，整齐，漂亮 🎉",
+    "{date}\n\n全员到位，今天不用捞人，直接鼓掌。"
   ]
 }
