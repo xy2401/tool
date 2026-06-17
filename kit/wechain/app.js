@@ -95,7 +95,11 @@
         swipeStart: null,
         longPressTimer: null,
         selectedMemberId: "",
-        todayKey: dateKey(new Date())
+        todayKey: dateKey(new Date()),
+        toastText: "",
+        toastVisible: false,
+        toastHiding: false,
+        toastTimer: null
       };
     },
 
@@ -269,6 +273,9 @@
           wrap.scrollLeft = Math.max(0, todayHead.offsetLeft - wrap.clientWidth / 2 + todayHead.clientWidth / 2);
         }
       });
+      document.addEventListener("keydown", (e) => {
+        if (e.key === "Escape" && this.modal) this.closeModal();
+      });
     },
 
     methods: {
@@ -325,10 +332,10 @@
       applyPaste() {
         const names = parseCheckinText(this.pasteText);
         const memberByName = new Map(this.activeList.members.map((member) => [member.name, member]));
+        const nameSet = new Set(names);
         this.ensureDate(this.pasteDate);
-        names.forEach((name) => {
-          const member = memberByName.get(name);
-          if (member && !member.deleted) this.activeList.marks[this.pasteDate][member.id] = true;
+        this.activeList.members.forEach((member) => {
+          if (!member.deleted) this.activeList.marks[this.pasteDate][member.id] = nameSet.has(member.name);
         });
         this.dateModes[this.pasteDate] = "all";
         this.randomizeNotice(true);
@@ -497,6 +504,7 @@
           document.execCommand("copy");
           area.remove();
         }
+        this.showToast("✓ 已复制");
       },
 
       randomizeNotice(spark = false) {
@@ -518,6 +526,27 @@
       closeModal() {
         clearTimeout(this.longPressTimer);
         this.modal = "";
+      },
+
+      dateCompletionRate(key) {
+        const total = this.activeMembers.length;
+        if (!total) return 0;
+        const done = this.activeMembers.filter((m) => Boolean(this.activeList.marks[key]?.[m.id])).length;
+        return Math.round((done / total) * 100);
+      },
+
+      showToast(text) {
+        clearTimeout(this.toastTimer);
+        this.toastHiding = false;
+        this.toastText = text;
+        this.toastVisible = true;
+        this.toastTimer = setTimeout(() => {
+          this.toastHiding = true;
+          setTimeout(() => {
+            this.toastVisible = false;
+            this.toastHiding = false;
+          }, 300);
+        }, 1500);
       }
     }
   }).mount("#app");

@@ -37,12 +37,23 @@
             >
               <span>{{ date.label }}</span>
               <small>{{ date.weekday }}</small>
-              <b
-                class="mode-chip"
-                :class="'mode-' + getDateMode(date.key)"
-                @click.stop="cycleDateMode(date.key)"
-              >{{ modeSymbol(getDateMode(date.key)) }}</b>
+              <span class="ring-wrap" :style="{ '--pct': activeMembers.length ? dateCompletionRate(date.key) : 0 }">
+                <b
+                  class="mode-chip"
+                  :class="'mode-' + getDateMode(date.key)"
+                  @click.stop="cycleDateMode(date.key)"
+                >{{ modeSymbol(getDateMode(date.key)) }}</b>
+              </span>
             </button>
+
+            <div v-if="!activeMembers.length" class="empty-guide">
+              <div class="empty-icon">📋</div>
+              <p>还没有成员<br>点击左上角 <strong>人员(0) +</strong> 添加成员<br>或点击上方日期粘贴接龙文本</p>
+              <div class="guide-actions">
+                <button type="button" @click="openAddMembers">添加成员</button>
+                <button type="button" @click="openPaste(todayKey)">粘贴接龙</button>
+              </div>
+            </div>
 
             <template v-for="group in groupedMembers" :key="group.key">
               <div class="group-row name-cell">
@@ -196,6 +207,10 @@
             </div>
           </template>
         </section>
+      </div>
+
+      <div v-if="toastVisible" class="toast-wrap" :class="{ hiding: toastHiding }">
+        <div class="toast">{{ toastText }}</div>
       </div>
     </div>
 
