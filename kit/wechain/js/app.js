@@ -20,6 +20,11 @@
     return next;
   }
 
+  function parseDateKey(key) {
+    const [year, month, day] = key.split("-").map(Number);
+    return new Date(year, month - 1, day);
+  }
+
   function makeId(prefix) {
     return `${prefix}-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
   }
@@ -87,11 +92,13 @@
         pendingNames: [],
         selectedPendingNames: [],
         memberText: "",
-        listNameDraft: "",
-        timeOverride: "auto",
+        csvTargetListId: "",
         noticeSeed: 0,
         noticeSpark: false,
+        showNoticePanel: false,
         swipeStart: null,
+        longPressTimer: null,
+        selectedMemberId: "",
         todayKey: dateKey(new Date())
       };
     },
@@ -111,8 +118,18 @@
 
       visibleDates() {
         const today = new Date();
-        const start = addDays(today, -31);
-        return Array.from({ length: 63 }, (_, index) => {
+        const baseStart = addDays(today, -3);
+        const baseEnd = addDays(today, 3);
+        const dataDates = Object.keys(this.activeList.marks || {})
+          .filter((key) => Object.values(this.activeList.marks[key] || {}).some(Boolean))
+          .map(parseDateKey);
+        const dataTimes = dataDates.map((date) => date.getTime());
+        const earliestData = dataTimes.length ? new Date(Math.min(...dataTimes)) : null;
+        const latestData = dataTimes.length ? new Date(Math.max(...dataTimes)) : null;
+        const start = earliestData && earliestData < baseStart ? addDays(earliestData, -3) : baseStart;
+        const end = latestData && latestData > baseEnd ? addDays(latestData, 3) : baseEnd;
+        const length = Math.round((end - start) / 86400000) + 1;
+        return Array.from({ length }, (_, index) => {
           const date = addDays(start, index);
           return {
             key: dateKey(date),
@@ -169,6 +186,12 @@
         return `${this.noticeData.rangeLabel} · ${modes.join(" ")}`;
       },
 
+      noticeStatusText() {
+        if (!this.selectedDates.length) return "选择日期统计";
+        const mode = selectedModeText(this.selectedDates, this.dateModes);
+        return `${this.noticeData.rangeLabel} ${mode}`;
+      },
+
       noticeText() {
         return renderNotice(this.noticeData, this.templates, this.currentTimeSlot, this.noticeSeed);
       },
@@ -177,26 +200,54 @@
         return this.noticeData.primaryNames.map((name) => `@${name}`).join(" ");
       },
 
+      isWeekSelection() {
+        return this.noticeData.days === 7;
+      },
+
+      doneRosterTitle() {
+        const count = this.noticeData.doneNames.length;
+        return count ? "全部完成" : "等待点亮";
+      },
+
+      missingRosterTitle() {
+        const count = this.noticeData.missNames.length;
+        return count ? "继续加油" : "全员到齐";
+      },
+
       currentTimeSlot() {
-        return this.timeOverride === "auto" ? getTimeSlot(new Date()) : this.timeOverride;
+        return getTimeSlot(new Date());
       },
 
       csvText() {
-        const dates = this.visibleDates.map((date) => date.key);
+        const sourceList = this.csvList;
+        const members = sourceList.members.filter((member) => !member.deleted);
+        const dates = this.visibleDates
+          .map((date) => date.key)
+          .filter((key) => members.some((member) => sourceList.marks[key]?.[member.id]));
         const rows = [["name", ...dates]];
-        this.activeMembers.forEach((member) => {
-          rows.push([member.name, ...dates.map((key) => (this.isDone(member.id, key) ? "1" : "0"))]);
+        members.forEach((member) => {
+          rows.push([member.name, ...dates.map((key) => (sourceList.marks[key]?.[member.id] ? "1" : "0"))]);
         });
         return rows.map((row) => row.map(csvCell).join(",")).join("\n");
+      },
+
+      csvList() {
+        return this.store.lists.find((list) => list.id === this.csvTargetListId) || this.activeList;
       },
 
       modalTitle() {
         return {
           paste: "粘贴接龙",
+          newcomers: "是否添加新人",
           members: "新增人员",
           lists: "管理列表",
-          csv: "CSV 数据"
+          member: "",
+          csv: ""
         }[this.modal] || "";
+      },
+
+      selectedMember() {
+        return this.activeList.members.find((member) => member.id === this.selectedMemberId) || null;
       }
     },
 
@@ -207,6 +258,10 @@
           localStorage.setItem(storageKey, JSON.stringify(value));
         }
       }
+    },
+
+    created() {
+      this.applyTodayMode(this.activeList);
     },
 
     mounted() {
@@ -271,8 +326,7 @@
       },
 
       applyPaste() {
-        const names = this.previewPaste();
-        this.addMembers(this.selectedPendingNames);
+        const names = parseCheckinText(this.pasteText);
         const memberByName = new Map(this.activeList.members.map((member) => [member.name, member]));
         this.ensureDate(this.pasteDate);
         names.forEach((name) => {
@@ -280,8 +334,30 @@
           if (member && !member.deleted) this.activeList.marks[this.pasteDate][member.id] = true;
         });
         this.dateModes[this.pasteDate] = "all";
+        this.randomizeNotice(true);
+        this.pendingNames = names.filter((name) => !memberByName.has(name));
+        this.selectedPendingNames = [...this.pendingNames];
+        if (this.pendingNames.length) {
+          this.modal = "newcomers";
+        } else {
+          this.closeModal();
+        }
+      },
+
+      confirmPendingMembers() {
+        this.addMembers(this.selectedPendingNames);
+        const memberByName = new Map(this.activeList.members.map((member) => [member.name, member]));
+        this.ensureDate(this.pasteDate);
+        this.selectedPendingNames.forEach((name) => {
+          const member = memberByName.get(name);
+          if (member && !member.deleted) this.activeList.marks[this.pasteDate][member.id] = true;
+        });
         this.closeModal();
         this.randomizeNotice(true);
+      },
+
+      skipPendingMembers() {
+        this.closeModal();
       },
 
       openAddMembers() {
@@ -321,10 +397,18 @@
 
       startSwipe(event, id) {
         const touch = event.changedTouches?.[0];
-        if (touch) this.swipeStart = { id, x: touch.clientX };
+        if (touch) {
+          this.swipeStart = { id, x: touch.clientX };
+          clearTimeout(this.longPressTimer);
+          this.longPressTimer = setTimeout(() => {
+            this.openMemberMenu(id);
+            this.swipeStart = null;
+          }, 560);
+        }
       },
 
       endSwipe(event, id) {
+        clearTimeout(this.longPressTimer);
         const touch = event.changedTouches?.[0];
         if (!touch || !this.swipeStart || this.swipeStart.id !== id) return;
         const delta = touch.clientX - this.swipeStart.x;
@@ -337,61 +421,70 @@
         else if (member.deleted) this.restoreMember(id);
       },
 
+      openMemberMenu(id) {
+        clearTimeout(this.longPressTimer);
+        this.selectedMemberId = id;
+        this.modal = "member";
+      },
+
+      softDeleteSelectedMember() {
+        if (this.selectedMemberId) this.softDeleteMember(this.selectedMemberId);
+        this.closeModal();
+      },
+
+      restoreSelectedMember() {
+        if (this.selectedMemberId) this.restoreMember(this.selectedMemberId);
+        this.closeModal();
+      },
+
+      hardDeleteSelectedMember() {
+        if (this.selectedMemberId) this.hardDeleteMember(this.selectedMemberId);
+        this.closeModal();
+      },
+
       openListPanel() {
-        this.listNameDraft = this.activeList.name;
         this.modal = "lists";
       },
 
       switchList(id) {
         this.store.activeListId = id;
-        this.listNameDraft = this.activeList.name;
+        this.applyTodayMode(this.activeList);
       },
 
       createList() {
         const id = makeId("list");
-        this.store.lists.push({ id, name: this.listNameDraft || "新列表", members: [], marks: {}, dateModes: {} });
+        this.store.lists.push({ id, name: "新列表", members: [], marks: {}, dateModes: { [this.todayKey]: "all" } });
         this.store.activeListId = id;
       },
 
-      renameList() {
-        if (this.listNameDraft.trim()) this.activeList.name = this.listNameDraft.trim();
+      applyTodayMode(list) {
+        if (!list) return;
+        list.dateModes = { [this.todayKey]: "all" };
       },
 
-      cloneList() {
-        const copy = JSON.parse(JSON.stringify(this.activeList));
-        copy.id = makeId("list");
-        copy.name = `${copy.name} 副本`;
-        copy.members.forEach((member) => {
-          const oldId = member.id;
-          const newId = makeId("member");
-          member.id = newId;
-          Object.values(copy.marks).forEach((marks) => {
-            if (Object.prototype.hasOwnProperty.call(marks, oldId)) {
-              marks[newId] = marks[oldId];
-              delete marks[oldId];
-            }
-          });
-        });
-        this.store.lists.push(copy);
-        this.store.activeListId = copy.id;
+      ensureListName(list) {
+        if (!list.name.trim()) list.name = "未命名列表";
       },
 
-      deleteList() {
+      deleteList(id) {
         if (this.store.lists.length <= 1) return;
-        this.store.lists = this.store.lists.filter((list) => list.id !== this.activeList.id);
-        this.store.activeListId = this.store.lists[0].id;
+        this.store.lists = this.store.lists.filter((list) => list.id !== id);
+        if (this.store.activeListId === id) this.store.activeListId = this.store.lists[0].id;
       },
 
-      openCsv() {
+      openCsv(listId) {
+        this.csvTargetListId = listId || this.activeList.id;
         this.modal = "csv";
       },
 
-      downloadCsv() {
+      downloadCsv(listId) {
+        this.csvTargetListId = listId || this.activeList.id;
+        const sourceList = this.csvList;
         const blob = new Blob([this.csvText], { type: "text/csv;charset=utf-8" });
         const url = URL.createObjectURL(blob);
         const link = document.createElement("a");
         link.href = url;
-        link.download = `${this.activeList.name}-接龙统计.csv`;
+        link.download = `${sourceList.name}-接龙统计.csv`;
         link.click();
         URL.revokeObjectURL(url);
       },
@@ -412,6 +505,7 @@
       randomizeNotice(spark = false) {
         this.noticeSeed += 1;
         if (spark) {
+          this.showNoticePanel = true;
           this.noticeSpark = false;
           requestAnimationFrame(() => {
             this.noticeSpark = true;
@@ -420,7 +514,12 @@
         }
       },
 
+      toggleNoticePanel() {
+        this.showNoticePanel = !this.showNoticePanel;
+      },
+
       closeModal() {
+        clearTimeout(this.longPressTimer);
         this.modal = "";
       }
     }
@@ -467,20 +566,30 @@
     if (!selectedDates.length) {
       return {
         scene: "idle",
-        primaryNames: [],
-        rangeLabel: "未选择日期",
-        dateLabel: "",
-        days: 0,
-        doneNames: [],
-        missNames: []
-      };
-    }
+          primaryNames: [],
+          rangeLabel: "未选择日期",
+          dateLabel: "",
+          days: 0,
+          doneItems: [],
+          missItems: [],
+          doneNames: [],
+          missNames: []
+        };
+      }
 
     const dateKeys = selectedDates.map((date) => date.key);
     const doneRequest = selectedDates.some((date) => ["done", "all"].includes(dateModes[date.key]));
     const missingRequest = selectedDates.some((date) => ["missing", "all"].includes(dateModes[date.key]));
-    const allDone = members.filter((member) => dateKeys.every((key) => marks[key]?.[member.id]));
-    const hasMissing = members.filter((member) => dateKeys.some((key) => !marks[key]?.[member.id]));
+    const memberStats = members.map((member) => {
+      const doneCount = dateKeys.filter((key) => marks[key]?.[member.id]).length;
+      return {
+        name: member.name,
+        doneCount,
+        missingCount: dateKeys.length - doneCount
+      };
+    });
+    const allDone = memberStats.filter((member) => member.doneCount === dateKeys.length);
+    const hasMissing = memberStats.filter((member) => member.missingCount > 0);
     const rangeLabel = dateKeys.length === 1 ? shortDate(dateKeys[0]) : `${shortDate(dateKeys[0])} ~ ${shortDate(dateKeys[dateKeys.length - 1])}`;
     const isWeek = dateKeys.length === 7;
 
@@ -504,9 +613,21 @@
       rangeLabel,
       dateLabel: shortDate(dateKeys[0]),
       days: dateKeys.length,
+      doneItems: allDone,
+      missItems: hasMissing,
       doneNames: allDone.map((member) => member.name),
       missNames: hasMissing.map((member) => member.name)
     };
+  }
+
+  function selectedModeText(selectedDates, dateModes) {
+    const modes = unique(selectedDates.map((date) => dateModes[date.key] || "none").filter((mode) => mode !== "none"));
+    if (modes.length === 1) {
+      return { done: "打卡", missing: "未打卡", all: "全选" }[modes[0]] || "统计";
+    }
+    if (modes.includes("all")) return "全选";
+    if (modes.includes("done") && modes.includes("missing")) return "多选";
+    return "统计";
   }
 
   function renderNotice(data, templateBag, timeSlot, seed) {
@@ -566,4 +687,5 @@
     const text = String(value);
     return /[",\n]/.test(text) ? `"${text.replace(/"/g, '""')}"` : text;
   }
+
 })();
