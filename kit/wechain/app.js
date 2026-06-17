@@ -35,7 +35,7 @@
 
   async function loadTemplates() {
     try {
-      const response = await fetch("./data/templates.json", { cache: "no-cache" });
+      const response = await fetch("./templates.json", { cache: "no-cache" });
       return await response.json();
     } catch (error) {
       return {
