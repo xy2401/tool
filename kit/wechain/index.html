@@ -23,8 +23,8 @@
         <section class="matrix-wrap" aria-label="打卡矩阵">
           <div class="matrix" :style="{ '--date-count': visibleDates.length }">
             <div class="corner cell head name-cell" @click="openAddMembers">
-              <span>人员({{ activeMembers.length }})</span>
-              <small>+</small>
+              <span>成员</span>
+              <small>({{ activeMembers.length }})</small>
             </div>
 
             <button
@@ -48,7 +48,7 @@
 
             <div v-if="!activeMembers.length" class="empty-guide">
               <div class="empty-icon">📋</div>
-              <p>还没有成员<br>点击左上角 <strong>人员(0) +</strong> 添加成员<br>或点击上方日期粘贴接龙文本</p>
+              <p>还没有成员<br>点击左上角 <strong>成员(0)</strong> 添加成员<br>或点击上方日期粘贴接龙文本</p>
               <div class="guide-actions">
                 <button type="button" @click="openAddMembers">添加成员</button>
                 <button type="button" @click="openPaste(todayKey)">粘贴接龙</button>
@@ -172,6 +172,9 @@
           <template v-if="modal === 'members'">
             <p class="hint">可以粘贴微信群 @ 人文本，也可以一行一个名字。</p>
             <textarea v-model="memberText" placeholder="@小羊 @风里跑 @阿宁今天练腿"></textarea>
+            <div style="margin-top: 16px;" v-if="activeMembers.length > 0">
+              <button class="danger-action" style="width: 100%;" type="button" @click="clearAllMembers">彻底清空所有成员</button>
+            </div>
           </template>
 
           <template v-if="modal === 'lists'">

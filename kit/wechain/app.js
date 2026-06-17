@@ -431,6 +431,15 @@
         this.modal = "member";
       },
 
+      clearAllMembers() {
+        if (confirm("确定要彻底清空当前名单下的所有成员和打卡记录吗？此操作不可恢复！")) {
+          this.activeList.members = [];
+          this.activeList.marks = {};
+          this.closeModal();
+          this.showToast("已清空成员");
+        }
+      },
+
       softDeleteSelectedMember() {
         if (this.selectedMemberId) this.softDeleteMember(this.selectedMemberId);
         this.closeModal();
