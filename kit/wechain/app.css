@@ -143,12 +143,24 @@ button:active {
 }
 
 .toolbar,
-.notice-actions,
-footer {
+.notice-actions {
   display: flex;
   gap: 8px;
   overflow-x: auto;
   padding-bottom: 2px;
+}
+
+footer {
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+  position: sticky;
+  bottom: -14px;
+  padding: 12px 14px;
+  margin: 14px -14px -14px;
+  background: var(--panel);
+  border-top: 1px solid var(--line);
+  z-index: 10;
 }
 
 .toolbar button,
