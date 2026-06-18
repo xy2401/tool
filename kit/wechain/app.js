@@ -371,6 +371,10 @@
         return { none: "○", done: "✓", missing: "-", all: "◎" }[mode] || "○";
       },
 
+      modeText(mode) {
+        return { none: "", done: "已接龙", missing: "未接龙", all: "全部" }[mode] || "";
+      },
+
       cycleDateMode(key) {
         const current = this.getDateMode(key);
         const next = modeOrder[(modeOrder.indexOf(current) + 1) % modeOrder.length];

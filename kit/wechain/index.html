@@ -27,28 +27,33 @@
               <small>({{ activeMembers.length }})</small>
             </div>
 
-            <button
+            <div
               v-for="date in visibleDates"
               :key="'head-' + date.key"
               class="cell head date-head"
               :class="{ today: date.key === todayKey, selected: dateModes[date.key] && dateModes[date.key] !== 'none' }"
-              type="button"
-              @click="openPaste(date.key)"
             >
-              <span>{{ date.label }}</span>
-              <small>{{ date.weekday }}</small>
-              <span
-                class="ring-wrap"
-                :class="'ring-' + completionLevel(date.key)"
-                :style="{ '--pct': activeMembers.length ? dateCompletionRate(date.key) : 0 }"
-              >
+              <button class="date-paste-zone" type="button" @click="openPaste(date.key)" title="粘贴这天的接龙">
+                <span>{{ date.label }}</span>
+                <small>{{ date.weekday }}</small>
+              </button>
+              <button class="date-mode-zone" type="button" @click="cycleDateMode(date.key)" title="切换筛选状态">
+                <span
+                  class="ring-wrap"
+                  :class="'ring-' + completionLevel(date.key)"
+                  :style="{ '--pct': activeMembers.length ? dateCompletionRate(date.key) : 0 }"
+                >
+                  <b
+                    class="mode-chip"
+                    :class="'mode-' + getDateMode(date.key)"
+                  >{{ modeSymbol(getDateMode(date.key)) }}</b>
+                </span>
                 <b
-                  class="mode-chip"
-                  :class="'mode-' + getDateMode(date.key)"
-                  @click.stop="cycleDateMode(date.key)"
-                >{{ modeSymbol(getDateMode(date.key)) }}</b>
-              </span>
-            </button>
+                  class="mode-label"
+                  :class="['mode-label-' + getDateMode(date.key), { empty: getDateMode(date.key) === 'none' }]"
+                >{{ modeText(getDateMode(date.key)) }}</b>
+              </button>
+            </div>
 
             <div v-if="!activeMembers.length" class="empty-guide">
               <div class="empty-icon">📋</div>
@@ -220,12 +225,15 @@
                 class="list-row"
                 :class="{ active: list.id === store.activeListId }"
               >
-                <input
-                  class="list-name-input"
-                  v-model.trim="list.name"
-                  @focus="switchList(list.id)"
-                  @input="ensureListName(list)"
-                />
+                <div class="list-main">
+                  <input
+                    class="list-name-input"
+                    v-model.trim="list.name"
+                    @focus="switchList(list.id)"
+                    @input="ensureListName(list)"
+                  />
+                  <span class="list-count">{{ list.members.filter(member => !member.deleted).length }}人</span>
+                </div>
                 <button type="button" class="mini-btn" @click="openCsv(list.id)">CSV</button>
                 <button type="button" class="mini-btn" @click="downloadCsv(list.id)">下载</button>
                 <button type="button" class="mini-btn danger" @click="deleteList(list.id)">删除</button>

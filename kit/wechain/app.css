@@ -239,7 +239,7 @@ footer .primary,
   position: sticky;
   top: 0;
   z-index: 12;
-  min-height: 70px;
+  min-height: 88px;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -252,11 +252,15 @@ footer .primary,
 
 .corner {
   z-index: 18;
+  min-height: 88px;
 }
 
 .date-head {
   border-radius: 0;
-  padding: 4px 0;
+  padding: 0;
+  gap: 0;
+  justify-content: stretch;
+  overflow: hidden;
 }
 
 .date-head.today {
@@ -270,6 +274,81 @@ footer .primary,
 
 .date-head small {
   color: var(--muted);
+}
+
+.date-paste-zone,
+.date-mode-zone {
+  width: 100%;
+  min-height: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+.date-paste-zone {
+  display: grid;
+  place-items: center;
+  align-content: center;
+  gap: 2px;
+  min-height: 38px;
+}
+
+.date-mode-zone {
+  display: grid;
+  place-items: center;
+  gap: 2px;
+  min-height: 50px;
+  border-top: 1px solid rgba(223, 228, 216, 0.72);
+}
+
+.date-paste-zone:hover,
+.date-mode-zone:hover {
+  background: rgba(32, 128, 82, 0.04);
+  box-shadow: none;
+}
+
+.date-paste-zone:active,
+.date-mode-zone:active {
+  transform: none;
+}
+
+.mode-label {
+  display: inline-grid;
+  place-items: center;
+  min-width: 42px;
+  max-width: 48px;
+  min-height: 18px;
+  padding: 0 5px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: #f1f2ee;
+  color: var(--muted);
+  font-size: 10px;
+  font-weight: 800;
+  line-height: 1;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.mode-label.empty {
+  visibility: hidden;
+}
+
+.mode-label-done {
+  background: var(--green-soft);
+  color: var(--green);
+}
+
+.mode-label-missing {
+  background: #fae7e7;
+  color: var(--red);
+}
+
+.mode-label-all {
+  background: #e4eef8;
+  color: var(--blue);
 }
 
 .mode-chip {
@@ -986,6 +1065,14 @@ textarea {
   background: var(--green-soft);
 }
 
+.list-main {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+
 .list-name-input {
   min-width: 0;
   height: 32px;
@@ -995,9 +1082,29 @@ textarea {
   font-weight: 700;
 }
 
+.list-count {
+  display: inline-grid;
+  place-items: center;
+  min-width: 34px;
+  height: 24px;
+  padding: 0 7px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.72);
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 800;
+  white-space: nowrap;
+}
+
 .list-row.active .list-name-input {
   color: var(--green);
   font-weight: 700;
+}
+
+.list-row.active .list-count {
+  border-color: rgba(32, 128, 82, 0.24);
+  color: var(--green);
 }
 
 .mini-btn {
