@@ -94,9 +94,34 @@ button:active {
   color: var(--ink);
 }
 
-.title-button span {
-  color: var(--muted);
-  font-size: 18px;
+.title-chevron {
+  flex: 0 0 auto;
+  width: 22px;
+  height: 22px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: rgba(255, 253, 248, 0.86);
+  box-shadow: 0 2px 8px rgba(39, 45, 35, 0.06);
+}
+
+.title-chevron::before {
+  content: "";
+  display: block;
+  width: 7px;
+  height: 7px;
+  margin: 5px auto 0;
+  border-right: 2px solid var(--muted);
+  border-bottom: 2px solid var(--muted);
+  transform: rotate(45deg);
+}
+
+.title-button:hover .title-chevron {
+  border-color: rgba(32, 128, 82, 0.28);
+  background: var(--green-soft);
+}
+
+.title-button:hover .title-chevron::before {
+  border-color: var(--green);
 }
 
 .chat-button {
@@ -681,6 +706,13 @@ textarea {
   gap: 12px;
 }
 
+.modal-header-actions {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: 8px;
+}
+
 .modal h2 {
   margin: 0;
   font-size: 18px;
@@ -728,6 +760,22 @@ textarea {
   background: var(--ink);
   border-color: var(--ink);
   color: #fff;
+}
+
+.soft-action {
+  border-color: var(--line);
+  background: #f1f4ee;
+  color: var(--muted);
+}
+
+.newcomer-actions {
+  display: flex;
+  flex: 0 0 auto;
+  gap: 6px;
+}
+
+.newcomer-actions .compact-action {
+  min-width: 58px;
 }
 
 .new-names {
@@ -778,12 +826,12 @@ textarea {
 }
 
 .add-list-btn {
-  position: absolute;
-  top: 14px;
-  right: 60px;
   width: 40px;
   min-width: 40px;
   padding: 0;
+  border-color: var(--green);
+  background: var(--green-soft);
+  color: var(--green);
   font-size: 20px;
   font-weight: 700;
 }

@@ -12,7 +12,7 @@
         <div class="header-main">
           <button class="title-button" type="button" @click="openListPanel" title="切换或编辑列表">
             <h1>{{ activeList.name }}</h1>
-            <span>⌄</span>
+            <span class="title-chevron" aria-hidden="true"></span>
           </button>
           <button class="status-line" type="button" @click="toggleNoticePanel">{{ noticeStatusText }}</button>
           <button class="chat-button" type="button" title="查看文案" @click="toggleNoticePanel">💬</button>
@@ -144,7 +144,7 @@
 
       <div v-if="modal" class="modal-backdrop" @click.self="closeModal">
         <section class="modal">
-          <header :class="{ 'paste-header': modal === 'paste' || modal === 'members' }">
+          <header :class="{ 'paste-header': modal === 'paste' || modal === 'members' || modal === 'newcomers' }">
             <template v-if="modal === 'paste'">
               <h2>粘贴接龙</h2>
               <span class="paste-date">{{ pasteDate }}</span>
@@ -155,8 +155,19 @@
               <span class="paste-date"></span>
               <button class="primary compact-action" type="button" @click="addMembersFromText">添加</button>
             </template>
+            <template v-else-if="modal === 'newcomers'">
+              <h2>{{ pendingNames.length }}位新成员</h2>
+              <span class="paste-date">是否添加？</span>
+              <div class="newcomer-actions">
+                <button class="compact-action soft-action" type="button" @click="skipPendingMembers">不添加</button>
+                <button class="primary compact-action" type="button" @click="confirmPendingMembers">添加</button>
+              </div>
+            </template>
             <h2 v-else-if="modalTitle">{{ modalTitle }}</h2>
-            <button class="icon-btn" type="button" @click="closeModal">×</button>
+            <div class="modal-header-actions">
+              <button v-if="modal === 'lists'" class="add-list-btn" type="button" @click="createList">+</button>
+              <button class="icon-btn" type="button" @click="closeModal">×</button>
+            </div>
           </header>
 
           <template v-if="modal === 'paste'">
@@ -164,7 +175,6 @@
           </template>
 
           <template v-if="modal === 'newcomers'">
-            <p class="hint">已更新当前人员的打卡状态。下面这些名字还不在人员列表中，是否添加？</p>
             <div class="new-names">
               <strong>发现新人员</strong>
               <label v-for="name in pendingNames" :key="name">
@@ -172,10 +182,6 @@
                 {{ name }}
               </label>
             </div>
-            <footer>
-              <button type="button" @click="skipPendingMembers">暂不添加</button>
-              <button class="primary" type="button" @click="confirmPendingMembers">添加并标记完成</button>
-            </footer>
           </template>
 
           <template v-if="modal === 'members'">
@@ -187,7 +193,6 @@
           </template>
 
           <template v-if="modal === 'lists'">
-            <button class="add-list-btn" type="button" @click="createList">+</button>
             <div class="list-manager">
               <div
                 v-for="list in store.lists"
