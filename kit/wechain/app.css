@@ -1021,7 +1021,24 @@ textarea {
 }
 
 .ring-full::before {
-  filter: drop-shadow(0 0 5px rgba(22, 163, 90, 0.32));
+  filter: drop-shadow(0 0 7px rgba(22, 163, 90, 0.62));
+  animation: fullRingGlow 1.8s ease-in-out infinite;
+}
+
+.ring-full::after {
+  content: "";
+  position: absolute;
+  inset: 5px;
+  border-radius: 50%;
+  background: rgba(22, 163, 90, 0.1);
+  box-shadow: inset 0 0 0 1px rgba(22, 163, 90, 0.18);
+}
+
+.ring-full .mode-chip {
+  box-shadow: 0 0 0 2px rgba(22, 163, 90, 0.2), 0 2px 8px rgba(22, 163, 90, 0.24);
+  color: #fff;
+  background: #16a35a;
+  text-shadow: 0 1px 1px rgba(0, 74, 38, 0.32);
 }
 
 .ring-wrap .mode-chip {
@@ -1030,5 +1047,16 @@ textarea {
   width: 22px;
   height: 22px;
   font-size: 12px;
+}
+
+@keyframes fullRingGlow {
+  0%, 100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+  50% {
+    transform: scale(1.08);
+    opacity: 0.84;
+  }
 }
 

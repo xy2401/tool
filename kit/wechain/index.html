@@ -59,6 +59,11 @@
               </div>
             </div>
 
+            <div v-else-if="hasActiveMemberFilter && !filteredMembers.length" class="empty-guide">
+              <div class="empty-icon">🔎</div>
+              <p>当前筛选没有匹配成员<br>切换日期状态可恢复显示</p>
+            </div>
+
             <template v-for="group in groupedMembers" :key="group.key">
               <div class="group-row name-cell">
                 <span>{{ group.label }}</span>

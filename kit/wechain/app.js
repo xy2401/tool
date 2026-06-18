@@ -112,6 +112,24 @@
         return this.activeList.members.filter((member) => !member.deleted);
       },
 
+      hasActiveMemberFilter() {
+        return this.selectedDates.length > 0;
+      },
+
+      filteredMembers() {
+        if (!this.hasActiveMemberFilter) return this.activeMembers;
+        return this.activeMembers.filter((member) => {
+          return this.selectedDates.some((date) => {
+            const mode = this.getDateMode(date.key);
+            if (mode === "all") return true;
+            const done = Boolean(this.activeList.marks[date.key]?.[member.id]);
+            if (mode === "done") return done;
+            if (mode === "missing") return !done;
+            return false;
+          });
+        });
+      },
+
       dateModes() {
         return this.activeList.dateModes;
       },
@@ -141,8 +159,8 @@
 
       groupedMembers() {
         const groups = new Map();
-        const normal = this.activeList.members.filter((member) => !member.deleted);
-        const deleted = this.activeList.members.filter((member) => member.deleted);
+        const normal = [...this.filteredMembers];
+        const deleted = this.hasActiveMemberFilter ? [] : this.activeList.members.filter((member) => member.deleted);
 
         normal.sort((a, b) => collator.compare(a.name, b.name));
         deleted.sort((a, b) => collator.compare(a.name, b.name));
@@ -686,9 +704,9 @@
   function selectedModeText(selectedDates, dateModes) {
     const modes = unique(selectedDates.map((date) => dateModes[date.key] || "none").filter((mode) => mode !== "none"));
     if (modes.length === 1) {
-      return { done: "打卡", missing: "未打卡", all: "全选" }[modes[0]] || "统计";
+      return { done: "已接龙", missing: "未接龙", all: "全部" }[modes[0]] || "统计";
     }
-    if (modes.includes("all")) return "全选";
+    if (modes.includes("all")) return "全部";
     if (modes.includes("done") && modes.includes("missing")) return "多选";
     return "统计";
   }
