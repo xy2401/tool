@@ -145,13 +145,13 @@
           <div class="panel-right">
 
             <!-- Empty state -->
-            <div class="empty-right" v-if="!panel.value">
+            <div class="empty-right" v-if="!panel.value && (!panel.computedList || !panel.computedList.length)">
               <span class="empty-right-icon">⚡</span>
               <span class="empty-right-text">在左侧输入内容后<br>识别结果与计算结果将在此展示</span>
             </div>
 
             <!-- Has content but no results -->
-            <div class="empty-right" v-else-if="(!panel.detections || !panel.detections.length) && (!panel.computedList || !panel.computedList.length)">
+            <div class="empty-right" v-else-if="panel.value && (!panel.detections || !panel.detections.length) && (!panel.computedList || !panel.computedList.length)">
               <span class="empty-right-icon">🔍</span>
               <span class="empty-right-text">未识别到特定格式<br>可点击左侧操作按钮计算</span>
             </div>
@@ -365,11 +365,106 @@
                 <div class="computed-section">
                   <div class="cr-item" v-for="cr in panel.computedList" :key="cr.id">
                     <div class="cr-label">{{ cr.label }}</div>
-                    <div class="cr-value">{{ cr.value }}<div class="cr-btns">
-                        <button class="cr-send" @click.stop="sendToPanel(cr.value)" title="发送到新面板">→</button>
-                        <button class="cr-copy" @click.stop="copy(cr.value)" title="复制">⎘</button>
+                    <!-- QR Code special rendering -->
+                    <template v-if="cr.id === 'qrgen'">
+                      <div class="qr-container">
+                        <div :id="'qr-' + panel.id" class="qr-canvas"></div>
+                        <div class="qr-actions">
+                          <button class="btn-qr-dl" @click.stop="downloadQR(panel.id)" title="下载二维码 PNG">⬇ 下载 PNG</button>
+                          <button class="cr-copy" @click.stop="copy(panel.value.trim())" title="复制原文">⎘ 复制原文</button>
+                        </div>
                       </div>
-                    </div>
+                    </template>
+
+                    <!-- WiFi QR Code form + rendering -->
+                    <template v-else-if="cr.id === 'wifiqr'">
+                      <div class="wifi-qr-section">
+                        <div class="wifi-form">
+                          <div class="wifi-field">
+                            <label class="wifi-label">SSID (WiFi 名称)</label>
+                            <input type="text" class="wifi-input" v-model="panel.wifiForm.ssid"
+                                   placeholder="输入 WiFi 名称" @input="onWifiFormChange(panel)">
+                          </div>
+                          <div class="wifi-field">
+                            <label class="wifi-label">密码</label>
+                            <input type="text" class="wifi-input" v-model="panel.wifiForm.password"
+                                   placeholder="输入 WiFi 密码（开放网络留空）" @input="onWifiFormChange(panel)">
+                          </div>
+                          <div class="wifi-field">
+                            <label class="wifi-label">加密方式</label>
+                            <div class="wifi-radio-group">
+                              <label class="wifi-radio" :class="{ active: panel.wifiForm.encryption === 'WPA' }">
+                                <input type="radio" value="WPA" v-model="panel.wifiForm.encryption" @change="onWifiFormChange(panel)"> WPA/WPA2
+                              </label>
+                              <label class="wifi-radio" :class="{ active: panel.wifiForm.encryption === 'WEP' }">
+                                <input type="radio" value="WEP" v-model="panel.wifiForm.encryption" @change="onWifiFormChange(panel)"> WEP
+                              </label>
+                              <label class="wifi-radio" :class="{ active: panel.wifiForm.encryption === 'nopass' }">
+                                <input type="radio" value="nopass" v-model="panel.wifiForm.encryption" @change="onWifiFormChange(panel)"> 无密码
+                              </label>
+                            </div>
+                          </div>
+                          <div class="wifi-field wifi-field-row">
+                            <label class="wifi-toggle-label">
+                              <span class="wifi-toggle" :class="{ on: panel.wifiForm.hidden }" @click="panel.wifiForm.hidden = !panel.wifiForm.hidden; onWifiFormChange(panel)">
+                                <span class="wifi-toggle-thumb"></span>
+                              </span>
+                              隐藏网络
+                            </label>
+                          </div>
+                        </div>
+                        <div class="qr-container" v-if="panel.wifiForm.ssid">
+                          <div :id="'wifiqr-' + panel.id" class="qr-canvas"></div>
+                          <div class="wifi-qr-string">{{ buildWifiString(panel.wifiForm) }}</div>
+                          <div class="qr-actions">
+                            <button class="btn-qr-dl" @click.stop="downloadWifiQR(panel.id)" title="下载 WiFi 二维码">⬇ 下载 PNG</button>
+                            <button class="cr-copy" @click.stop="copy(buildWifiString(panel.wifiForm))" title="复制 WiFi 字符串">⎘ 复制字符串</button>
+                          </div>
+                        </div>
+                        <div class="wifi-hint" v-else>
+                          <span class="wifi-hint-icon">📶</span>
+                          <span>填写 SSID 后自动生成二维码</span>
+                        </div>
+                      </div>
+                    </template>
+
+                    <!-- Regex inline form -->
+                    <template v-else-if="cr.id === 'regmatch'">
+                      <div class="regex-section">
+                        <div class="regex-form">
+                          <div class="regex-input-row">
+                            <span class="regex-slash">/</span>
+                            <input type="text" class="regex-input" v-model="panel._lastRegex"
+                                   placeholder="输入正则表达式" @input="onRegexChange(panel)" spellcheck="false">
+                            <span class="regex-slash">/</span>
+                            <div class="regex-flags">
+                              <button class="regex-flag" :class="{ active: (panel._regexFlags||'g').includes('g') }"
+                                      @click="toggleRegexFlag(panel, 'g')">g</button>
+                              <button class="regex-flag" :class="{ active: (panel._regexFlags||'g').includes('i') }"
+                                      @click="toggleRegexFlag(panel, 'i')">i</button>
+                              <button class="regex-flag" :class="{ active: (panel._regexFlags||'g').includes('m') }"
+                                      @click="toggleRegexFlag(panel, 'm')">m</button>
+                              <button class="regex-flag" :class="{ active: (panel._regexFlags||'g').includes('s') }"
+                                      @click="toggleRegexFlag(panel, 's')">s</button>
+                            </div>
+                          </div>
+                        </div>
+                        <div class="cr-value regex-result">{{ cr.value }}<div class="cr-btns">
+                            <button class="cr-send" @click.stop="sendToPanel(cr.value)" title="发送到新面板">→</button>
+                            <button class="cr-copy" @click.stop="copy(cr.value)" title="复制">⎘</button>
+                          </div>
+                        </div>
+                      </div>
+                    </template>
+
+                    <!-- Normal text result -->
+                    <template v-else>
+                      <div class="cr-value">{{ cr.value }}<div class="cr-btns">
+                          <button class="cr-send" @click.stop="sendToPanel(cr.value)" title="发送到新面板">→</button>
+                          <button class="cr-copy" @click.stop="copy(cr.value)" title="复制">⎘</button>
+                        </div>
+                      </div>
+                    </template>
                   </div>
                 </div>
               </template>
@@ -404,6 +499,7 @@
 
 <script src="https://unpkg.com/vue@3.5.13/dist/vue.global.prod.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.2.0/crypto-js.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"></script>
 <script src="app.js"></script>
 </body>
 </html>

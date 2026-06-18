@@ -99,6 +99,33 @@ function uuidv4() {
   });
 }
 
+/* ── Morse Code ── */
+const MORSE_TABLE = {
+  'A':'.-','B':'-...','C':'-.-.','D':'-..','E':'.','F':'..-.','G':'--.','H':'....','I':'..','J':'.---',
+  'K':'-.-','L':'.-..','M':'--','N':'-.','O':'---','P':'.--.','Q':'--.-','R':'.-.','S':'...','T':'-',
+  'U':'..-','V':'...-','W':'.--','X':'-..-','Y':'-.--','Z':'--..',
+  '0':'-----','1':'.----','2':'..---','3':'...--','4':'....-','5':'.....',
+  '6':'-....','7':'--...','8':'---..','9':'----.',
+  '.':'.-.-.-',',':'--..--','?':'..--..','!':'-.-.--','/':'-..-.','-':'-....-',
+  '(':'-.--.',')':'-.--.-','&':'.-...',':':'---...',';':'-.-.-.',
+  '=':'-...-','+':'.-.-.',"'":'.----.','"':'.-..-.','@':'.--.-.',
+  ' ':'/'
+};
+const MORSE_REVERSE = Object.fromEntries(Object.entries(MORSE_TABLE).map(([k,v]) => [v, k]));
+
+function morseEncode(text) {
+  return text.toUpperCase().split('').map(ch => {
+    if (ch === ' ') return '/';
+    return MORSE_TABLE[ch] || `[${ch}]`;
+  }).join(' ');
+}
+function morseDecode(morse) {
+  return morse.trim().split(/\s+/).map(code => {
+    if (code === '/') return ' ';
+    return MORSE_REVERSE[code] || `[${code}]`;
+  }).join('');
+}
+
 /* ══════════════════════════════════════════════════
    DETECTION ENGINE
    ══════════════════════════════════════════════════ */
@@ -263,8 +290,8 @@ createApp({
   data() {
     return {
       panels: [
-        { id: 1, value: '', computedList: [], activeOps: {}, detections: [], collapsed: false, dragging: false },
-        { id: 2, value: '', computedList: [], activeOps: {}, detections: [], collapsed: false, dragging: false },
+        { id: 1, value: '', computedList: [], activeOps: {}, detections: [], collapsed: false, dragging: false, wifiForm: { ssid: '', password: '', encryption: 'WPA', hidden: false } },
+        { id: 2, value: '', computedList: [], activeOps: {}, detections: [], collapsed: false, dragging: false, wifiForm: { ssid: '', password: '', encryption: 'WPA', hidden: false } },
       ],
       _uid: 3,
       toast: '',
@@ -294,6 +321,8 @@ createApp({
            { id: 'unescjson', label: 'JSON 反转义',    desc: '将 JSON 转义字符串（\\n \\t \\\\ 等）还原' }],
           [{ id: 'escnl',     label: '转义换行符',     desc: '将换行符(\\n)、回车(\\r)、制表符(\\t)转为转义字符串' },
            { id: 'unescnl',   label: '反转义换行符',   desc: '将 \\n \\r \\t 等转义字符串还原为实际控制字符' }],
+          [{ id: 'morseenc',  label: '莫尔斯编码',     desc: '将文本转换为莫尔斯电码（点/划表示）' },
+           { id: 'morsedec',  label: '莫尔斯解码',     desc: '将莫尔斯电码（.- 格式）解码还原为文本' }],
         ]},
         { name: '文本变换', ops: [
           { id: 'upper',   label: '转大写',      desc: '将所有英文字母转换为大写' },
@@ -324,6 +353,10 @@ createApp({
         { name: '统计 & 匹配', ops: [
           { id: 'count',    label: '字符统计', desc: '统计字符数、中文字数、词数、字节数和行数' },
           { id: 'regmatch', label: '正则提取', desc: '输入正则表达式，提取文本中所有匹配项' },
+        ]},
+        { name: '二维码', ops: [
+          { id: 'qrgen',   label: '生成二维码', desc: '将文本内容生成二维码图片（支持中文和 URL）' },
+          { id: 'wifiqr',  label: 'WiFi 二维码', desc: '生成 WiFi 连接二维码，手机扫码即可连接 WiFi' },
         ]},
       ],
     };
@@ -366,7 +399,7 @@ createApp({
   methods: {
     // ── Panel management ──
     mkPanel() {
-      return { id: this._uid++, value: '', computedList: [], activeOps: {}, detections: [], collapsed: false, dragging: false };
+      return { id: this._uid++, value: '', computedList: [], activeOps: {}, detections: [], collapsed: false, dragging: false, wifiForm: { ssid: '', password: '', encryption: 'WPA', hidden: false } };
     },
     addPanel() { this.panels.push(this.mkPanel()); },
     removePanel(idx) { if (this.panels.length > 1) this.panels.splice(idx, 1); },
@@ -477,50 +510,153 @@ createApp({
         panel.computedList = panel.computedList.filter(c => c.id !== op.id);
         panel.activeOps = { ...panel.activeOps, [op.id]: false };
         if (op.id === 'regmatch') delete panel._lastRegex;
+        // Remove QR canvas if toggling off
+        if (op.id === 'qrgen') {
+          this.$nextTick(() => {
+            const container = document.getElementById('qr-' + panel.id);
+            if (container) container.innerHTML = '';
+          });
+        }
+        if (op.id === 'wifiqr') {
+          this.$nextTick(() => {
+            const container = document.getElementById('wifiqr-' + panel.id);
+            if (container) container.innerHTML = '';
+          });
+        }
         return;
       }
+
+      // Input-free ops: show form immediately without requiring textarea value
+      if (op.id === 'wifiqr') {
+        panel.computedList = [...panel.computedList, { id: op.id, label: op.label, value: '__WIFIQR__' }];
+        panel.activeOps = { ...panel.activeOps, [op.id]: true };
+        this.$nextTick(() => this.renderWifiQR(panel));
+        return;
+      }
+      if (op.id === 'regmatch') {
+        if (!panel._lastRegex) panel._lastRegex = '\\d+';
+        if (!panel._regexFlags) panel._regexFlags = 'g';
+        const v = panel.value.trim();
+        const result = v ? this.runRegex(v, panel._lastRegex, panel._regexFlags) : '✨ 在左侧输入文本，在上方输入正则表达式';
+        panel.computedList = [...panel.computedList, { id: op.id, label: op.label, value: result }];
+        panel.activeOps = { ...panel.activeOps, [op.id]: true };
+        return;
+      }
+
       const v = panel.value.trim();
       if (!v) return;
 
-      let result;
-      if (op.id === 'regmatch') {
-        const pattern = prompt('请输入正则表达式（不含 / 分隔符）：', panel._lastRegex || '\\d+');
-        if (pattern === null) return;
-        panel._lastRegex = pattern;
-        result = this.runRegex(v, pattern);
-      } else {
-        result = this.runOp(op.id, v);
-      }
+      const result = this.runOp(op.id, v);
       panel.computedList = [...panel.computedList, { id: op.id, label: op.label, value: result }];
       panel.activeOps = { ...panel.activeOps, [op.id]: true };
+
+      // Render QR code after DOM update
+      if (op.id === 'qrgen') {
+        this.$nextTick(() => this.renderQR(panel));
+      }
     },
 
     recompute(panel) {
       const v = panel.value.trim();
-      if (!v) { panel.computedList = []; panel.activeOps = {}; return; }
       const activeIds = Object.keys(panel.activeOps).filter(k => panel.activeOps[k]);
+      // Ops that don't depend on textarea input
+      const inputFreeOps = ['wifiqr', 'regmatch'];
+      if (!v) {
+        // Keep input-independent ops, clear the rest
+        const keepIds = activeIds.filter(id => inputFreeOps.includes(id));
+        if (!keepIds.length) {
+          panel.computedList = []; panel.activeOps = {}; return;
+        }
+        // Remove non-kept ops
+        const removeIds = activeIds.filter(id => !inputFreeOps.includes(id));
+        removeIds.forEach(id => { panel.activeOps[id] = false; });
+        panel.computedList = panel.computedList.filter(c => inputFreeOps.includes(c.id));
+        // Update regmatch result text
+        panel.computedList.forEach(c => {
+          if (c.id === 'regmatch') c.value = '✨ 在左侧输入文本，在上方输入正则表达式';
+        });
+        // Re-render WiFi QR if active
+        if (keepIds.includes('wifiqr')) {
+          this.$nextTick(() => this.renderWifiQR(panel));
+        }
+        return;
+      }
       if (!activeIds.length) return;
       panel.computedList = activeIds.map(opId => {
         const op = this.allOps.find(o => o.id === opId);
         if (!op) return null;
-        let result;
+        // WiFi QR keeps its placeholder value
+        if (opId === 'wifiqr') return { id: opId, label: op.label, value: '__WIFIQR__' };
+        // Regex uses inline form pattern
         if (opId === 'regmatch') {
-          result = panel._lastRegex ? this.runRegex(v, panel._lastRegex) : '（需要先输入正则）';
-        } else {
-          result = this.runOp(opId, v);
+          const result = panel._lastRegex ? this.runRegex(v, panel._lastRegex, panel._regexFlags || 'g') : '✨ 输入正则表达式开始匹配';
+          return { id: opId, label: op.label, value: result };
         }
+        const result = this.runOp(opId, v);
         return { id: opId, label: op.label, value: result };
       }).filter(Boolean);
+      // Re-render QR if active
+      if (activeIds.includes('qrgen')) {
+        this.$nextTick(() => this.renderQR(panel));
+      }
+      if (activeIds.includes('wifiqr')) {
+        this.$nextTick(() => this.renderWifiQR(panel));
+      }
     },
 
-    runRegex(v, pattern) {
+    runRegex(v, pattern, flags) {
       try {
-        const re = new RegExp(pattern, 'g');
-        const matches = [...v.matchAll(re)].map(m => m[0]);
-        return matches.length
-          ? `/${pattern}/g → 找到 ${matches.length} 个匹配：\n${matches.join('\n')}`
-          : `/${pattern}/g → 未找到匹配`;
+        flags = flags || 'g';
+        const re = new RegExp(pattern, flags);
+        const allMatches = [...v.matchAll(re)];
+        if (!allMatches.length) return `/${pattern}/${flags} → 未找到匹配`;
+        const hasGroups = allMatches.some(m => m.length > 1 || m.groups);
+        const lines = allMatches.map((m, i) => {
+          let line = m[0];
+          if (hasGroups) {
+            // Show numbered groups
+            const groups = [];
+            for (let g = 1; g < m.length; g++) {
+              if (m[g] !== undefined) groups.push(`[${g}]=${m[g]}`);
+            }
+            // Show named groups
+            if (m.groups) {
+              for (const [name, val] of Object.entries(m.groups)) {
+                if (val !== undefined) groups.push(`[${name}]=${val}`);
+              }
+            }
+            if (groups.length) line += '  ←  ' + groups.join('  ');
+          }
+          return line;
+        });
+        const header = `/${pattern}/${flags} → 找到 ${allMatches.length} 个匹配` + (hasGroups ? `（含捕获组）` : '') + `：`;
+        return header + '\n' + lines.join('\n');
       } catch(e) { return '❌ 无效正则: ' + e.message; }
+    },
+
+    onRegexChange(panel) {
+      if (!panel.activeOps.regmatch) return;
+      const v = panel.value.trim();
+      const result = v && panel._lastRegex
+        ? this.runRegex(v, panel._lastRegex, panel._regexFlags || 'g')
+        : (panel._lastRegex ? '✨ 在左侧输入文本开始匹配' : '✨ 输入正则表达式开始匹配');
+      const idx = panel.computedList.findIndex(c => c.id === 'regmatch');
+      if (idx >= 0) {
+        panel.computedList[idx] = { ...panel.computedList[idx], value: result };
+        panel.computedList = [...panel.computedList]; // trigger reactivity
+      }
+    },
+    toggleRegexFlag(panel, flag) {
+      let flags = panel._regexFlags || 'g';
+      if (flags.includes(flag)) {
+        flags = flags.replace(flag, '');
+      } else {
+        flags += flag;
+      }
+      // Ensure 'g' is always present for matchAll
+      if (!flags.includes('g')) flags = 'g' + flags;
+      panel._regexFlags = flags;
+      this.onRegexChange(panel);
     },
 
     runOp(opId, v) {
@@ -580,6 +716,9 @@ createApp({
             const byt = new TextEncoder().encode(v).length;
             return `字符数: ${v.length}  |  中文: ${zh}  |  词数: ${wds}  |  字节(UTF-8): ${byt}  |  行数: ${v.split('\n').length}`;
           }
+          case 'morseenc':  return morseEncode(v);
+          case 'morsedec':  return morseDecode(v);
+          case 'qrgen':     return '__QR__' + v;
           default: return '';
         }
       } catch(e) { return '❌ 操作失败: ' + e.message; }
@@ -648,6 +787,94 @@ createApp({
       return `hsl(${Math.round(hue*360)}, ${Math.round(sat*100)}%, ${Math.round(lum*100)}%)`;
     },
 
+    // ── QR Code rendering ──
+    renderQR(panel) {
+      const v = panel.value.trim();
+      if (!v) return;
+      const containerId = 'qr-' + panel.id;
+      this.$nextTick(() => {
+        const container = document.getElementById(containerId);
+        if (!container) return;
+        container.innerHTML = '';
+        if (typeof QRCode !== 'undefined') {
+          new QRCode(container, {
+            text: v,
+            width: 200,
+            height: 200,
+            colorDark: '#e2e8f0',
+            colorLight: '#0f172a',
+            correctLevel: QRCode.CorrectLevel.M,
+          });
+        } else {
+          container.textContent = '❌ QR 库加载失败';
+        }
+      });
+    },
+    downloadQR(panelId) {
+      const container = document.getElementById('qr-' + panelId);
+      if (!container) return;
+      const canvas = container.querySelector('canvas');
+      if (!canvas) { this.showToast('❌ 未找到二维码'); return; }
+      const link = document.createElement('a');
+      link.download = 'qrcode.png';
+      link.href = canvas.toDataURL('image/png');
+      link.click();
+      this.showToast('二维码已下载 ✓');
+    },
+
+    // ── WiFi QR Code ──
+    buildWifiString(form) {
+      // WIFI:T:<auth>;S:<ssid>;P:<password>;H:<hidden>;;
+      const escape = s => s.replace(/([\\;,:"'])/g, '\\$1');
+      const t = form.encryption || 'WPA';
+      let str = `WIFI:T:${t};S:${escape(form.ssid)};`;
+      if (t !== 'nopass' && form.password) {
+        str += `P:${escape(form.password)};`;
+      }
+      if (form.hidden) str += 'H:true;';
+      str += ';';
+      return str;
+    },
+    renderWifiQR(panel) {
+      const form = panel.wifiForm;
+      if (!form.ssid) return;
+      const wifiStr = this.buildWifiString(form);
+      const containerId = 'wifiqr-' + panel.id;
+      this.$nextTick(() => {
+        const container = document.getElementById(containerId);
+        if (!container) return;
+        container.innerHTML = '';
+        if (typeof QRCode !== 'undefined') {
+          new QRCode(container, {
+            text: wifiStr,
+            width: 200,
+            height: 200,
+            colorDark: '#e2e8f0',
+            colorLight: '#0f172a',
+            correctLevel: QRCode.CorrectLevel.M,
+          });
+        } else {
+          container.textContent = '❌ QR 库加载失败';
+        }
+      });
+    },
+    onWifiFormChange(panel) {
+      if (panel.wifiForm.ssid) {
+        this.renderWifiQR(panel);
+      }
+    },
+    downloadWifiQR(panelId) {
+      const container = document.getElementById('wifiqr-' + panelId);
+      if (!container) return;
+      const canvas = container.querySelector('canvas');
+      if (!canvas) { this.showToast('❌ 请先填写 SSID'); return; }
+      const link = document.createElement('a');
+      link.download = 'wifi-qrcode.png';
+      link.href = canvas.toDataURL('image/png');
+      link.click();
+      this.showToast('WiFi 二维码已下载 ✓');
+    },
+
     // ── Copy & Toast ──
     copy(text) {
       if (!text) return;
@@ -675,6 +902,8 @@ createApp({
           activeOps: p.activeOps,
           collapsed: p.collapsed,
           _lastRegex: p._lastRegex,
+          _regexFlags: p._regexFlags,
+          wifiForm: p.wifiForm,
         }));
         localStorage.setItem('any-tool-panels', JSON.stringify(data));
       } catch(e) {}
@@ -690,10 +919,21 @@ createApp({
             collapsed: d.collapsed || false,
             dragging: false,
             _lastRegex: d._lastRegex,
+            _regexFlags: d._regexFlags || 'g',
+            wifiForm: d.wifiForm || { ssid: '', password: '', encryption: 'WPA', hidden: false },
           }));
           this._uid = Math.max(...this.panels.map(p => p.id)) + 1;
           this.panels.forEach(p => {
             this.updateDetections(p);
+            // Pre-seed input-independent ops before recompute
+            if (p.activeOps.wifiqr) {
+              const op = this.allOps.find(o => o.id === 'wifiqr');
+              if (op) p.computedList.push({ id: 'wifiqr', label: op.label, value: '__WIFIQR__' });
+            }
+            if (p.activeOps.regmatch) {
+              const op = this.allOps.find(o => o.id === 'regmatch');
+              if (op) p.computedList.push({ id: 'regmatch', label: op.label, value: '' });
+            }
             this.recompute(p);
           });
         }
