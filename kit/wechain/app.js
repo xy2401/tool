@@ -727,7 +727,7 @@
         .split(/\r?\n/)
         .map((line) => line.trim())
         .filter((line) => line && !line.startsWith("#"))
-        .map((line) => line.replace(/^\d+\s*[.、)\-]?\s*/, "").trim())
+        .map(cleanCheckinName)
         .filter(Boolean)
     );
   }
@@ -735,7 +735,17 @@
   function parseMembersText(text) {
     const atNames = [...text.matchAll(/@([^\s@]+)/g)].map((match) => match[1]);
     if (atNames.length) return unique(atNames);
-    return unique(text.split(/[\n,，;；]+/));
+    return unique(
+      text
+        .split(/[\n,，;；]+/)
+        .map((line) => line.trim())
+        .filter((line) => line && !line.startsWith("#"))
+        .map(cleanCheckinName)
+    );
+  }
+
+  function cleanCheckinName(line) {
+    return line.replace(/^\d+\s*[.、)\-]?\s*/, "").trim();
   }
 
   function getInitialGroup(name) {

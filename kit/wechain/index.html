@@ -210,8 +210,8 @@
           </template>
 
           <template v-if="modal === 'members'">
-            <p class="hint">可以粘贴微信群 @ 人文本，也可以一行一个名字。</p>
-            <textarea v-model="memberText" placeholder="@小羊 @风里跑 @阿宁今天练腿"></textarea>
+            <p class="hint">可以粘贴微信群 @ 人文本、一行一个名字，也可以直接粘贴接龙打卡文本。</p>
+            <textarea v-model="memberText" placeholder="@小羊 @风里跑&#10;或：&#10;1. 小羊&#10;2. 风里跑&#10;3. 阿宁今天练腿"></textarea>
             <div style="margin-top: 16px;" v-if="activeMembers.length > 0">
               <button class="danger-action" style="width: 100%;" type="button" @click="clearAllMembers">彻底清空所有成员</button>
             </div>

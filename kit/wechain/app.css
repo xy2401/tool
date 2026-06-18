@@ -239,7 +239,7 @@ footer .primary,
   position: sticky;
   top: 0;
   z-index: 12;
-  min-height: 88px;
+  min-height: 84px;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -252,14 +252,14 @@ footer .primary,
 
 .corner {
   z-index: 18;
-  min-height: 88px;
+  min-height: 84px;
 }
 
 .date-head {
   border-radius: 0;
-  padding: 0;
-  gap: 0;
-  justify-content: stretch;
+  padding: 5px 3px;
+  gap: 4px;
+  justify-content: center;
   overflow: hidden;
 }
 
@@ -292,15 +292,17 @@ footer .primary,
   place-items: center;
   align-content: center;
   gap: 2px;
-  min-height: 38px;
+  min-height: 30px;
 }
 
 .date-mode-zone {
   display: grid;
-  place-items: center;
+  align-items: center;
+  align-content: center;
+  justify-content: center;
+  justify-items: center;
   gap: 2px;
-  min-height: 50px;
-  border-top: 1px solid rgba(223, 228, 216, 0.72);
+  min-height: 44px;
 }
 
 .date-paste-zone:hover,
@@ -1261,8 +1263,8 @@ textarea {
   position: relative;
   display: grid;
   place-items: center;
-  width: 30px;
-  height: 30px;
+  width: 26px;
+  height: 26px;
 }
 
 .ring-wrap::before {
@@ -1333,9 +1335,9 @@ textarea {
 .ring-wrap .mode-chip {
   position: relative;
   z-index: 1;
-  width: 22px;
-  height: 22px;
-  font-size: 12px;
+  width: 19px;
+  height: 19px;
+  font-size: 11px;
 }
 
 @keyframes fullRingGlow {
