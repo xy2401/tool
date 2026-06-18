@@ -37,7 +37,11 @@
             >
               <span>{{ date.label }}</span>
               <small>{{ date.weekday }}</small>
-              <span class="ring-wrap" :style="{ '--pct': activeMembers.length ? dateCompletionRate(date.key) : 0 }">
+              <span
+                class="ring-wrap"
+                :class="'ring-' + completionLevel(date.key)"
+                :style="{ '--pct': activeMembers.length ? dateCompletionRate(date.key) : 0 }"
+              >
                 <b
                   class="mode-chip"
                   :class="'mode-' + getDateMode(date.key)"

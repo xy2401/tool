@@ -966,6 +966,8 @@ textarea {
 
 .ring-wrap {
   --pct: 0;
+  --ring-color: #b8c0b1;
+  --ring-track: rgba(113, 120, 109, 0.16);
   position: relative;
   display: grid;
   place-items: center;
@@ -980,11 +982,45 @@ textarea {
   border-radius: 50%;
   background: conic-gradient(
     from -90deg,
-    #34d399 calc(var(--pct) * 1%),
-    rgba(52, 211, 153, 0.12) calc(var(--pct) * 1%)
+    var(--ring-color) calc(var(--pct) * 1%),
+    var(--ring-track) calc(var(--pct) * 1%)
   );
   -webkit-mask: radial-gradient(farthest-side, transparent calc(100% - 3.5px), #000 calc(100% - 3px));
   mask: radial-gradient(farthest-side, transparent calc(100% - 3.5px), #000 calc(100% - 3px));
+}
+
+.ring-empty {
+  --ring-color: #b8c0b1;
+  --ring-track: rgba(113, 120, 109, 0.14);
+}
+
+.ring-low {
+  --ring-color: #d45b4f;
+  --ring-track: rgba(212, 91, 79, 0.14);
+}
+
+.ring-mid {
+  --ring-color: #df9a2f;
+  --ring-track: rgba(223, 154, 47, 0.16);
+}
+
+.ring-good {
+  --ring-color: #2f7db8;
+  --ring-track: rgba(47, 125, 184, 0.15);
+}
+
+.ring-high {
+  --ring-color: #2c9465;
+  --ring-track: rgba(44, 148, 101, 0.16);
+}
+
+.ring-full {
+  --ring-color: #16a35a;
+  --ring-track: rgba(22, 163, 90, 0.18);
+}
+
+.ring-full::before {
+  filter: drop-shadow(0 0 5px rgba(22, 163, 90, 0.32));
 }
 
 .ring-wrap .mode-chip {

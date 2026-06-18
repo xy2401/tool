@@ -544,6 +544,16 @@
         return Math.round((done / total) * 100);
       },
 
+      completionLevel(key) {
+        const rate = this.dateCompletionRate(key);
+        if (rate <= 0) return "empty";
+        if (rate <= 30) return "low";
+        if (rate <= 60) return "mid";
+        if (rate < 90) return "good";
+        if (rate < 100) return "high";
+        return "full";
+      },
+
       showToast(text) {
         clearTimeout(this.toastTimer);
         this.toastHiding = false;
