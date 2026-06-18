@@ -4,7 +4,7 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
     <title>微信群接龙统计助手</title>
-    <link rel="stylesheet" href="./app.css?v=1.0.4" />
+    <link rel="stylesheet" href="./app.css?v=1.0.5" />
   </head>
   <body>
     <div id="app" v-cloak>
@@ -31,7 +31,12 @@
               v-for="date in visibleDates"
               :key="'head-' + date.key"
               class="cell head date-head"
-              :class="{ today: date.key === todayKey, selected: dateModes[date.key] && dateModes[date.key] !== 'none' }"
+              :class="{
+                today: date.key === todayKey,
+                selected: dateModes[date.key] && dateModes[date.key] !== 'none',
+                'month-start': date.isMonthStart,
+                'month-break': date.isFirstVisibleMonthDay
+              }"
             >
               <button class="date-paste-zone" type="button" @click="openPaste(date.key)" title="粘贴这天的接龙">
                 <span>{{ date.label }}</span>
@@ -263,6 +268,6 @@
     </div>
 
     <script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
-    <script src="./app.js?v=1.0.4"></script>
+    <script src="./app.js?v=1.0.5"></script>
   </body>
 </html>

@@ -144,20 +144,29 @@
         const today = new Date();
         const baseStart = addDays(today, -3);
         const baseEnd = addDays(today, 3);
-        const dataDates = Object.keys(this.activeList.marks || {})
-          .filter((key) => Object.values(this.activeList.marks[key] || {}).some(Boolean))
-          .map(parseDateKey);
+        const markDateKeys = Object.keys(this.activeList.marks || {});
+        const modeDateKeys = Object.keys(this.activeList.dateModes || {}).filter((key) => this.activeList.dateModes[key] !== "none");
+        const dataDates = unique([...markDateKeys, ...modeDateKeys]).map(parseDateKey);
         const dataTimes = dataDates.map((date) => date.getTime());
         const earliestData = dataTimes.length ? new Date(Math.min(...dataTimes)) : null;
         const latestData = dataTimes.length ? new Date(Math.max(...dataTimes)) : null;
-        const start = earliestData && earliestData < baseStart ? addDays(earliestData, -3) : baseStart;
-        const end = latestData && latestData > baseEnd ? addDays(latestData, 3) : baseEnd;
+        const start = earliestData ? new Date(Math.min(baseStart.getTime(), addDays(earliestData, -1).getTime())) : baseStart;
+        const end = latestData ? new Date(Math.max(baseEnd.getTime(), addDays(latestData, 1).getTime())) : baseEnd;
         const length = Math.round((end - start) / 86400000) + 1;
+        let previousMonth = -1;
         return Array.from({ length }, (_, index) => {
           const date = addDays(start, index);
+          const month = date.getMonth();
+          const day = date.getDate();
+          const firstVisibleMonthDay = month !== previousMonth;
+          previousMonth = month;
           return {
             key: dateKey(date),
-            label: `${pad(date.getMonth() + 1)}-${pad(date.getDate())}`,
+            label: index === 0 ? `${pad(month + 1)}-${pad(day)}` : firstVisibleMonthDay ? `${month + 1}月` : pad(day),
+            monthLabel: `${month + 1}月`,
+            dayLabel: pad(day),
+            isMonthStart: day === 1,
+            isFirstVisibleMonthDay: firstVisibleMonthDay,
             weekday: weekNames[date.getDay()]
           };
         });
