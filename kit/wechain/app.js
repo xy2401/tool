@@ -273,9 +273,27 @@
           wrap.scrollLeft = Math.max(0, todayHead.offsetLeft - wrap.clientWidth / 2 + todayHead.clientWidth / 2);
         }
       });
+      const wrap = document.querySelector(".matrix-wrap");
+      if (wrap) {
+        this.onMatrixWheel = (event) => {
+          if (Math.abs(event.deltaX) >= Math.abs(event.deltaY)) return;
+          const maxLeft = wrap.scrollWidth - wrap.clientWidth;
+          if (maxLeft <= 0) return;
+          const nextLeft = Math.min(maxLeft, Math.max(0, wrap.scrollLeft + event.deltaY));
+          if (nextLeft === wrap.scrollLeft) return;
+          wrap.scrollLeft = nextLeft;
+          event.preventDefault();
+        };
+        wrap.addEventListener("wheel", this.onMatrixWheel, { passive: false });
+      }
       document.addEventListener("keydown", (e) => {
         if (e.key === "Escape" && this.modal) this.closeModal();
       });
+    },
+
+    beforeUnmount() {
+      const wrap = document.querySelector(".matrix-wrap");
+      if (wrap && this.onMatrixWheel) wrap.removeEventListener("wheel", this.onMatrixWheel);
     },
 
     methods: {

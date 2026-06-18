@@ -180,7 +180,8 @@ footer .primary,
 .matrix-wrap {
   margin-top: 12px;
   overflow: auto;
-  overscroll-behavior: none;
+  overscroll-behavior-x: contain;
+  overscroll-behavior-y: auto;
   -webkit-overflow-scrolling: touch;
   border: 1px solid var(--line);
   border-radius: 8px;
