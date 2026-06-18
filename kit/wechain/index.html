@@ -101,38 +101,76 @@
             <div>
               <strong>{{ noticeMeta }}</strong>
             </div>
+            <div class="notice-actions">
+              <button type="button" @click="copyText(noticeText)">复制</button>
+              <button type="button" @click="randomizeNotice">换一句</button>
+            </div>
           </div>
-          <div class="notice-actions">
-            <button type="button" @click="copyText(noticeText)">复制</button>
-            <button type="button" @click="copyText(currentNamesLine)">仅@名单</button>
-            <button type="button" @click="randomizeNotice">换一句</button>
-          </div>
-          <textarea readonly :value="noticeText" aria-label="生成的通知文案"></textarea>
+          <div class="notice-text" aria-label="生成的通知文案">{{ noticeText }}</div>
           <div class="roster-board">
-            <section class="roster-section done-roster">
+            <section class="roster-section done-roster" :class="{ collapsed: noticeCollapsed.done }">
               <div v-if="noticeData.doneNames.length" class="firework-field" aria-hidden="true">
                 <i v-for="n in 12" :key="'fw-' + n"></i>
               </div>
-              <h3>
-                <span v-if="noticeData.doneNames.length" class="crowns" aria-label="全部完成">
-                  <span v-for="n in noticeData.days" :key="'crown-head-' + n">👑</span>
-                </span>
-                <template v-else>{{ doneRosterTitle }}</template>
-              </h3>
-              <p v-if="!noticeData.doneNames.length" class="empty-roster">暂时无人完成</p>
-              <div v-for="item in noticeData.doneItems" :key="'done-' + item.name" class="roster-name done-name">
-                <span>{{ item.name }}</span>
+              <div class="roster-heading">
+                <label class="group-check">
+                  <input
+                    type="checkbox"
+                    :checked="isNoticeGroupSelected('done')"
+                    :disabled="!noticeData.doneNames.length"
+                    @change="toggleNoticeGroup('done', $event.target.checked)"
+                  />
+                  <span>完成({{ noticeData.doneNames.length }}人)</span>
+                </label>
+                <button class="roster-at" type="button" @click="copyNoticeGroupNames('done')" :disabled="!noticeData.doneNames.length">@名单</button>
+                <button class="roster-fold" type="button" @click="toggleNoticeSection('done')">
+                  <span class="fold-icon" :class="{ collapsed: noticeCollapsed.done }" aria-hidden="true"></span>
+                  {{ noticeCollapsed.done ? '展开' : '折叠' }}
+                </button>
+              </div>
+              <div v-if="!noticeCollapsed.done" class="roster-list">
+                <p v-if="!noticeData.doneNames.length" class="empty-roster">暂时无人完成</p>
+                <button
+                  v-for="item in noticeData.doneItems"
+                  :key="'done-' + item.name"
+                  class="roster-name done-name"
+                  type="button"
+                >
+                  <span>{{ item.name }}</span>
+                </button>
               </div>
             </section>
-            <section class="roster-section missing-roster">
+            <section class="roster-section missing-roster" :class="{ collapsed: noticeCollapsed.missing }">
               <div v-if="noticeData.missNames.length" class="encourage-field" aria-hidden="true"></div>
-              <h3>{{ missingRosterTitle }}</h3>
-              <p v-if="!noticeData.missNames.length" class="empty-roster">全员到齐</p>
-              <div v-for="item in noticeData.missItems" :key="'miss-' + item.name" class="roster-name missing-name">
-                <span>{{ item.name }}</span>
-                <small v-if="item.doneCount" class="mark-count flower-count" aria-label="已完成天数">
-                  <span v-for="n in item.doneCount" :key="'flower-' + item.name + '-' + n">🌺</span>
-                </small>
+              <div class="roster-heading">
+                <label class="group-check">
+                  <input
+                    type="checkbox"
+                    :checked="isNoticeGroupSelected('missing')"
+                    :disabled="!noticeData.missNames.length"
+                    @change="toggleNoticeGroup('missing', $event.target.checked)"
+                  />
+                  <span>未完成({{ noticeData.missNames.length }}人)</span>
+                </label>
+                <button class="roster-at" type="button" @click="copyNoticeGroupNames('missing')" :disabled="!noticeData.missNames.length">@名单</button>
+                <button class="roster-fold" type="button" @click="toggleNoticeSection('missing')">
+                  <span class="fold-icon" :class="{ collapsed: noticeCollapsed.missing }" aria-hidden="true"></span>
+                  {{ noticeCollapsed.missing ? '展开' : '折叠' }}
+                </button>
+              </div>
+              <div v-if="!noticeCollapsed.missing" class="roster-list">
+                <p v-if="!noticeData.missNames.length" class="empty-roster">全员到齐</p>
+                <button
+                  v-for="item in noticeData.missItems"
+                  :key="'miss-' + item.name"
+                  class="roster-name missing-name"
+                  type="button"
+                >
+                  <span>{{ item.name }}</span>
+                  <small v-if="item.doneCount" class="mark-count flower-count" aria-label="已完成天数">
+                    <span v-for="n in item.doneCount" :key="'flower-' + item.name + '-' + n">🌺</span>
+                  </small>
+                </button>
               </div>
             </section>
           </div>

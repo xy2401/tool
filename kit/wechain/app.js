@@ -92,6 +92,12 @@
         noticeSeed: 0,
         noticeSpark: false,
         showNoticePanel: false,
+        noticeSelectionTouched: false,
+        noticeSelectedNames: [],
+        noticeCollapsed: {
+          done: false,
+          missing: false
+        },
         swipeStart: null,
         longPressTimer: null,
         selectedMemberId: "",
@@ -199,6 +205,44 @@
         return buildNoticeData(this.activeMembers, this.activeList.marks, this.selectedDates, this.dateModes);
       },
 
+      noticeSelectionPool() {
+        return unique([...this.noticeData.doneNames, ...this.noticeData.missNames]);
+      },
+
+      selectedNoticeNames() {
+        const pool = new Set(this.noticeSelectionPool);
+        const defaultNames = this.noticeData.missNames.length ? this.noticeData.missNames : this.noticeData.primaryNames;
+        const names = this.noticeSelectionTouched ? this.noticeSelectedNames : defaultNames;
+        return unique(names).filter((name) => pool.has(name));
+      },
+
+      selectedNoticeNameSet() {
+        return new Set(this.selectedNoticeNames);
+      },
+
+      selectedNoticeData() {
+        const selected = this.selectedNoticeNameSet;
+        return {
+          ...this.noticeData,
+          primaryCount: this.noticeData.primaryNames.length,
+          doneCount: this.noticeData.doneNames.length,
+          missCount: this.noticeData.missNames.length,
+          primaryNames: this.selectedNoticeNames,
+          doneItems: this.noticeData.doneItems.filter((item) => selected.has(item.name)),
+          missItems: this.noticeData.missItems.filter((item) => selected.has(item.name)),
+          doneNames: this.noticeData.doneNames.filter((name) => selected.has(name)),
+          missNames: this.noticeData.missNames.filter((name) => selected.has(name))
+        };
+      },
+
+      selectedDoneCount() {
+        return this.noticeData.doneNames.filter((name) => this.selectedNoticeNameSet.has(name)).length;
+      },
+
+      selectedMissingCount() {
+        return this.noticeData.missNames.filter((name) => this.selectedNoticeNameSet.has(name)).length;
+      },
+
       noticeMeta() {
         if (!this.selectedDates.length) return "点日期第三行符号选择统计范围";
         const modes = unique(this.selectedDates.map((date) => this.modeSymbol(this.getDateMode(date.key))));
@@ -212,11 +256,11 @@
       },
 
       noticeText() {
-        return renderNotice(this.noticeData, this.templates, this.currentTimeSlot, this.noticeSeed);
+        return renderNotice(this.selectedNoticeData, this.templates, this.currentTimeSlot, this.noticeSeed);
       },
 
       currentNamesLine() {
-        return this.noticeData.primaryNames.map((name) => `@${name}`).join(" ");
+        return this.selectedNoticeNames.map((name) => `@${name}`).join(" ");
       },
 
       isWeekSelection() {
@@ -328,6 +372,7 @@
         const next = modeOrder[(modeOrder.indexOf(current) + 1) % modeOrder.length];
         if (next === "none") delete this.dateModes[key];
         else this.dateModes[key] = next;
+        this.resetNoticeSelection();
         this.randomizeNotice();
       },
 
@@ -338,6 +383,7 @@
       toggleMark(memberId, key) {
         this.ensureDate(key);
         this.activeList.marks[key][memberId] = !this.activeList.marks[key][memberId];
+        this.resetNoticeSelection();
         this.randomizeNotice();
       },
 
@@ -374,6 +420,7 @@
           if (!member.deleted) this.activeList.marks[this.pasteDate][member.id] = nameSet.has(member.name);
         });
         this.dateModes[this.pasteDate] = "all";
+        this.resetNoticeSelection();
         this.randomizeNotice(true);
         this.pendingNames = names.filter((name) => !memberByName.has(name));
         this.selectedPendingNames = [...this.pendingNames];
@@ -393,6 +440,7 @@
           if (member && !member.deleted) this.activeList.marks[this.pasteDate][member.id] = true;
         });
         this.closeModal();
+        this.resetNoticeSelection();
         this.randomizeNotice(true);
       },
 
@@ -552,6 +600,24 @@
         this.showToast("✓ 已复制");
       },
 
+      copyNamesLine() {
+        if (!this.currentNamesLine) {
+          this.showToast("没有可复制的@名单");
+          return;
+        }
+        this.copyText(this.currentNamesLine);
+      },
+
+      copyNoticeGroupNames(section) {
+        const names = this.noticeGroupNames(section);
+        const text = names.map((name) => `@${name}`).join(" ");
+        if (!text) {
+          this.showToast("没有可复制的@名单");
+          return;
+        }
+        this.copyText(text);
+      },
+
       randomizeNotice(spark = false) {
         this.noticeSeed += 1;
         if (spark) {
@@ -566,6 +632,47 @@
 
       toggleNoticePanel() {
         this.showNoticePanel = !this.showNoticePanel;
+      },
+
+      resetNoticeSelection() {
+        this.noticeSelectionTouched = false;
+        this.noticeSelectedNames = [];
+      },
+
+      isNoticeNameSelected(name) {
+        return this.selectedNoticeNameSet.has(name);
+      },
+
+      toggleNoticeName(name) {
+        const selected = new Set(this.selectedNoticeNames);
+        if (selected.has(name)) selected.delete(name);
+        else selected.add(name);
+        this.noticeSelectionTouched = true;
+        this.noticeSelectedNames = [...selected];
+      },
+
+      noticeGroupNames(section) {
+        return section === "done" ? this.noticeData.doneNames : this.noticeData.missNames;
+      },
+
+      isNoticeGroupSelected(section) {
+        const names = this.noticeGroupNames(section);
+        if (!names.length) return false;
+        return names.every((name) => this.selectedNoticeNameSet.has(name));
+      },
+
+      toggleNoticeGroup(section, checked) {
+        const selected = new Set(this.selectedNoticeNames);
+        this.noticeGroupNames(section).forEach((name) => {
+          if (checked) selected.add(name);
+          else selected.delete(name);
+        });
+        this.noticeSelectionTouched = true;
+        this.noticeSelectedNames = [...selected];
+      },
+
+      toggleNoticeSection(section) {
+        this.noticeCollapsed[section] = !this.noticeCollapsed[section];
       },
 
       closeModal() {
@@ -713,15 +820,15 @@
 
   function renderNotice(data, templateBag, timeSlot, seed) {
     if (data.scene === "idle") return "点日期表头第三行的 ○，选择完成、未完成或全选，就会在这里生成通知文案。";
-    const count = data.primaryNames.length;
+    const count = data.primaryCount ?? data.primaryNames.length;
     const values = {
       date: data.dateLabel,
       range: data.rangeLabel,
       days: data.days,
       count,
       names: namesLine(data.primaryNames),
-      doneCount: data.doneNames.length,
-      missCount: data.missNames.length,
+      doneCount: data.doneCount ?? data.doneNames.length,
+      missCount: data.missCount ?? data.missNames.length,
       doneNames: namesLine(data.doneNames),
       missNames: namesLine(data.missNames),
       timeSlot: timeSlotText(timeSlot),
@@ -739,8 +846,8 @@
     return [""];
   }
 
-  function namesLine(names) {
-    return names.length ? names.map((name) => `@${name}`).join(" ") : "无";
+  function namesLine(names, emptyText = "") {
+    return names.length ? names.map((name) => `@${name}`).join(" ") : emptyText;
   }
 
   function getTimeSlot(date) {
