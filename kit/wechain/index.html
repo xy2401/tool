@@ -4,7 +4,7 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
     <title>微信群接龙统计助手</title>
-    <link rel="stylesheet" href="./app.css?v=1.0.1" />
+    <link rel="stylesheet" href="./app.css?v=1.0.2" />
   </head>
   <body>
     <div id="app" v-cloak>
@@ -108,66 +108,48 @@
           </div>
           <div class="notice-text" aria-label="生成的通知文案">{{ noticeText }}</div>
           <div class="roster-board">
-            <section class="roster-section done-roster" :class="{ collapsed: noticeCollapsed.done }">
-              <div v-if="noticeData.doneNames.length" class="firework-field" aria-hidden="true">
+            <section
+              v-for="group in noticeRosterGroups"
+              :key="group.key"
+              class="roster-section"
+              :class="[group.full ? 'done-roster' : 'missing-roster', { collapsed: noticeCollapsed[group.key] }]"
+            >
+              <div v-if="group.full && group.names.length" class="firework-field" aria-hidden="true">
                 <i v-for="n in 12" :key="'fw-' + n"></i>
               </div>
+              <div v-if="!group.full && group.names.length" class="encourage-field" aria-hidden="true"></div>
               <div class="roster-heading">
                 <label class="group-check">
                   <input
                     type="checkbox"
-                    :checked="isNoticeGroupSelected('done')"
-                    :disabled="!noticeData.doneNames.length"
-                    @change="toggleNoticeGroup('done', $event.target.checked)"
+                    :checked="isNoticeGroupSelected(group.key)"
+                    :disabled="!group.names.length"
+                    @change="toggleNoticeGroup(group.key, $event.target.checked)"
                   />
-                  <span>完成({{ noticeData.doneNames.length }}人)</span>
+                  <span>
+                    <span v-if="group.full" class="group-crowns" aria-hidden="true">
+                      <span v-for="n in group.crowns" :key="group.key + '-crown-' + n">👑</span>
+                    </span>
+                    {{ group.label }}({{ group.names.length }}人)
+                  </span>
                 </label>
-                <button class="roster-at" type="button" @click="copyNoticeGroupNames('done')" :disabled="!noticeData.doneNames.length">@名单</button>
-                <button class="roster-fold" type="button" @click="toggleNoticeSection('done')">
-                  <span class="fold-icon" :class="{ collapsed: noticeCollapsed.done }" aria-hidden="true"></span>
-                  {{ noticeCollapsed.done ? '展开' : '折叠' }}
+                <button class="roster-at" type="button" @click="copyNoticeGroupNames(group.key)" :disabled="!group.names.length">@名单</button>
+                <button class="roster-fold" type="button" @click="toggleNoticeSection(group.key)">
+                  <span class="fold-icon" :class="{ collapsed: noticeCollapsed[group.key] }" aria-hidden="true"></span>
+                  {{ noticeCollapsed[group.key] ? '展开' : '折叠' }}
                 </button>
               </div>
-              <div v-if="!noticeCollapsed.done" class="roster-list">
-                <p v-if="!noticeData.doneNames.length" class="empty-roster">暂时无人完成</p>
+              <div v-if="!noticeCollapsed[group.key]" class="roster-list">
+                <p v-if="!group.names.length" class="empty-roster">{{ group.emptyText }}</p>
                 <button
-                  v-for="item in noticeData.doneItems"
-                  :key="'done-' + item.name"
-                  class="roster-name done-name"
+                  v-for="item in group.items"
+                  :key="group.key + '-' + item.name"
+                  class="roster-name"
+                  :class="group.full ? 'done-name' : 'missing-name'"
                   type="button"
                 >
                   <span>{{ item.name }}</span>
-                </button>
-              </div>
-            </section>
-            <section class="roster-section missing-roster" :class="{ collapsed: noticeCollapsed.missing }">
-              <div v-if="noticeData.missNames.length" class="encourage-field" aria-hidden="true"></div>
-              <div class="roster-heading">
-                <label class="group-check">
-                  <input
-                    type="checkbox"
-                    :checked="isNoticeGroupSelected('missing')"
-                    :disabled="!noticeData.missNames.length"
-                    @change="toggleNoticeGroup('missing', $event.target.checked)"
-                  />
-                  <span>未完成({{ noticeData.missNames.length }}人)</span>
-                </label>
-                <button class="roster-at" type="button" @click="copyNoticeGroupNames('missing')" :disabled="!noticeData.missNames.length">@名单</button>
-                <button class="roster-fold" type="button" @click="toggleNoticeSection('missing')">
-                  <span class="fold-icon" :class="{ collapsed: noticeCollapsed.missing }" aria-hidden="true"></span>
-                  {{ noticeCollapsed.missing ? '展开' : '折叠' }}
-                </button>
-              </div>
-              <div v-if="!noticeCollapsed.missing" class="roster-list">
-                <p v-if="!noticeData.missNames.length" class="empty-roster">全员到齐</p>
-                <button
-                  v-for="item in noticeData.missItems"
-                  :key="'miss-' + item.name"
-                  class="roster-name missing-name"
-                  type="button"
-                >
-                  <span>{{ item.name }}</span>
-                  <small v-if="item.doneCount" class="mark-count flower-count" aria-label="已完成天数">
+                  <small v-if="!group.full && item.doneCount" class="mark-count flower-count" aria-label="已完成天数">
                     <span v-for="n in item.doneCount" :key="'flower-' + item.name + '-' + n">🌺</span>
                   </small>
                 </button>
@@ -273,6 +255,6 @@
     </div>
 
     <script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
-    <script src="./app.js?v=1.0.1"></script>
+    <script src="./app.js?v=1.0.2"></script>
   </body>
 </html>

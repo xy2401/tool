@@ -552,6 +552,13 @@ textarea {
   white-space: nowrap;
 }
 
+.group-crowns {
+  display: inline-flex;
+  gap: 1px;
+  margin-right: 4px;
+  vertical-align: -1px;
+}
+
 .roster-fold {
   flex: 0 0 auto;
   display: inline-flex;

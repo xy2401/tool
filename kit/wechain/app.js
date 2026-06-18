@@ -205,13 +205,17 @@
         return buildNoticeData(this.activeMembers, this.activeList.marks, this.selectedDates, this.dateModes);
       },
 
+      noticeRosterGroups() {
+        return this.noticeData.rosterGroups || [];
+      },
+
       noticeSelectionPool() {
-        return unique([...this.noticeData.doneNames, ...this.noticeData.missNames]);
+        return unique(this.noticeRosterGroups.flatMap((group) => group.names));
       },
 
       selectedNoticeNames() {
         const pool = new Set(this.noticeSelectionPool);
-        const defaultNames = this.noticeData.missNames.length ? this.noticeData.missNames : this.noticeData.primaryNames;
+        const defaultNames = unique(this.noticeRosterGroups.filter((group) => !group.full).flatMap((group) => group.names));
         const names = this.noticeSelectionTouched ? this.noticeSelectedNames : defaultNames;
         return unique(names).filter((name) => pool.has(name));
       },
@@ -652,7 +656,7 @@
       },
 
       noticeGroupNames(section) {
-        return section === "done" ? this.noticeData.doneNames : this.noticeData.missNames;
+        return this.noticeRosterGroups.find((group) => group.key === section)?.names || [];
       },
 
       isNoticeGroupSelected(section) {
@@ -761,7 +765,8 @@
           doneItems: [],
           missItems: [],
           doneNames: [],
-          missNames: []
+          missNames: [],
+          rosterGroups: []
         };
       }
 
@@ -778,6 +783,7 @@
     });
     const allDone = memberStats.filter((member) => member.doneCount === dateKeys.length);
     const hasMissing = memberStats.filter((member) => member.missingCount > 0);
+    const rosterGroups = buildRosterGroups(memberStats, dateKeys.length);
     const rangeLabel = dateKeys.length === 1 ? shortDate(dateKeys[0]) : `${shortDate(dateKeys[0])} ~ ${shortDate(dateKeys[dateKeys.length - 1])}`;
     const isWeek = dateKeys.length === 7;
 
@@ -804,8 +810,32 @@
       doneItems: allDone,
       missItems: hasMissing,
       doneNames: allDone.map((member) => member.name),
-      missNames: hasMissing.map((member) => member.name)
+      missNames: hasMissing.map((member) => member.name),
+      rosterGroups
     };
+  }
+
+  function buildRosterGroups(memberStats, days) {
+    return Array.from({ length: days + 1 }, (_, index) => days - index)
+      .map((doneCount) => {
+        const items = memberStats.filter((member) => member.doneCount === doneCount);
+        const full = doneCount === days;
+        const empty = doneCount === 0;
+        return {
+          key: `done-${doneCount}`,
+          label: days === 1
+            ? full ? "完成" : "未完成"
+            : full ? "全勤" : empty ? "未完成" : `完成${doneCount}天`,
+          count: items.length,
+          doneCount,
+          crowns: full ? days : 0,
+          full,
+          items,
+          names: items.map((member) => member.name),
+          emptyText: full ? "暂时无人全勤" : empty ? "没有完全未完成的人" : `暂无完成${doneCount}天的人`
+        };
+      })
+      .filter((group) => group.count > 0 || group.full || group.doneCount === 0);
   }
 
   function selectedModeText(selectedDates, dateModes) {
