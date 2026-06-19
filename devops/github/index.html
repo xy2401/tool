@@ -131,9 +131,14 @@
                         <div class="template-help">Available: <code>name</code>, <code>html_url</code>, <code>description</code>, <code>language</code>, <code>stargazers_count</code>, <code>updated_at</code></div>
                     </div>
                     <div style="display: flex; gap: 8px; align-items: center;">
-                        <select id="selectTemplatePreset" style="font-size: 0.75rem; padding: 4px; border-radius: 4px; border: 1px solid var(--border-color); background: var(--bg-base); color: var(--text-primary);"></select>
-                        <button id="btnSaveTemplateAs" class="btn btn-outline" style="font-size: 0.75rem; padding: 4px 8px;">Save As</button>
-                        <button id="btnDeleteTemplate" class="btn btn-outline" style="font-size: 0.75rem; padding: 4px 8px; color: #ff7b72; border-color: #ff7b72;">Delete</button>
+                        <div style="position: relative; display: inline-flex; align-items: stretch; border: 1px solid var(--border-color); border-radius: 4px; background: var(--bg-base); overflow: hidden;">
+                            <div style="display: flex; align-items: center; justify-content: center; padding: 0 6px; background: var(--bg-surface); border-right: 1px solid var(--border-color); pointer-events: none; color: var(--text-secondary);">
+                                ▾
+                            </div>
+                            <select id="selectTemplateHidden" style="position: absolute; left: 0; top: 0; bottom: 0; width: 32px; opacity: 0; cursor: pointer;"></select>
+                            <input type="text" id="inputTemplateName" style="border: none; outline: none; background: transparent; color: var(--text-primary); padding: 4px 8px; width: 160px; font-size: 0.75rem;" placeholder="Template Name">
+                        </div>
+                        <button id="btnDeleteTemplate" class="btn btn-outline" style="font-size: 0.75rem; padding: 4px 8px; color: #ff7b72; border-color: #ff7b72; visibility: hidden;">Delete</button>
                     </div>
                 </div>
                 <textarea id="inputTemplate" spellcheck="false"></textarea>

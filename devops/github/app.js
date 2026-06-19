@@ -22,8 +22,8 @@ document.addEventListener('DOMContentLoaded', () => {
     const repoList = document.getElementById('repoList');
     const repoStats = document.getElementById('repoStats');
     const inputTemplate = document.getElementById('inputTemplate');
-    const selectTemplatePreset = document.getElementById('selectTemplatePreset');
-    const btnSaveTemplateAs = document.getElementById('btnSaveTemplateAs');
+    const inputTemplateName = document.getElementById('inputTemplateName');
+    const selectTemplateHidden = document.getElementById('selectTemplateHidden');
     const btnDeleteTemplate = document.getElementById('btnDeleteTemplate');
     const templateSavedIndicator = document.getElementById('templateSavedIndicator');
     
@@ -93,35 +93,47 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     const renderTemplatePresets = () => {
-        selectTemplatePreset.innerHTML = '';
+        selectTemplateHidden.innerHTML = '';
         Object.keys(userTemplates).forEach(key => {
             const opt = document.createElement('option');
             opt.value = key;
             opt.textContent = key;
-            selectTemplatePreset.appendChild(opt);
+            selectTemplateHidden.appendChild(opt);
         });
-        selectTemplatePreset.value = currentTemplateKey;
+        inputTemplateName.value = currentTemplateKey;
+        selectTemplateHidden.value = currentTemplateKey;
     };
 
     const updateTemplateEditor = () => {
+        inputTemplateName.value = currentTemplateKey;
+        selectTemplateHidden.value = currentTemplateKey;
         inputTemplate.value = userTemplates[currentTemplateKey] || "";
-        btnDeleteTemplate.style.display = defaultTemplates[currentTemplateKey] ? 'none' : 'inline-block';
+        btnDeleteTemplate.style.visibility = defaultTemplates[currentTemplateKey] ? 'hidden' : 'visible';
         generateOutput();
     };
 
     // Template UI Listeners
-    selectTemplatePreset.addEventListener('change', (e) => {
-        currentTemplateKey = e.target.value;
-        localStorage.setItem('gh_explorer_current_template', currentTemplateKey);
-        updateTemplateEditor();
+    selectTemplateHidden.addEventListener('change', (e) => {
+        inputTemplateName.value = e.target.value;
+        inputTemplateName.dispatchEvent(new Event('change'));
     });
 
-    btnSaveTemplateAs.addEventListener('click', () => {
-        const newName = prompt('Enter a name for the new template preset:');
-        if (newName && newName.trim()) {
-            const nameTrimmed = newName.trim();
-            userTemplates[nameTrimmed] = inputTemplate.value;
-            currentTemplateKey = nameTrimmed;
+    inputTemplateName.addEventListener('change', (e) => {
+        let newName = e.target.value.trim();
+        if (!newName) {
+            newName = currentTemplateKey; // Revert if empty
+            inputTemplateName.value = newName;
+            return;
+        }
+        
+        if (userTemplates[newName] !== undefined) {
+            // Exists: Switch to it
+            currentTemplateKey = newName;
+            updateTemplateEditor();
+        } else {
+            // Does not exist: Create new based on current textarea
+            currentTemplateKey = newName;
+            userTemplates[newName] = inputTemplate.value;
             saveTemplates();
             renderTemplatePresets();
             updateTemplateEditor();
@@ -407,17 +419,36 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
 
-        const output = displayedRepos.map(repo => {
-            // Simple string replacement engine for ${key}
-            return template.replace(/\$\{([^}]+)\}/g, (match, key) => {
-                const k = key.trim();
-                if (k === 'updated_at' || k === 'pushed_at') {
-                    if (!repo[k]) return 'N/A';
-                    return new Date(repo[k]).toISOString().split('T')[0];
-                }
-                return repo[k] !== undefined && repo[k] !== null ? repo[k] : '';
-            });
-        }).join('\n\n'); // Separate items by double newline for cleaner markdown spacing
+        // Gather all possible keys to inject them as JS variables
+        const allKeysSet = new Set();
+        displayedRepos.forEach(r => Object.keys(r).forEach(k => allKeysSet.add(k)));
+        const keys = Array.from(allKeysSet);
+        
+        let compiledFunc;
+        try {
+            // Compile template string into a real JS function
+            compiledFunc = new Function(...keys, "return `" + template.replace(/\\/g, '\\\\').replace(/`/g, '\\`') + "`;");
+        } catch(e) {
+            outputPreview.value = `Template Compile Error:\n${e.message}\nMake sure your \${...} expressions are valid JavaScript.`;
+            return;
+        }
+
+        const output = displayedRepos.map((repo, index) => {
+            try {
+                const values = keys.map(k => {
+                    let val = repo[k];
+                    // Retain date formatting backward compatibility
+                    if ((k === 'updated_at' || k === 'pushed_at') && val) {
+                        return new Date(val).toISOString().split('T')[0];
+                    }
+                    if (val === null || val === undefined) return '';
+                    return val;
+                });
+                return compiledFunc(...values);
+            } catch(e) {
+                return `[Error rendering repo ${repo.name || index}: ${e.message}]`;
+            }
+        }).join('\n\n');
         
         outputPreview.value = output;
     };
@@ -425,6 +456,21 @@ document.addEventListener('DOMContentLoaded', () => {
     let templateSaveTimeout;
     inputTemplate.addEventListener('input', () => {
         generateOutput();
+        
+        // Auto-fork if modifying a default template
+        if (defaultTemplates[currentTemplateKey]) {
+            let copyName = `${currentTemplateKey} (副本)`;
+            let counter = 1;
+            while (userTemplates[copyName]) {
+                copyName = `${currentTemplateKey} (副本 ${counter})`;
+                counter++;
+            }
+            currentTemplateKey = copyName;
+            inputTemplateName.value = currentTemplateKey;
+            btnDeleteTemplate.style.visibility = 'visible';
+            renderTemplatePresets();
+        }
+        
         userTemplates[currentTemplateKey] = inputTemplate.value;
         
         clearTimeout(templateSaveTimeout);
