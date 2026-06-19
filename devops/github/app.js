@@ -1,6 +1,7 @@
 document.addEventListener('DOMContentLoaded', () => {
     // DOM Elements
     const btnSettings = document.getElementById('btnSettings');
+    const btnTheme = document.getElementById('btnTheme');
     const settingsModal = document.getElementById('settingsModal');
     const btnCloseSettings = document.getElementById('btnCloseSettings');
     const btnSaveSettings = document.getElementById('btnSaveSettings');
@@ -21,11 +22,21 @@ document.addEventListener('DOMContentLoaded', () => {
     let currentRepos = [];
     let displayedRepos = [];
 
-    // Initialize Settings
+    // Initialize Settings & Theme
     const loadSettings = () => {
         const pat = localStorage.getItem('gh_explorer_pat') || '';
         inputPat.value = pat;
+        
+        const theme = localStorage.getItem('gh_explorer_theme') || 'light';
+        document.documentElement.setAttribute('data-theme', theme);
     };
+
+    btnTheme.addEventListener('click', () => {
+        const currentTheme = document.documentElement.getAttribute('data-theme') || 'light';
+        const newTheme = currentTheme === 'light' ? 'dark' : 'light';
+        document.documentElement.setAttribute('data-theme', newTheme);
+        localStorage.setItem('gh_explorer_theme', newTheme);
+    });
     
     const saveSettings = () => {
         const pat = inputPat.value.trim();
