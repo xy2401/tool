@@ -31,6 +31,10 @@
         const themePreference = ref('system');
         const lineNumbersRef = ref(null);
         const collapsedNodes = ref([]);
+        const showInfoModal = ref(false);
+        const jsonStats = ref({});
+        const jsonSchemaText = ref('');
+        const jsonPathsList = ref([]);
         let toastIdCounter = 0;
         let skipHistoryRecord = false;
         let historyDebounceTimeout = null;
@@ -1203,6 +1207,201 @@
           }
         };
 
+        const formatSize = (bytes) => {
+          if (bytes === 0) return '0 B';
+          const k = 1024;
+          const sizes = ['B', 'KB', 'MB', 'GB'];
+          const i = Math.floor(Math.log(bytes) / Math.log(k));
+          return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+        };
+
+        const calculateDepthAndKeys = (obj) => {
+          let maxChildDepth = 0;
+          let keys = 0;
+          let stringCount = 0;
+          let numberCount = 0;
+          let booleanCount = 0;
+          let nullCount = 0;
+          let objectCount = 0;
+          let arrayCount = 0;
+
+          const recurse = (node, currentDepth) => {
+            if (currentDepth > maxChildDepth) maxChildDepth = currentDepth;
+            if (node === null) {
+              nullCount++;
+              return;
+            }
+            const type = typeof node;
+            if (type === 'string') {
+              stringCount++;
+            } else if (type === 'number') {
+              numberCount++;
+            } else if (type === 'boolean') {
+              booleanCount++;
+            } else if (Array.isArray(node)) {
+              arrayCount++;
+              keys += node.length;
+              for (let i = 0; i < node.length; i++) {
+                recurse(node[i], currentDepth + 1);
+              }
+            } else if (type === 'object') {
+              objectCount++;
+              const objKeys = Object.keys(node);
+              keys += objKeys.length;
+              for (let key of objKeys) {
+                recurse(node[key], currentDepth + 1);
+              }
+            }
+          };
+
+          recurse(obj, 1);
+          return { depth: maxChildDepth, keys, stringCount, numberCount, booleanCount, nullCount, objectCount, arrayCount };
+        };
+
+        const generateJSONPaths = (obj, prefix = '$') => {
+          const pathCounts = {};
+          
+          const recurse = (node, currentPath) => {
+            if (!pathCounts[currentPath]) pathCounts[currentPath] = 0;
+            pathCounts[currentPath]++;
+            
+            if (node !== null && typeof node === 'object') {
+              if (Array.isArray(node)) {
+                for (let i = 0; i < node.length; i++) {
+                  let child = node[i];
+                  if (child !== null && typeof child === 'object') {
+                    recurse(child, `${currentPath}[*]`);
+                  } else {
+                    let p = `${currentPath}[*]`;
+                    if (!pathCounts[p]) pathCounts[p] = 0;
+                    pathCounts[p]++;
+                  }
+                }
+              } else {
+                for (let key in node) {
+                  if (Object.prototype.hasOwnProperty.call(node, key)) {
+                    let child = node[key];
+                    if (child !== null && typeof child === 'object') {
+                      let nextPath = /^[a-zA-Z_][a-zA-Z0-9_]*$/.test(key) ? `${currentPath}.${key}` : `${currentPath}['${key}']`;
+                      recurse(child, nextPath);
+                    }
+                  }
+                }
+              }
+            }
+          };
+          
+          if (obj !== null && typeof obj === 'object') {
+            recurse(obj, prefix);
+          }
+          
+          return Object.keys(pathCounts).map(path => ({ path, count: pathCounts[path] }));
+        };
+
+        const inferSchema = (obj) => {
+          if (obj === null) return { type: 'null' };
+          const type = typeof obj;
+          if (type === 'string' || type === 'number' || type === 'boolean') {
+            return { type };
+          }
+          if (Array.isArray(obj)) {
+            let itemTypes = [];
+            let itemSchemas = [];
+            for (let item of obj) {
+              const itemSchema = inferSchema(item);
+              const schemaStr = JSON.stringify(itemSchema);
+              if (!itemTypes.includes(schemaStr)) {
+                itemTypes.push(schemaStr);
+                itemSchemas.push(itemSchema);
+              }
+            }
+            let itemsSchema = {};
+            if (itemSchemas.length === 1) {
+              itemsSchema = itemSchemas[0];
+            } else if (itemSchemas.length > 1) {
+              itemsSchema = { anyOf: itemSchemas };
+            }
+            return { type: 'array', items: itemsSchema };
+          }
+          if (type === 'object') {
+            const properties = {};
+            for (let key in obj) {
+              if (Object.prototype.hasOwnProperty.call(obj, key)) {
+                properties[key] = inferSchema(obj[key]);
+              }
+            }
+            return { type: 'object', properties };
+          }
+          return {};
+        };
+
+        const openInfoModal = () => {
+          if (!selectedNode.value) return;
+          const val = selectedNode.value.val;
+          const stats = calculateDepthAndKeys(val);
+          
+          let sizeStr = '0 B';
+          try {
+            const str = JSON.stringify(val);
+            if (str) {
+              const bytes = new Blob([str]).size;
+              sizeStr = formatSize(bytes);
+            }
+          } catch(e) {}
+
+          let typeDisplay = 'Null';
+          if (val !== null) {
+            if (Array.isArray(val)) typeDisplay = 'Array';
+            else typeDisplay = typeof val;
+            typeDisplay = typeDisplay.charAt(0).toUpperCase() + typeDisplay.slice(1);
+          }
+
+          jsonStats.value = {
+            path: selectedNode.value.path.join('.') || 'Root',
+            type: typeDisplay,
+            keyCount: stats.keys,
+            maxDepth: stats.depth,
+            estimatedSize: sizeStr,
+            stringCount: stats.stringCount,
+            numberCount: stats.numberCount,
+            booleanCount: stats.booleanCount,
+            nullCount: stats.nullCount,
+            objectCount: stats.objectCount,
+            arrayCount: stats.arrayCount
+          };
+
+          const paths = generateJSONPaths(val, jsonStats.value.path === 'Root' ? '$' : `$['${jsonStats.value.path}']`);
+          jsonPathsList.value = paths;
+
+          const schemaObj = inferSchema(val);
+          const finalSchema = {
+            "$schema": "http://json-schema.org/draft-07/schema#",
+            ...schemaObj
+          };
+          jsonSchemaText.value = JSON.stringify(finalSchema, null, 2);
+
+          showInfoModal.value = true;
+        };
+
+        const copySchema = () => {
+          if (!jsonSchemaText.value) return;
+          navigator.clipboard.writeText(jsonSchemaText.value).then(() => {
+            showToast('已复制', 'JSON Schema 已复制到剪贴板', 'success');
+          }).catch(err => {
+            showToast('复制失败', '请手动复制文本框中的内容', 'error');
+          });
+        };
+
+        const copyPaths = () => {
+          if (!jsonPathsList.value.length) return;
+          const textToCopy = jsonPathsList.value.map(p => `${p.path} (数量: ${p.count})`).join('\n');
+          navigator.clipboard.writeText(textToCopy).then(() => {
+            showToast('已复制', 'JSONPaths 已复制到剪贴板', 'success');
+          }).catch(err => {
+            showToast('复制失败', '请手动复制内容', 'error');
+          });
+        };
+
         return {
           rawInput,
           nodes,
@@ -1255,7 +1454,14 @@
           collapsedNodes,
           hasChildren,
           toggleCollapse,
-          toggleCollapseAll
+          toggleCollapseAll,
+          showInfoModal,
+          jsonStats,
+          jsonSchemaText,
+          jsonPathsList,
+          openInfoModal,
+          copySchema,
+          copyPaths
         };
       }
     }).mount('#app');
