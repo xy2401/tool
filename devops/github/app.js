@@ -66,6 +66,8 @@ document.addEventListener('DOMContentLoaded', () => {
     // State
     let currentRepos = [];
     let displayedRepos = [];
+    let accumulatedRepos = [];
+    let rightSideRepos = [];
     let currentPage = 1;
     let hasNextPage = false;
 
@@ -255,16 +257,16 @@ document.addEventListener('DOMContentLoaded', () => {
             hasNextPage = linkHeader && linkHeader.includes('rel="next"');
             currentPage = page;
             
-            const newRepos = data.items || [];
+            const data = await response.json();
+            currentRepos = data.items || [];
+            repoStats.textContent = `List: ${currentRepos.length.toLocaleString()} repos`;
+            
             if (document.getElementById('chkAccumulate').checked) {
-                const existingIds = new Set(currentRepos.map(r => r.id));
-                const uniqueNew = newRepos.filter(r => !existingIds.has(r.id));
-                currentRepos = [...currentRepos, ...uniqueNew];
-                repoStats.textContent = `List: ${currentRepos.length.toLocaleString()} repos (Accumulating)`;
-            } else {
-                currentRepos = newRepos;
-                repoStats.textContent = `List: ${currentRepos.length.toLocaleString()} repos`;
+                const existingIds = new Set(accumulatedRepos.map(r => r.id));
+                const uniqueNew = currentRepos.filter(r => !existingIds.has(r.id));
+                accumulatedRepos = [...accumulatedRepos, ...uniqueNew];
             }
+            
             applySortAndFilter();
             
             // Update Pagination UI
@@ -415,43 +417,82 @@ document.addEventListener('DOMContentLoaded', () => {
             );
         }
         
-        // Local Sort
-        const localSort = document.getElementById('selectLocalSort').value;
-        if (localSort !== 'none') {
-            result.sort((a, b) => {
-                if (localSort === 'stars_desc') return (b.stargazers_count || 0) - (a.stargazers_count || 0);
-                if (localSort === 'forks_desc') return (b.forks_count || 0) - (a.forks_count || 0);
-                if (localSort === 'updated_desc') {
+        displayedRepos = result;
+        
+        if (!document.getElementById('chkAccumulate').checked) {
+            accumulatedRepos = [...displayedRepos];
+        }
+        
+        renderRepos();
+        outputJson.value = JSON.stringify(displayedRepos, null, 2);
+        
+        updateRightSide();
+    };
+
+    inputFilter.addEventListener('input', applySortAndFilter);
+    
+    // Right Side Update
+    const updateRightSide = () => {
+        let source = [...accumulatedRepos];
+        
+        const rightFilter = document.getElementById('inputRightFilter').value.toLowerCase().trim();
+        if (rightFilter) {
+            source = source.filter(repo => 
+                (repo.full_name && repo.full_name.toLowerCase().includes(rightFilter)) ||
+                (repo.description && repo.description.toLowerCase().includes(rightFilter))
+            );
+        }
+        
+        const rightSort = document.getElementById('selectRightSort').value;
+        if (rightSort !== 'none') {
+            source.sort((a, b) => {
+                if (rightSort === 'stars_desc') return (b.stargazers_count || 0) - (a.stargazers_count || 0);
+                if (rightSort === 'forks_desc') return (b.forks_count || 0) - (a.forks_count || 0);
+                if (rightSort === 'updated_desc') {
                     const d1 = new Date(b.pushed_at || b.updated_at).getTime() || 0;
                     const d2 = new Date(a.pushed_at || a.updated_at).getTime() || 0;
                     return d1 - d2;
                 }
-                if (localSort === 'name_asc') return (a.full_name || '').localeCompare(b.full_name || '');
                 return 0;
             });
         }
         
-        displayedRepos = result;
-        
-        renderRepos();
-        outputJson.value = JSON.stringify(displayedRepos, null, 2);
+        rightSideRepos = source;
+        document.getElementById('rightStats').textContent = `${rightSideRepos.length} items`;
         generateOutput();
     };
-
-    inputFilter.addEventListener('input', applySortAndFilter);
-    document.getElementById('selectLocalSort').addEventListener('change', applySortAndFilter);
+    
+    document.getElementById('inputRightFilter').addEventListener('input', updateRightSide);
+    document.getElementById('selectRightSort').addEventListener('change', updateRightSide);
+    
+    document.getElementById('chkAccumulate').addEventListener('change', (e) => {
+        if (!e.target.checked) {
+            accumulatedRepos = [...displayedRepos];
+        } else {
+            // Re-sync with current displayed when turned on if it was empty
+            if (accumulatedRepos.length === 0) {
+                accumulatedRepos = [...displayedRepos];
+            }
+        }
+        updateRightSide();
+    });
+    
+    document.getElementById('btnClearAccumulate').addEventListener('click', () => {
+        accumulatedRepos = document.getElementById('chkAccumulate').checked ? [] : [...displayedRepos];
+        updateRightSide();
+    });
 
     // Template Generator
     const generateOutput = () => {
         const template = inputTemplate.value;
-        if (!template.trim() || displayedRepos.length === 0) {
+        if (!template.trim() || rightSideRepos.length === 0) {
             outputPreview.value = '';
             return;
         }
 
         // Gather all possible keys to inject them as JS variables
         const allKeysSet = new Set();
-        displayedRepos.forEach(r => Object.keys(r).forEach(k => allKeysSet.add(k)));
+        rightSideRepos.forEach(r => Object.keys(r).forEach(k => allKeysSet.add(k)));
         const keys = Array.from(allKeysSet);
         
         let compiledFunc;
@@ -463,7 +504,7 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
 
-        const output = displayedRepos.map((repo, index) => {
+        const output = rightSideRepos.map((repo, index) => {
             try {
                 const values = keys.map(k => {
                     let val = repo[k];
