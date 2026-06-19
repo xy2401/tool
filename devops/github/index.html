@@ -90,7 +90,15 @@
                             
                             <dt style="font-size: 0.8rem; color: var(--text-secondary); text-align: right; padding-right: 8px; white-space: nowrap;">Query:</dt>
                             <dd style="margin: 0; grid-column: span 3; display: flex; gap: 8px;">
-                                <input type="text" id="inputQuery" placeholder="Advanced parameter query (e.g. user:microsoft language:python)" style="flex: 1; padding: 6px 10px; font-size: 0.875rem;">
+                                <input type="text" id="inputQuery" list="listQueries" placeholder="Advanced parameter query (e.g. user:microsoft language:python)" style="flex: 1; padding: 6px 10px; font-size: 0.875rem;">
+                                <datalist id="listQueries">
+                                    <option value="created:>2024-01-01 stars:>1000">created:>2024-01-01 stars:>1000 ( 🔥 Trending this year )</option>
+                                    <option value="pushed:>2024-05-01">pushed:>2024-05-01 ( 🕒 Recently updated )</option>
+                                    <option value="good-first-issues:>10">good-first-issues:>10 ( 👶 Beginner friendly )</option>
+                                    <option value="stars:>50000">stars:>50000 ( ⭐ Hall of fame )</option>
+                                    <option value="license:mit">license:mit ( 📄 MIT License )</option>
+                                    <option value="size:<5000">size:<5000 ( 📦 Small projects )</option>
+                                </datalist>
                                 <button id="btnSearch" class="btn btn-primary" style="padding: 6px 24px; font-size: 0.875rem;">Search</button>
                             </dd>
                         </dl>
