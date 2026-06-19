@@ -10,18 +10,37 @@ document.addEventListener('DOMContentLoaded', () => {
     const inputUsername = document.getElementById('inputUsername');
     const btnSearch = document.getElementById('btnSearch');
     const selectSort = document.getElementById('selectSort');
+    const selectPerPage = document.getElementById('selectPerPage');
     const inputFilter = document.getElementById('inputFilter');
     const repoList = document.getElementById('repoList');
     const repoStats = document.getElementById('repoStats');
     
     const inputTemplate = document.getElementById('inputTemplate');
     const outputPreview = document.getElementById('outputPreview');
+    const outputJson = document.getElementById('outputJson');
     const btnCopy = document.getElementById('btnCopy');
 
     const paginationControls = document.getElementById('paginationControls');
     const btnPrevPage = document.getElementById('btnPrevPage');
     const btnNextPage = document.getElementById('btnNextPage');
     const pageIndicator = document.getElementById('pageIndicator');
+    
+    // Tabs Logic
+    const tabBtns = document.querySelectorAll('.tab-btn');
+    const tabPanes = document.querySelectorAll('.tab-pane');
+    tabBtns.forEach(btn => {
+        btn.addEventListener('click', () => {
+            tabBtns.forEach(b => b.classList.remove('active'));
+            tabPanes.forEach(p => {
+                p.classList.remove('active');
+                p.style.display = 'none';
+            });
+            btn.classList.add('active');
+            const target = document.getElementById(btn.getAttribute('data-target'));
+            target.classList.add('active');
+            target.style.display = 'flex';
+        });
+    });
 
     // State
     let currentRepos = [];
@@ -82,7 +101,8 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         
         try {
-            let url = `https://api.github.com/users/${encodeURIComponent(username)}/repos?per_page=100&sort=updated&page=${page}`;
+            const perPage = selectPerPage.value;
+            let url = `https://api.github.com/users/${encodeURIComponent(username)}/repos?per_page=${perPage}&sort=updated&page=${page}`;
             const response = await fetch(url, { headers });
             
             if (!response.ok) {
@@ -142,6 +162,13 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
+    selectPerPage.addEventListener('change', () => {
+        const username = inputUsername.value.trim();
+        if (username) {
+            fetchRepos(username, 1);
+        }
+    });
+
     // Render Data
     const renderRepos = () => {
         if (displayedRepos.length === 0) {
@@ -195,6 +222,7 @@ document.addEventListener('DOMContentLoaded', () => {
         repoStats.textContent = `${displayedRepos.length} repos found`;
         
         renderRepos();
+        outputJson.value = JSON.stringify(displayedRepos, null, 2);
         generateOutput();
     };
 

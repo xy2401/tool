@@ -38,6 +38,15 @@
                         <option value="name">Name</option>
                     </select>
                 </div>
+                <div class="sort-group">
+                    <label>Per Page:</label>
+                    <select id="selectPerPage">
+                        <option value="10">10</option>
+                        <option value="30">30</option>
+                        <option value="50">50</option>
+                        <option value="100">100</option>
+                    </select>
+                </div>
                 <div class="filter-group">
                     <input type="text" id="inputFilter" placeholder="Filter by name...">
                 </div>
@@ -65,9 +74,17 @@
   > ${description}
   > ⭐ ${stargazers_count} | 🕒 ${updated_at}</textarea>
             </div>
-            <div class="preview-area">
-                <label>Generated Output:</label>
-                <textarea id="outputPreview" readonly></textarea>
+            <div class="tabs-area" style="display: flex; flex-direction: column; flex: 2; padding: 0 16px 16px;">
+                <div class="tab-headers" style="display: flex; border-bottom: 1px solid var(--border-color); margin-bottom: 8px;">
+                    <button class="tab-btn active" data-target="panePreview">Generated Output</button>
+                    <button class="tab-btn" data-target="paneJson">Raw JSON</button>
+                </div>
+                <div id="panePreview" class="tab-pane active" style="flex: 1; display: flex;">
+                    <textarea id="outputPreview" readonly style="flex: 1;"></textarea>
+                </div>
+                <div id="paneJson" class="tab-pane" style="flex: 1; display: none;">
+                    <textarea id="outputJson" readonly style="flex: 1; font-family: monospace; font-size: 0.75rem;"></textarea>
+                </div>
             </div>
         </div>
     </main>
