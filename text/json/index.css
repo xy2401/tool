@@ -1175,51 +1175,33 @@
       box-shadow: 0 0 10px rgba(0, 0, 0, 0.5);
     }
 
-    /* Info Modal Styles */
-    .modal-overlay {
-      position: fixed;
-      top: 0;
-      left: 0;
-      width: 100vw;
-      height: 100vh;
-      background: var(--modal-overlay-bg);
-      backdrop-filter: blur(8px);
-      -webkit-backdrop-filter: blur(8px);
-      z-index: 3000;
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      padding: 2rem;
-    }
-
-    .modal-content {
-      width: 100%;
-      max-width: 800px;
-      max-height: 85vh;
+    /* Right Side Inspector Panel Styles */
+    .inspector-panel {
+      width: 350px;
+      flex-shrink: 0;
       display: flex;
       flex-direction: column;
-      background: var(--modal-content-bg);
-      border: 1px solid var(--modal-border);
-      box-shadow: var(--modal-shadow);
-      border-radius: 1.25rem;
-      animation: modalFadeIn 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+      border-left: 1px solid var(--panel-border);
+      background: var(--panel-bg);
+      animation: slideInRight 0.3s cubic-bezier(0.16, 1, 0.3, 1);
     }
 
-    @keyframes modalFadeIn {
-      from { opacity: 0; transform: translateY(20px) scale(0.95); }
-      to { opacity: 1; transform: translateY(0) scale(1); }
+    @keyframes slideInRight {
+      from { transform: translateX(20px); opacity: 0; }
+      to { transform: translateX(0); opacity: 1; }
     }
 
-    .modal-header {
+    .inspector-header {
       display: flex;
       justify-content: space-between;
       align-items: center;
-      padding: 0.85rem 1.25rem;
+      padding: 1rem 1.25rem;
       border-bottom: 1px solid var(--panel-border);
+      flex-shrink: 0;
     }
 
-    .modal-header h3 {
-      font-size: 1.15rem;
+    .inspector-header h3 {
+      font-size: 1.1rem;
       font-weight: 600;
       color: var(--text-main);
       margin: 0;
@@ -1242,8 +1224,8 @@
       background: rgba(244, 63, 94, 0.1);
     }
 
-    .modal-body {
-      padding: 1rem 1.25rem;
+    .inspector-body {
+      padding: 1rem;
       overflow-y: auto;
       display: flex;
       flex-direction: column;
@@ -1253,10 +1235,22 @@
 
     .info-section {
       background: var(--empty-state-bg);
-      border: 1px solid var(--modal-border);
+      border: 1px solid var(--panel-border);
       border-radius: 0.5rem;
       padding: 0.85rem 1rem;
-      box-shadow: inset 0 2px 10px rgba(0, 0, 0, 0.05);
+    }
+
+    .info-section.flex-col {
+      display: flex;
+      flex-direction: column;
+      padding: 1rem;
+    }
+
+    .section-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 0.5rem;
     }
 
     .info-section h4 {

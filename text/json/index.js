@@ -853,6 +853,9 @@
             try {
               const parsed = JSON.parse(editText.value);
               editText.value = formatJSON(parsed);
+              if (showInfoModal.value) {
+                openInfoModal();
+              }
               return;
             } catch (e) {
               // Ignore invalid JSON to prevent losing user edits
@@ -861,6 +864,9 @@
           }
 
           editText.value = formatJSON(selectedNode.value.val);
+          if (showInfoModal.value) {
+            openInfoModal();
+          }
         };
 
         // Handle Node Selection
@@ -1299,40 +1305,43 @@
         };
 
         const inferSchema = (obj) => {
-          if (obj === null) return { type: 'null' };
-          const type = typeof obj;
-          if (type === 'string' || type === 'number' || type === 'boolean') {
-            return { type };
-          }
-          if (Array.isArray(obj)) {
-            let itemTypes = [];
-            let itemSchemas = [];
-            for (let item of obj) {
-              const itemSchema = inferSchema(item);
-              const schemaStr = JSON.stringify(itemSchema);
-              if (!itemTypes.includes(schemaStr)) {
-                itemTypes.push(schemaStr);
-                itemSchemas.push(itemSchema);
-              }
-            }
-            let itemsSchema = {};
-            if (itemSchemas.length === 1) {
-              itemsSchema = itemSchemas[0];
-            } else if (itemSchemas.length > 1) {
-              itemsSchema = { anyOf: itemSchemas };
-            }
-            return { type: 'array', items: itemsSchema };
-          }
+          const type = obj === null ? 'null' : Array.isArray(obj) ? 'array' : typeof obj;
+          const schema = { type };
+
           if (type === 'object') {
-            const properties = {};
-            for (let key in obj) {
-              if (Object.prototype.hasOwnProperty.call(obj, key)) {
-                properties[key] = inferSchema(obj[key]);
+            schema.properties = {};
+            const keys = Object.keys(obj);
+            if (keys.length > 0) {
+              schema.required = [];
+              for (const key of keys) {
+                schema.properties[key] = inferSchema(obj[key]);
+                schema.required.push(key);
               }
             }
-            return { type: 'object', properties };
+          } else if (type === 'array') {
+            if (obj.length > 0) {
+              const itemSchemas = obj.map(inferSchema);
+              const uniqueSchemas = [];
+              const seenTypes = new Set();
+              
+              for (const s of itemSchemas) {
+                const typeKey = s.type === 'object' ? 'object:' + Object.keys(s.properties || {}).sort().join(',') : s.type;
+                if (!seenTypes.has(typeKey)) {
+                  seenTypes.add(typeKey);
+                  uniqueSchemas.push(s);
+                }
+              }
+
+              if (uniqueSchemas.length === 1) {
+                schema.items = uniqueSchemas[0];
+              } else {
+                schema.items = { anyOf: uniqueSchemas };
+              }
+            } else {
+              schema.items = {};
+            }
           }
-          return {};
+          return schema;
         };
 
         const openInfoModal = () => {
@@ -1375,10 +1384,19 @@
 
           const schemaObj = inferSchema(val);
           const finalSchema = {
-            "$schema": "http://json-schema.org/draft-07/schema#",
+            $schema: "http://json-schema.org/draft-07/schema#",
             ...schemaObj
           };
-          jsonSchemaText.value = JSON.stringify(finalSchema, null, 2);
+          
+          try {
+            if (window.jsyaml) {
+              jsonSchemaText.value = window.jsyaml.dump(finalSchema, { indent: 2, lineWidth: -1 });
+            } else {
+              jsonSchemaText.value = JSON.stringify(finalSchema, null, 2);
+            }
+          } catch (e) {
+            jsonSchemaText.value = JSON.stringify(finalSchema, null, 2);
+          }
 
           showInfoModal.value = true;
         };
