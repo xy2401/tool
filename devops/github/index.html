@@ -33,7 +33,7 @@
 
 
                             <dt style="font-size: 0.8rem; color: var(--text-secondary); text-align: right; padding-right: 8px; white-space: nowrap;">Owner:</dt>
-                            <dd style="margin: 0;">
+                            <dd style="margin: 0; padding-right: 32px;">
                                 <input type="text" id="advOwner" list="listOwners" placeholder="e.g. microsoft" style="width: 100%; padding: 6px 10px; font-size: 0.875rem;">
                                 <datalist id="listOwners">
                                     <option value="openai">
@@ -61,7 +61,7 @@
                             </dd>
                             
                             <dt style="font-size: 0.8rem; color: var(--text-secondary); text-align: right; padding-right: 8px; white-space: nowrap;">Stars ≥:</dt>
-                            <dd style="margin: 0;">
+                            <dd style="margin: 0; padding-right: 32px;">
                                 <input type="text" id="advMinStars" list="listStars" placeholder="e.g. 1000" style="width: 100%; padding: 6px 10px; font-size: 0.875rem;">
                                 <datalist id="listStars">
                                     <option value="1000">
@@ -88,7 +88,9 @@
                                 </datalist>
                             </dd>
                             
-                            <dt style="font-size: 0.8rem; color: var(--text-secondary); text-align: right; padding-right: 8px; white-space: nowrap;">Query:</dt>
+                            <dt style="font-size: 0.8rem; text-align: right; padding-right: 8px; white-space: nowrap;">
+                                <a href="https://docs.github.com/en/search-github/searching-on-github/searching-for-repositories" target="_blank" style="color: var(--text-secondary); text-decoration: none; border-bottom: 1px dashed var(--text-secondary); cursor: help;" title="View GitHub Search Syntax Documentation">Query ⓘ:</a>
+                            </dt>
                             <dd style="margin: 0; grid-column: span 3; display: flex; gap: 8px;">
                                 <input type="text" id="inputQuery" list="listQueries" placeholder="Advanced parameter query (e.g. user:microsoft language:python)" style="flex: 1; padding: 6px 10px; font-size: 0.875rem;">
                                 <datalist id="listQueries">
