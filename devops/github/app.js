@@ -40,7 +40,7 @@ document.addEventListener('DOMContentLoaded', () => {
     
     // Default Templates
     const defaultTemplates = {
-        "Markdown List": "- [${name}](${html_url})\n  > ${description}\n  > ⭐ ${stargazers_count} | 🕒 ${updated_at}",
+        "Markdown List": "- [${name}](${html_url})\n  > ${description}\n  > ⭐ ${stargazers_count} | 🕒 ${updated_at}\n",
         "Markdown Table": "| Name | Description | Stars |\n|---|---|---|\n| [${name}](${html_url}) | ${description} | ⭐ ${stargazers_count} |",
         "CSV Format": "Name,URL,Stars,Language\n${name},${html_url},${stargazers_count},${language}"
     };
@@ -88,8 +88,14 @@ document.addEventListener('DOMContentLoaded', () => {
 
         // Load Templates
         try {
-            const savedTemplates = JSON.parse(localStorage.getItem('gh_explorer_templates'));
-            userTemplates = savedTemplates && Object.keys(savedTemplates).length > 0 ? savedTemplates : { ...defaultTemplates };
+            const savedTemplates = JSON.parse(localStorage.getItem('gh_explorer_templates')) || {};
+            userTemplates = { ...defaultTemplates }; // Always load fresh defaults from code
+            // Merge custom templates from saved storage
+            for (let key in savedTemplates) {
+                if (!defaultTemplates[key]) {
+                    userTemplates[key] = savedTemplates[key];
+                }
+            }
         } catch(e) {
             userTemplates = { ...defaultTemplates };
         }
