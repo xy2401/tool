@@ -350,6 +350,9 @@ createApp({
         { name: '格式化', ops: [
           { id: 'numfmt', label: '千分位格式化', desc: '将数字格式化为带千分位分隔符的形式（如 1,234,567）' },
         ]},
+        { name: '计算', ops: [
+          { id: 'eval', label: '表达式计算', desc: '执行 JavaScript 表达式求值，如 1+1 或 "a"+"b"' },
+        ]},
         { name: '统计 & 匹配', ops: [
           { id: 'count',    label: '字符统计', desc: '统计字符数、中文字数、词数、字节数和行数' },
           { id: 'regmatch', label: '正则提取', desc: '输入正则表达式，提取文本中所有匹配项' },
@@ -710,6 +713,7 @@ createApp({
           case 'extips':    { const m = v.match(/\b(?:\d{1,3}\.){3}\d{1,3}\b/g) || []; const valid = m.filter(ip => ip.split('.').every(n => +n >= 0 && +n <= 255)); return valid.length ? `找到 ${valid.length} 个 IP：\n${[...new Set(valid)].join('\n')}` : '未找到 IP 地址'; }
           case 'extnums':   { const m = v.match(/-?\d+(\.\d+)?/g) || []; return m.length ? `找到 ${m.length} 个数字：\n${m.join('\n')}` : '未找到数字'; }
           case 'numfmt':    { const nums = v.match(/-?\d+(\.\d+)?/g); if (!nums) return v; let out = v; nums.sort((a,b) => b.length - a.length).forEach(n => { const parts = n.split('.'); parts[0] = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, ','); out = out.replace(n, parts.join('.')); }); return out; }
+          case 'eval':      try { return String(eval(v)); } catch(e) { return '❌ 计算失败: ' + e.message; }
           case 'count': {
             const zh  = (v.match(/[\u4e00-\u9fa5]/g)||[]).length;
             const wds = v.trim().split(/\s+/).filter(Boolean).length;
