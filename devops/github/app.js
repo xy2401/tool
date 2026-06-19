@@ -119,6 +119,7 @@ document.addEventListener('DOMContentLoaded', () => {
         inputTemplate.value = userTemplates[currentTemplateKey] || "";
         btnDeleteTemplate.style.visibility = defaultTemplates[currentTemplateKey] ? 'hidden' : 'visible';
         generateOutput();
+        autoResizeTemplate();
     };
 
     // Template UI Listeners
