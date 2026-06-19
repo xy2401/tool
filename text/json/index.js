@@ -31,7 +31,7 @@
         const themePreference = ref('system');
         const lineNumbersRef = ref(null);
         const collapsedNodes = ref([]);
-        const showInfoModal = ref(false);
+        const activeTab = ref('preview'); // IDE Tab state
         const jsonStats = ref({});
         const jsonSchemaText = ref('');
         const jsonPathsList = ref([]);
@@ -309,8 +309,47 @@
           });
         });
 
+        const statsText = computed(() => {
+          if (!jsonStats.value || Object.keys(jsonStats.value).length === 0) return '无节点统计数据';
+          const s = jsonStats.value;
+          return `=== 节点基础信息 ===
+当前节点路径: ${s.path || 'Root'}
+根节点类型:   ${s.type}
+总键值/元素数: ${s.keyCount}
+最大层级深度: ${s.maxDepth}
+估算大小:     ${s.estimatedSize}
+
+=== 子项统计 ===
+子对象数量:   ${s.objectCount}
+子数组数量:   ${s.arrayCount}
+字符串数量:   ${s.stringCount}
+数字数量:     ${s.numberCount}
+布尔值数量:   ${s.booleanCount}
+Null数量:    ${s.nullCount}`;
+        });
+
+        const pathsText = computed(() => {
+          if (!jsonPathsList.value || jsonPathsList.value.length === 0) return '暂无路径';
+          return jsonPathsList.value.map(item => `${item.path}  (数量: ${item.count})`).join('\n');
+        });
+
+        const displayValue = computed(() => {
+          if (activeTab.value === 'preview') return editText.value;
+          if (activeTab.value === 'stats') return statsText.value;
+          if (activeTab.value === 'paths') return pathsText.value;
+          if (activeTab.value === 'schema') return jsonSchemaText.value;
+          return '';
+        });
+
+        const handleInput = (e) => {
+          if (activeTab.value === 'preview') {
+            editText.value = e.target.value;
+            isTextareaDirty.value = true;
+          }
+        };
+
         const lineNumbersText = computed(() => {
-          const text = editText.value || '';
+          const text = displayValue.value || '';
           const count = text.split('\n').length;
           let result = '';
           for (let i = 1; i <= count; i++) {
@@ -853,9 +892,7 @@
             try {
               const parsed = JSON.parse(editText.value);
               editText.value = formatJSON(parsed);
-              if (showInfoModal.value) {
-                openInfoModal();
-              }
+              updateNodeInfo();
               return;
             } catch (e) {
               // Ignore invalid JSON to prevent losing user edits
@@ -864,8 +901,61 @@
           }
 
           editText.value = formatJSON(selectedNode.value.val);
-          if (showInfoModal.value) {
-            openInfoModal();
+          updateNodeInfo();
+        };
+
+        const updateNodeInfo = () => {
+          if (!selectedNode.value) return;
+          const val = selectedNode.value.val;
+          const stats = calculateDepthAndKeys(val);
+          
+          let sizeStr = '0 B';
+          try {
+            const str = JSON.stringify(val);
+            if (str) {
+              const bytes = new Blob([str]).size;
+              sizeStr = formatSize(bytes);
+            }
+          } catch(e) {}
+
+          let typeDisplay = 'Null';
+          if (val !== null) {
+            if (Array.isArray(val)) typeDisplay = 'Array';
+            else typeDisplay = typeof val;
+            typeDisplay = typeDisplay.charAt(0).toUpperCase() + typeDisplay.slice(1);
+          }
+
+          jsonStats.value = {
+            path: selectedNode.value.path.join('.') || 'Root',
+            type: typeDisplay,
+            keyCount: stats.keys,
+            maxDepth: stats.depth,
+            estimatedSize: sizeStr,
+            stringCount: stats.stringCount,
+            numberCount: stats.numberCount,
+            booleanCount: stats.booleanCount,
+            nullCount: stats.nullCount,
+            objectCount: stats.objectCount,
+            arrayCount: stats.arrayCount
+          };
+
+          const prefixPath = selectedNode.value.path.length > 0 ? selectedNode.value.path.join('.') : '$';
+          jsonPathsList.value = generateJSONPaths(val, prefixPath);
+
+          const schemaObj = inferSchema(val);
+          const finalSchema = {
+            $schema: "http://json-schema.org/draft-07/schema#",
+            ...schemaObj
+          };
+          
+          try {
+            if (window.jsyaml) {
+              jsonSchemaText.value = window.jsyaml.dump(finalSchema, { indent: 2, lineWidth: -1 });
+            } else {
+              jsonSchemaText.value = JSON.stringify(finalSchema, null, 2);
+            }
+          } catch (e) {
+            jsonSchemaText.value = JSON.stringify(finalSchema, null, 2);
           }
         };
 
@@ -877,6 +967,7 @@
           excludedProperties.value = []; // Reset excluded properties when switching nodes
           excludedNodes.value = []; // Reset excluded nodes when switching nodes
           applyFormatting();
+          updateNodeInfo();
         };
 
         // Copy JSON content to clipboard
@@ -1344,63 +1435,6 @@
           return schema;
         };
 
-        const openInfoModal = () => {
-          if (!selectedNode.value) return;
-          const val = selectedNode.value.val;
-          const stats = calculateDepthAndKeys(val);
-          
-          let sizeStr = '0 B';
-          try {
-            const str = JSON.stringify(val);
-            if (str) {
-              const bytes = new Blob([str]).size;
-              sizeStr = formatSize(bytes);
-            }
-          } catch(e) {}
-
-          let typeDisplay = 'Null';
-          if (val !== null) {
-            if (Array.isArray(val)) typeDisplay = 'Array';
-            else typeDisplay = typeof val;
-            typeDisplay = typeDisplay.charAt(0).toUpperCase() + typeDisplay.slice(1);
-          }
-
-          jsonStats.value = {
-            path: selectedNode.value.path.join('.') || 'Root',
-            type: typeDisplay,
-            keyCount: stats.keys,
-            maxDepth: stats.depth,
-            estimatedSize: sizeStr,
-            stringCount: stats.stringCount,
-            numberCount: stats.numberCount,
-            booleanCount: stats.booleanCount,
-            nullCount: stats.nullCount,
-            objectCount: stats.objectCount,
-            arrayCount: stats.arrayCount
-          };
-
-          const paths = generateJSONPaths(val, jsonStats.value.path === 'Root' ? '$' : `$['${jsonStats.value.path}']`);
-          jsonPathsList.value = paths;
-
-          const schemaObj = inferSchema(val);
-          const finalSchema = {
-            $schema: "http://json-schema.org/draft-07/schema#",
-            ...schemaObj
-          };
-          
-          try {
-            if (window.jsyaml) {
-              jsonSchemaText.value = window.jsyaml.dump(finalSchema, { indent: 2, lineWidth: -1 });
-            } else {
-              jsonSchemaText.value = JSON.stringify(finalSchema, null, 2);
-            }
-          } catch (e) {
-            jsonSchemaText.value = JSON.stringify(finalSchema, null, 2);
-          }
-
-          showInfoModal.value = true;
-        };
-
         const copySchema = () => {
           if (!jsonSchemaText.value) return;
           navigator.clipboard.writeText(jsonSchemaText.value).then(() => {
@@ -1473,13 +1507,14 @@
           hasChildren,
           toggleCollapse,
           toggleCollapseAll,
-          showInfoModal,
+          activeTab,
           jsonStats,
           jsonSchemaText,
           jsonPathsList,
-          openInfoModal,
           copySchema,
-          copyPaths
+          copyPaths,
+          displayValue,
+          handleInput
         };
       }
     }).mount('#app');
