@@ -822,6 +822,7 @@ pre { overflow: auto; width: 100%; height: 100%; margin: 0; color: #1f2328; whit
     htmlPreviewFrame.setAttribute("sandbox", "allow-scripts");
     workspaceNode.classList.remove("is-previewing");
     htmlPreviewFrame.srcdoc = "";
+    if (typeof saveState === "function") saveState();
   }
 
   function syncPreviewAvailability() {
@@ -1236,6 +1237,7 @@ pre { overflow: auto; width: 100%; height: 100%; margin: 0; color: #1f2328; whit
     }
     syncPreviewAvailability();
     focusEditor();
+    if (typeof saveState === "function") saveState();
   });
 
   autoSelect.addEventListener("change", () => {
@@ -1252,6 +1254,7 @@ pre { overflow: auto; width: 100%; height: 100%; margin: 0; color: #1f2328; whit
     }
     syncPreviewAvailability();
     focusEditor();
+    if (typeof saveState === "function") saveState();
   });
 
   demoSelect.addEventListener("change", async () => {
@@ -1269,10 +1272,12 @@ pre { overflow: auto; width: 100%; height: 100%; margin: 0; color: #1f2328; whit
     activeEditor.setPosition({ lineNumber: 1, column: 1 });
     syncPreviewAvailability();
     focusEditor();
+    if (typeof saveState === "function") saveState();
   });
 
   themeSelect.addEventListener("change", () => {
     monaco.editor.setTheme(themeSelect.value);
+    if (typeof saveState === "function") saveState();
   });
 
   minimapInput.addEventListener("change", () => {
@@ -1288,6 +1293,7 @@ pre { overflow: auto; width: 100%; height: 100%; margin: 0; color: #1f2328; whit
       });
     }
     focusEditor();
+    if (typeof saveState === "function") saveState();
   });
 
   diffEnabledInput.addEventListener("change", () => {
@@ -1300,6 +1306,7 @@ pre { overflow: auto; width: 100%; height: 100%; margin: 0; color: #1f2328; whit
     }
 
     focusEditor();
+    if (typeof saveState === "function") saveState();
   });
 
   sortJsonDiffButton.addEventListener("click", () => {
@@ -1363,6 +1370,7 @@ pre { overflow: auto; width: 100%; height: 100%; margin: 0; color: #1f2328; whit
 
     getActiveEditor().layout();
     focusEditor();
+    if (typeof saveState === "function") saveState();
   }
 
   htmlPreviewInput.addEventListener("change", () => {
@@ -1542,6 +1550,7 @@ pre { overflow: auto; width: 100%; height: 100%; margin: 0; color: #1f2328; whit
       renderSideBySide: diffModeSelect.value === "side-by-side"
     });
     focusEditor();
+    if (typeof saveState === "function") saveState();
   });
 
   if (!window.marked || !window.DOMPurify) {
@@ -1559,6 +1568,90 @@ pre { overflow: auto; width: 100%; height: 100%; margin: 0; color: #1f2328; whit
     yamlToJsonButton.title = "JSON/YAML 转换组件加载失败";
   }
 
+  function saveState() {
+    const state = {
+      theme: themeSelect.value,
+      minimap: minimapInput.checked ? "1" : "0",
+      diff: diffEnabledInput.checked ? "1" : "0",
+      diffMode: diffModeSelect.value,
+      language: languageSelect.value
+    };
+    const activePreview = [
+      htmlPreviewInput,
+      markdownPreviewInput,
+      javascriptPreviewInput,
+      svgPreviewInput,
+      base64PreviewInput
+    ].find(i => i.checked);
+    if (activePreview) {
+      state.preview = activePreview.id;
+    }
+    const params = new URLSearchParams(state);
+    const hash = params.toString();
+    window.history.replaceState(null, "", `#${hash}`);
+    localStorage.setItem("monaco-toolbox-state", hash);
+  }
+
+  function restoreState() {
+    let hash = window.location.hash.slice(1);
+    if (!hash) {
+      hash = localStorage.getItem("monaco-toolbox-state") || "";
+    }
+    if (!hash) return;
+
+    const params = new URLSearchParams(hash);
+    
+    if (params.has("theme")) {
+      themeSelect.value = params.get("theme");
+      monaco.editor.setTheme(themeSelect.value);
+    }
+    if (params.has("minimap")) {
+      minimapInput.checked = params.get("minimap") === "1";
+      const minimap = { enabled: minimapInput.checked };
+      if (editor) editor.updateOptions({ minimap });
+      if (diffEditor) {
+        diffEditor.getOriginalEditor().updateOptions({ minimap });
+        diffEditor.getModifiedEditor().updateOptions({ minimap });
+      }
+    }
+    if (params.has("language")) {
+      const lang = params.get("language");
+      if (languages.includes(lang)) {
+        languageSelect.value = lang;
+        monaco.editor.setModelLanguage(primaryModel, lang);
+        if (diffOriginalModel) {
+          monaco.editor.setModelLanguage(diffOriginalModel, lang);
+        }
+      }
+    }
+    if (params.has("diff")) {
+      diffEnabledInput.checked = params.get("diff") === "1";
+      diffModeSelect.disabled = !diffEnabledInput.checked;
+      if (diffEnabledInput.checked) {
+        if (!diffEditor) createDiffEditor();
+      } else {
+        if (diffEditor) closeDiffEditor();
+      }
+    }
+    if (params.has("diffMode")) {
+      diffModeSelect.value = params.get("diffMode");
+      if (diffEditor) {
+        diffEditor.updateOptions({ renderSideBySide: diffModeSelect.value === "side-by-side" });
+      }
+    }
+    if (params.has("preview")) {
+      const previewId = params.get("preview");
+      const previewInput = document.getElementById(previewId);
+      if (previewInput) {
+        previewInput.checked = true;
+        handlePreviewChange(previewInput);
+      }
+    }
+  }
+
+  restoreState();
   syncPreviewAvailability();
+
+  window.addEventListener("hashchange", restoreState);
 
 });
