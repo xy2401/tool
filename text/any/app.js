@@ -523,6 +523,26 @@ createApp({
         return;
       }
 
+      // Macro for extraction presets
+      const regexPresets = {
+        'exturls': { p: 'https?://[^\\s<>"\']+', f: 'gi' },
+        'extemails': { p: '[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}', f: 'gi' },
+        'extips': { p: '\\b(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\\b', f: 'g' },
+        'extnums': { p: '-?\\d+(\\.\\d+)?', f: 'g' }
+      };
+      if (regexPresets[op.id]) {
+        const preset = regexPresets[op.id];
+        panel._lastRegex = preset.p;
+        panel._regexFlags = preset.f;
+        if (!panel.activeOps['regmatch']) {
+          const regOp = this.allOps.find(o => o.id === 'regmatch');
+          if (regOp) this.compute(panel, regOp);
+        } else {
+          this.onRegexChange(panel);
+        }
+        return;
+      }
+
       // Input-free ops: show form immediately without requiring textarea value
       if (op.id === 'wifiqr') {
         panel.computedList = [...panel.computedList, { id: op.id, label: op.label, value: '__WIFIQR__' }];
@@ -702,10 +722,6 @@ createApp({
           case 'jsonmin':   try { return JSON.stringify(JSON.parse(v)); } catch(e) { return '❌ 非有效 JSON'; }
           case 'escnl':     return v.replace(/\\/g, '\\\\').replace(/\n/g, '\\n').replace(/\r/g, '\\r').replace(/\t/g, '\\t');
           case 'unescnl':   return v.replace(/\\n/g, '\n').replace(/\\r/g, '\r').replace(/\\t/g, '\t').replace(/\\\\/g, '\\');
-          case 'exturls':   { const m = v.match(/https?:\/\/[^\s<>"']+/gi) || []; return m.length ? `找到 ${m.length} 个 URL：\n${[...new Set(m)].join('\n')}` : '未找到 URL'; }
-          case 'extemails': { const m = v.match(/[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/gi) || []; return m.length ? `找到 ${m.length} 个邮箱：\n${[...new Set(m)].join('\n')}` : '未找到邮箱'; }
-          case 'extips':    { const m = v.match(/\b(?:\d{1,3}\.){3}\d{1,3}\b/g) || []; const valid = m.filter(ip => ip.split('.').every(n => +n >= 0 && +n <= 255)); return valid.length ? `找到 ${valid.length} 个 IP：\n${[...new Set(valid)].join('\n')}` : '未找到 IP 地址'; }
-          case 'extnums':   { const m = v.match(/-?\d+(\.\d+)?/g) || []; return m.length ? `找到 ${m.length} 个数字：\n${m.join('\n')}` : '未找到数字'; }
           case 'numfmt':    { const nums = v.match(/-?\d+(\.\d+)?/g); if (!nums) return v; let out = v; nums.sort((a,b) => b.length - a.length).forEach(n => { const parts = n.split('.'); parts[0] = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, ','); out = out.replace(n, parts.join('.')); }); return out; }
           case 'eval':      try { return String(eval(v)); } catch(e) { return '❌ 计算失败: ' + e.message; }
           case 'count': {
