@@ -503,10 +503,32 @@ createApp({
     // ── Compute operations ──
     compute(panel, op) {
       // Toggle off
+      const regexPresets = {
+        'exturls': { p: 'https?://[^\\s<>"\']+', f: 'gi' },
+        'extemails': { p: '[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}', f: 'gi' },
+        'extips': { p: '\\b(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\\b', f: 'g' },
+        'extnums': { p: '-?\\d+(\\.\\d+)?', f: 'g' }
+      };
+
+      // Toggle off
       if (panel.activeOps[op.id]) {
+        if (regexPresets[op.id]) {
+          panel.activeOps = { ...panel.activeOps, [op.id]: false };
+          if (panel.activeOps['regmatch']) {
+            const regOp = this.allOps.find(o => o.id === 'regmatch');
+            if (regOp) this.compute(panel, regOp);
+          }
+          return;
+        }
+
         panel.computedList = panel.computedList.filter(c => c.id !== op.id);
         panel.activeOps = { ...panel.activeOps, [op.id]: false };
-        if (op.id === 'regmatch') delete panel._lastRegex;
+        if (op.id === 'regmatch') {
+          delete panel._lastRegex;
+          Object.keys(regexPresets).forEach(k => {
+            if (panel.activeOps[k]) panel.activeOps[k] = false;
+          });
+        }
         // Remove QR canvas if toggling off
         if (op.id === 'qrgen') {
           this.$nextTick(() => {
@@ -523,17 +545,17 @@ createApp({
         return;
       }
 
-      // Macro for extraction presets
-      const regexPresets = {
-        'exturls': { p: 'https?://[^\\s<>"\']+', f: 'gi' },
-        'extemails': { p: '[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}', f: 'gi' },
-        'extips': { p: '\\b(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\\b', f: 'g' },
-        'extnums': { p: '-?\\d+(\\.\\d+)?', f: 'g' }
-      };
+      // Macro for extraction presets activation
       if (regexPresets[op.id]) {
         const preset = regexPresets[op.id];
         panel._lastRegex = preset.p;
         panel._regexFlags = preset.f;
+        
+        const newActiveOps = { ...panel.activeOps };
+        Object.keys(regexPresets).forEach(k => newActiveOps[k] = false);
+        newActiveOps[op.id] = true;
+        panel.activeOps = newActiveOps;
+
         if (!panel.activeOps['regmatch']) {
           const regOp = this.allOps.find(o => o.id === 'regmatch');
           if (regOp) this.compute(panel, regOp);
