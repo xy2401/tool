@@ -14,7 +14,6 @@
         const selectedNodeId = ref('');
         const indentSpaces = ref('4');
         const isTextareaDirty = ref(false);
-        const showPropertiesInTree = ref(true);
         const excludedProperties = ref([]);
         const excludedNodes = ref([]);
         const wordWrap = ref(true);
@@ -1471,7 +1470,6 @@ Null数量:    ${s.nullCount}`;
           savedItems,
           isDragging,
           isTextareaDirty,
-          showPropertiesInTree,
           excludedProperties,
           selectedNodeProperties,
           toggleProperty,
