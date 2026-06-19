@@ -17,7 +17,6 @@ document.addEventListener('DOMContentLoaded', () => {
     const btnSearch = document.getElementById('btnSearch');
     const selectSort = document.getElementById('selectSort');
     const selectPerPage = document.getElementById('selectPerPage');
-    const inputFilter = document.getElementById('inputFilter');
     const repoList = document.getElementById('repoList');
     const repoStats = document.getElementById('repoStats');
     const inputTemplate = document.getElementById('inputTemplate');
@@ -394,18 +393,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Local Filter (Sort is now global via API)
     const applySortAndFilter = () => {
-        let result = [...currentRepos];
-        
-        // Filter
-        const filterText = inputFilter.value.toLowerCase().trim();
-        if (filterText) {
-            result = result.filter(repo => 
-                (repo.full_name && repo.full_name.toLowerCase().includes(filterText)) ||
-                (repo.description && repo.description.toLowerCase().includes(filterText))
-            );
-        }
-        
-        displayedRepos = result;
+        displayedRepos = [...currentRepos];
         
         if (!document.getElementById('chkAccumulate').checked) {
             accumulatedRepos = [...displayedRepos];
@@ -416,8 +404,6 @@ document.addEventListener('DOMContentLoaded', () => {
         
         updateRightSide();
     };
-
-    inputFilter.addEventListener('input', applySortAndFilter);
     
     // Right Side Update
     const updateRightSide = () => {

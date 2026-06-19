@@ -28,19 +28,13 @@
                 </div>
                 
                 <search>
-                    <div class="search-bar" style="display: flex; gap: 8px;">
-                        <input type="text" id="inputQuery" placeholder="Raw Query (e.g. user:microsoft language:python)" style="flex: 1;">
-                        <button id="btnSearch" class="btn btn-primary">Search</button>
-                    </div>
+                    <div style="background: var(--bg-base); border: 1px solid var(--border-color); border-radius: 6px; padding: 16px;">
+                        <dl style="display: grid; grid-template-columns: auto 1fr auto 1fr; gap: 16px 0; margin: 0; align-items: center;">
 
-                    <details id="advancedPanel" open style="margin-top: 12px; background: var(--bg-base); border: 1px solid var(--border-color); border-radius: 6px; overflow: hidden;">
-                        <summary style="padding: 8px 12px; font-size: 0.8rem; font-weight: 600; cursor: pointer; user-select: none; border-bottom: 1px solid transparent; outline: none;">⚙️ Advanced Filters</summary>
-                        
-                        <dl style="display: grid; grid-template-columns: auto 1fr auto 1fr; gap: 12px 0; margin: 0; padding: 12px; border-top: 1px solid var(--border-color); align-items: center;">
-                            
+
                             <dt style="font-size: 0.8rem; color: var(--text-secondary); text-align: right; padding-right: 8px; white-space: nowrap;">Owner:</dt>
-                            <dd style="margin: 0; padding-right: 16px;">
-                                <input type="text" id="advOwner" list="listOwners" placeholder="e.g. microsoft" style="width: 100%; padding: 4px 8px; font-size: 0.8rem;">
+                            <dd style="margin: 0;">
+                                <input type="text" id="advOwner" list="listOwners" placeholder="e.g. microsoft" style="width: 100%; padding: 6px 10px; font-size: 0.875rem;">
                                 <datalist id="listOwners">
                                     <option value="openai">
                                     <option value="microsoft">
@@ -54,8 +48,8 @@
                             </dd>
                             
                             <dt style="font-size: 0.8rem; color: var(--text-secondary); text-align: right; padding-right: 8px; white-space: nowrap;">Lang:</dt>
-                            <dd style="margin: 0;">
-                                <input type="text" id="advLanguage" list="listLanguages" placeholder="e.g. javascript" style="width: 100%; padding: 4px 8px; font-size: 0.8rem;">
+                            <dd style="margin: 0; padding-right: 16px;">
+                                <input type="text" id="advLanguage" list="listLanguages" placeholder="e.g. javascript" style="width: 100%; padding: 6px 10px; font-size: 0.875rem;">
                                 <datalist id="listLanguages">
                                     <option value="javascript">
                                     <option value="python">
@@ -67,8 +61,8 @@
                             </dd>
                             
                             <dt style="font-size: 0.8rem; color: var(--text-secondary); text-align: right; padding-right: 8px; white-space: nowrap;">Stars ≥:</dt>
-                            <dd style="margin: 0; padding-right: 16px;">
-                                <input type="text" id="advMinStars" list="listStars" placeholder="e.g. 1000" style="width: 100%; padding: 4px 8px; font-size: 0.8rem;">
+                            <dd style="margin: 0;">
+                                <input type="text" id="advMinStars" list="listStars" placeholder="e.g. 1000" style="width: 100%; padding: 6px 10px; font-size: 0.875rem;">
                                 <datalist id="listStars">
                                     <option value="1000">
                                     <option value="5000">
@@ -78,8 +72,8 @@
                             </dd>
                             
                             <dt style="font-size: 0.8rem; color: var(--text-secondary); text-align: right; padding-right: 8px; white-space: nowrap;">Topic:</dt>
-                            <dd style="margin: 0;">
-                                <input type="text" id="advTopic" list="listTopics" placeholder="e.g. react" style="width: 100%; padding: 4px 8px; font-size: 0.8rem;">
+                            <dd style="margin: 0; padding-right: 16px;">
+                                <input type="text" id="advTopic" list="listTopics" placeholder="e.g. react" style="width: 100%; padding: 6px 10px; font-size: 0.875rem;">
                                 <datalist id="listTopics">
                                     <option value="ai">
                                     <option value="llm">
@@ -93,8 +87,14 @@
                                     <option value="cli">
                                 </datalist>
                             </dd>
+                            
+                            <dt style="font-size: 0.8rem; color: var(--text-secondary); text-align: right; padding-right: 8px; white-space: nowrap;">Query:</dt>
+                            <dd style="margin: 0; grid-column: span 3; display: flex; gap: 8px;">
+                                <input type="text" id="inputQuery" placeholder="Advanced parameter query (e.g. user:microsoft language:python)" style="flex: 1; padding: 6px 10px; font-size: 0.875rem;">
+                                <button id="btnSearch" class="btn btn-primary" style="padding: 6px 24px; font-size: 0.875rem;">Search</button>
+                            </dd>
                         </dl>
-                    </details>
+                    </div>
                 </search>
             </div>
             <div class="panel-toolbar" style="flex-wrap: wrap; gap: 10px; padding: 10px 16px;">
@@ -114,9 +114,6 @@
                         <option value="50">50</option>
                         <option value="100">100</option>
                     </select>
-                </div>
-                <div style="display: flex; align-items: center;">
-                    <input type="text" id="inputFilter" placeholder="Filter..." style="padding: 2px 8px; height: 26px; font-size: 0.8rem; width: 120px;">
                 </div>
 
                 <div style="flex: 1; min-width: 10px;"></div>
