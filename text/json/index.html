@@ -189,14 +189,33 @@
           <div class="glass-card viewer-panel" :class="{ 'fullscreen-mode': isEditFullscreen }" @dblclick.self="toggleEditFullscreen">
             <!-- Header for output -->
             <div class="viewer-header" @dblclick="toggleEditFullscreen" style="cursor: pointer; user-select: none;" title="双击此处可最大化/还原编辑器">
-              <div class="section-title" style="margin-bottom: 0;">
+              <div class="breadcrumb-nav" v-if="selectedNode" @dblclick.stop>
+                <div v-for="(seg, idx) in breadcrumbSegments" :key="idx" class="breadcrumb-segment-wrapper">
+                  <span v-if="idx > 0" class="breadcrumb-separator">›</span>
+                  <div class="breadcrumb-segment" :class="{ 'has-dropdown': seg.siblings.length > 1 }">
+                    <button 
+                      class="breadcrumb-btn"
+                      :class="{ 'breadcrumb-current': idx === breadcrumbSegments.length - 1 }"
+                      @click.stop="selectNode(seg.nodeId)"
+                    >{{ seg.label }}<svg v-if="seg.siblings.length > 1" class="breadcrumb-arrow" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M19 9l-7 7-7-7"/></svg></button>
+                    <div v-if="seg.siblings.length > 1" class="breadcrumb-dropdown">
+                      <button 
+                        v-for="sib in seg.siblings"
+                        :key="sib.nodeId"
+                        :class="['breadcrumb-dropdown-item', { active: sib.isSelected }]"
+                        @click.stop="selectNode(sib.nodeId)"
+                      >{{ sib.label }}<span class="breadcrumb-dropdown-type" v-if="sib.type" v-text="sib.type"></span></button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <div class="section-title" v-else style="margin-bottom: 0;">
                 <span>
                   <svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4" />
                   </svg>
-                  当前选择节点 JSON 数据编辑
+                  JSON 数据编辑
                 </span>
-                <span class="badge-secondary" v-if="selectedNode" v-text="`路径: ${selectedNode.id}`"></span>
               </div>
               <div class="btn-group" v-if="selectedNode" @dblclick.stop>
                 <select 

@@ -313,6 +313,50 @@
           }
         };
 
+        const breadcrumbSegments = computed(() => {
+          if (!selectedNode.value) return [];
+          const path = selectedNode.value.path;
+          const segments = [];
+
+          for (let i = 0; i < path.length; i++) {
+            const segmentName = path[i];
+            const parentPath = path.slice(0, i);
+
+            // Find sibling nodes at this depth with same parent prefix
+            const siblings = nodes.value.filter(n => {
+              if (n.path.length !== i + 1) return false;
+              for (let j = 0; j < i; j++) {
+                if (n.path[j] !== parentPath[j]) return false;
+              }
+              return true;
+            });
+
+            // Check if parent value is an array (for [index] label formatting)
+            let parentIsArray = false;
+            if (i > 0) {
+              const parentId = parentPath.join('.');
+              const parentNode = nodes.value.find(n => n.id === parentId);
+              if (parentNode && Array.isArray(parentNode.val)) {
+                parentIsArray = true;
+              }
+            }
+
+            const nodeId = path.slice(0, i + 1).join('.');
+
+            segments.push({
+              label: parentIsArray ? '[' + segmentName + ']' : segmentName,
+              nodeId,
+              siblings: siblings.map(s => ({
+                label: parentIsArray ? '[' + s.path[i] + ']' : s.path[i],
+                nodeId: s.id,
+                type: s.type,
+                isSelected: s.path[i] === segmentName
+              }))
+            });
+          }
+
+          return segments;
+        });
 
 
         const selectedNodeProperties = computed(() => {
@@ -1174,7 +1218,8 @@
           removeToast,
           lineNumbersRef,
           lineNumbersText,
-          syncLineNumberScroll
+          syncLineNumberScroll,
+          breadcrumbSegments
         };
       }
     }).mount('#app');
