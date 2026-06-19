@@ -323,22 +323,22 @@ document.addEventListener('DOMContentLoaded', () => {
             const licenseHtml = repo.license ? `<span title="License">⚖️ ${repo.license.spdx_id || repo.license.name}</span>` : '';
             const langHtml = repo.language ? `<span>📦 ${repo.language}</span>` : '';
             const topicsHtml = (repo.topics && repo.topics.length > 0) 
-                ? `<div class="repo-topics" style="display: flex; gap: 6px; flex-wrap: wrap; margin-top: 8px;">` +
+                ? `<div class="repo-topics" style="display: flex; gap: 4px; flex-wrap: wrap; margin-bottom: 6px;">` +
                   repo.topics.map(t => `<span class="topic-tag">${escapeHtml(t)}</span>`).join('') +
                   `</div>`
                 : '';
             
             return `
-                <div class="repo-card">
-                    <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 4px;">
-                        <img src="${repo.owner.avatar_url}" alt="${repo.owner.login}" style="width: 24px; height: 24px; border-radius: 50%;">
-                        <a href="${repo.html_url}" target="_blank" class="repo-name" style="margin: 0; font-size: 1.1rem;">${repo.full_name}</a>
+                <div class="repo-card" style="padding: 12px 14px; gap: 6px; display: flex; flex-direction: column;">
+                    <div style="display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap;">
+                        <img src="${repo.owner.avatar_url}" alt="${repo.owner.login}" style="width: 18px; height: 18px; border-radius: 50%; align-self: center;">
+                        <a href="${repo.html_url}" target="_blank" class="repo-name" style="margin: 0; font-size: 1rem; font-weight: 600;">${repo.full_name}</a>
+                        <span class="repo-desc" style="font-size: 0.85rem; color: var(--text-secondary); margin: 0; flex: 1; min-width: 200px;">— ${escapeHtml(repo.description || 'No description')}</span>
                     </div>
                     
-                    <div class="repo-desc">${escapeHtml(repo.description || 'No description provided')}</div>
                     ${topicsHtml}
                     
-                    <div class="clone-url-group" style="display: flex; gap: 0; align-items: center; border: 1px solid var(--border-color); border-radius: 6px; overflow: hidden; margin: 8px 0;">
+                    <div class="clone-url-group" style="display: flex; gap: 0; align-items: center; border: 1px solid var(--border-color); border-radius: 6px; overflow: hidden; height: 26px;">
                         <select class="clone-type-select" data-https="${repo.clone_url}" data-ssh="${repo.ssh_url}" data-gh="gh repo clone ${repo.full_name}" style="border: none; background: var(--bg-surface); border-right: 1px solid var(--border-color); padding: 4px 8px; font-size: 0.75rem; border-radius: 0; outline: none; cursor: pointer;">
                             <option value="https">HTTPS</option>
                             <option value="ssh">SSH</option>
