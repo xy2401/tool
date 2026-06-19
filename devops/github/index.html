@@ -32,9 +32,9 @@
                     <button id="btnSearch" class="btn btn-primary">Search</button>
                 </div>
                 <div id="advancedPanel" class="advanced-panel" style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; padding: 12px; background: var(--bg-base); border: 1px solid var(--border-color); border-radius: 6px;">
-                    <div class="form-group">
-                        <label style="font-size: 0.75rem; color: var(--text-secondary);">Owner (User/Org)</label>
-                        <input type="text" id="advOwner" list="listOwners" placeholder="e.g. microsoft, google, facebook">
+                    <div style="display: flex; align-items: center; gap: 8px;">
+                        <label style="font-size: 0.8rem; color: var(--text-secondary); white-space: nowrap; width: 60px;">Owner:</label>
+                        <input type="text" id="advOwner" list="listOwners" placeholder="e.g. microsoft" style="flex: 1;">
                         <datalist id="listOwners">
                             <option value="openai">
                             <option value="microsoft">
@@ -46,9 +46,9 @@
                             <option value="spring-projects">
                         </datalist>
                     </div>
-                    <div class="form-group">
-                        <label style="font-size: 0.75rem; color: var(--text-secondary);">Language</label>
-                        <input type="text" id="advLanguage" list="listLanguages" placeholder="e.g. javascript, python">
+                    <div style="display: flex; align-items: center; gap: 8px;">
+                        <label style="font-size: 0.8rem; color: var(--text-secondary); white-space: nowrap; width: 60px;">Lang:</label>
+                        <input type="text" id="advLanguage" list="listLanguages" placeholder="e.g. javascript" style="flex: 1;">
                         <datalist id="listLanguages">
                             <option value="javascript">
                             <option value="python">
@@ -58,9 +58,9 @@
                             <option value="typescript">
                         </datalist>
                     </div>
-                    <div class="form-group">
-                        <label style="font-size: 0.75rem; color: var(--text-secondary);">Min Stars</label>
-                        <input type="text" id="advMinStars" list="listStars" placeholder="e.g. 1000, 5000">
+                    <div style="display: flex; align-items: center; gap: 8px;">
+                        <label style="font-size: 0.8rem; color: var(--text-secondary); white-space: nowrap; width: 60px;">Stars ≥:</label>
+                        <input type="text" id="advMinStars" list="listStars" placeholder="e.g. 1000" style="flex: 1;">
                         <datalist id="listStars">
                             <option value="1000">
                             <option value="5000">
@@ -68,9 +68,9 @@
                             <option value="50000">
                         </datalist>
                     </div>
-                    <div class="form-group">
-                        <label style="font-size: 0.75rem; color: var(--text-secondary);">Topic</label>
-                        <input type="text" id="advTopic" list="listTopics" placeholder="e.g. machine-learning, react">
+                    <div style="display: flex; align-items: center; gap: 8px;">
+                        <label style="font-size: 0.8rem; color: var(--text-secondary); white-space: nowrap; width: 60px;">Topic:</label>
+                        <input type="text" id="advTopic" list="listTopics" placeholder="e.g. react" style="flex: 1;">
                         <datalist id="listTopics">
                             <option value="ai">
                             <option value="llm">
@@ -86,36 +86,39 @@
                     </div>
                 </div>
             </div>
-            <div class="panel-toolbar">
-                <div class="sort-group">
-                    <label>Sort by:</label>
-                    <select id="selectSort">
-                        <option value="updated">Last Updated</option>
+            <div class="panel-toolbar" style="flex-wrap: wrap; gap: 10px; padding: 10px 16px;">
+                <div style="display: flex; align-items: center; gap: 6px;">
+                    <span style="font-size: 0.8rem; color: var(--text-secondary);">Sort:</span>
+                    <select id="selectSort" style="padding: 2px 6px; height: 26px; font-size: 0.8rem;">
+                        <option value="updated">Latest</option>
                         <option value="stars">Stars</option>
                         <option value="forks">Forks</option>
                     </select>
                 </div>
-                <div class="sort-group">
-                    <label>Per Page:</label>
-                    <select id="selectPerPage">
+                <div style="display: flex; align-items: center; gap: 6px;">
+                    <span style="font-size: 0.8rem; color: var(--text-secondary);">Count:</span>
+                    <select id="selectPerPage" style="padding: 2px 6px; height: 26px; font-size: 0.8rem;">
                         <option value="10">10</option>
                         <option value="30">30</option>
                         <option value="50">50</option>
                         <option value="100">100</option>
                     </select>
                 </div>
-                <div class="filter-group">
-                    <input type="text" id="inputFilter" placeholder="Filter by name...">
+                <div style="display: flex; align-items: center;">
+                    <input type="text" id="inputFilter" placeholder="Filter..." style="padding: 2px 8px; height: 26px; font-size: 0.8rem; width: 120px;">
                 </div>
-                <div class="stats" id="repoStats">0 repos found</div>
+
+                <div style="flex: 1; min-width: 10px;"></div>
+
+                <div class="stats" id="repoStats" style="font-size: 0.8rem; color: var(--text-secondary); white-space: nowrap; margin-left: 0; display: flex; align-items: center; height: 26px;">0 repos</div>
+                <div class="pagination" id="paginationControls" style="display: none; padding: 0; border: none; background: transparent; gap: 6px; align-items: center;">
+                    <button id="btnPrevPage" class="btn btn-outline" style="padding: 0 8px; height: 26px; font-size: 0.8rem; display: flex; align-items: center; justify-content: center;" disabled>&lt;</button>
+                    <span id="pageIndicator" style="font-size: 0.8rem; min-width: 20px; text-align: center;">1</span>
+                    <button id="btnNextPage" class="btn btn-outline" style="padding: 0 8px; height: 26px; font-size: 0.8rem; display: flex; align-items: center; justify-content: center;" disabled>&gt;</button>
+                </div>
             </div>
             <div class="repo-list" id="repoList">
                 <div class="empty-state">Enter a username to search repositories</div>
-            </div>
-            <div class="pagination" id="paginationControls" style="display: none;">
-                <button id="btnPrevPage" class="btn btn-outline" disabled>&laquo; Prev</button>
-                <span id="pageIndicator">Page 1</span>
-                <button id="btnNextPage" class="btn btn-outline" disabled>Next &raquo;</button>
             </div>
         </div>
 
