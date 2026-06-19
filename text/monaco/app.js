@@ -533,8 +533,8 @@ require(["vs/editor/editor.main"], async () => {
 
     return extensionMatches[0]?.language || null;
   }
-
-  const initialValue = await loadSample("javascript");
+  
+  const initialValue = await loadSample("markdown");
   let lastDetectionResult = {
     language: null,
     ranking: [],
@@ -555,7 +555,7 @@ require(["vs/editor/editor.main"], async () => {
   };
   const primaryModel = monaco.editor.createModel(
     initialValue,
-    "javascript"
+    "markdown"
   );
   let editor = null;
   let diffEditor = null;
@@ -1086,7 +1086,7 @@ pre { overflow: auto; width: 100%; height: 100%; margin: 0; color: #1f2328; whit
         const option = document.createElement("option");
         option.value = language;
         option.textContent = language;
-        option.selected = language === "javascript";
+        option.selected = language === "markdown";
         return option;
       })
     );
@@ -1111,7 +1111,7 @@ pre { overflow: auto; width: 100%; height: 100%; margin: 0; color: #1f2328; whit
       const option = document.createElement("option");
       option.value = language;
       option.textContent = language;
-      option.selected = language === "javascript";
+      option.selected = language === "markdown";
       return option;
     })
   );
@@ -1573,7 +1573,7 @@ pre { overflow: auto; width: 100%; height: 100%; margin: 0; color: #1f2328; whit
     if (minimapInput.checked) parts.push("m");
     if (diffEnabledInput.checked) parts.push("d");
     if (diffModeSelect.value === "inline") parts.push("dm=i");
-    if (languageSelect.value !== "javascript") parts.push(`l=${encodeURIComponent(languageSelect.value)}`);
+    if (languageSelect.value !== "markdown") parts.push(`l=${encodeURIComponent(languageSelect.value)}`);
 
     const activePreview = [
       htmlPreviewInput,
@@ -1605,16 +1605,33 @@ pre { overflow: auto; width: 100%; height: 100%; margin: 0; color: #1f2328; whit
     if (!hash && window.location.hash !== "#") {
       hash = localStorage.getItem("monaco-toolbox-state") || "";
     }
-    if (!hash) return;
+    
+    // Restore theme from localStorage independently of other state
+    const savedTheme = localStorage.getItem("monaco-toolbox-theme");
+    if (savedTheme) {
+      themeSelect.value = savedTheme;
+      monaco.editor.setTheme(savedTheme);
+    }
+
+    if (!hash) {
+      // First time visit or all defaults. Default to Markdown preview on.
+      const previewInput = document.getElementById("markdown-preview-enabled");
+      if (previewInput && !previewInput.disabled) {
+        previewInput.checked = true;
+        handlePreviewChange(previewInput);
+      }
+      return;
+    }
 
     const params = new URLSearchParams(hash);
     
-    // Restore theme from localStorage (or hash for backward compatibility)
+    // Backward compatibility for theme in hash
     if (params.has("theme")) params.set("t", params.get("theme"));
-    const theme = params.get("t") || localStorage.getItem("monaco-toolbox-theme");
-    if (theme) {
-      themeSelect.value = theme;
-      monaco.editor.setTheme(theme);
+    const hashTheme = params.get("t");
+    if (hashTheme) {
+      themeSelect.value = hashTheme;
+      monaco.editor.setTheme(hashTheme);
+      localStorage.setItem("monaco-toolbox-theme", hashTheme);
     }
     
     if (params.has("minimap")) params.set("m", params.get("minimap"));
