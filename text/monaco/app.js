@@ -1569,13 +1569,12 @@ pre { overflow: auto; width: 100%; height: 100%; margin: 0; color: #1f2328; whit
   }
 
   function saveState() {
-    const state = {
-      theme: themeSelect.value,
-      minimap: minimapInput.checked ? "1" : "0",
-      diff: diffEnabledInput.checked ? "1" : "0",
-      diffMode: diffModeSelect.value,
-      language: languageSelect.value
-    };
+    const parts = [];
+    if (minimapInput.checked) parts.push("m");
+    if (diffEnabledInput.checked) parts.push("d");
+    if (diffModeSelect.value === "inline") parts.push("dm=i");
+    if (languageSelect.value !== "javascript") parts.push(`l=${encodeURIComponent(languageSelect.value)}`);
+
     const activePreview = [
       htmlPreviewInput,
       markdownPreviewInput,
@@ -1584,29 +1583,44 @@ pre { overflow: auto; width: 100%; height: 100%; margin: 0; color: #1f2328; whit
       base64PreviewInput
     ].find(i => i.checked);
     if (activePreview) {
-      state.preview = activePreview.id;
+      parts.push(`p=${encodeURIComponent(activePreview.id.replace("-preview-enabled", ""))}`);
     }
-    const params = new URLSearchParams(state);
-    const hash = params.toString();
-    window.history.replaceState(null, "", `#${hash}`);
-    localStorage.setItem("monaco-toolbox-state", hash);
+
+    const hash = parts.join("&");
+    const cleanUrl = window.location.pathname + window.location.search;
+    window.history.replaceState(null, "", hash ? `#${hash}` : cleanUrl);
+    
+    if (hash) {
+      localStorage.setItem("monaco-toolbox-state", hash);
+    } else {
+      localStorage.removeItem("monaco-toolbox-state");
+    }
+    
+    // Theme is saved separately to avoid polluting the URL hash
+    localStorage.setItem("monaco-toolbox-theme", themeSelect.value);
   }
 
   function restoreState() {
     let hash = window.location.hash.slice(1);
-    if (!hash) {
+    if (!hash && window.location.hash !== "#") {
       hash = localStorage.getItem("monaco-toolbox-state") || "";
     }
     if (!hash) return;
 
     const params = new URLSearchParams(hash);
     
-    if (params.has("theme")) {
-      themeSelect.value = params.get("theme");
-      monaco.editor.setTheme(themeSelect.value);
+    // Restore theme from localStorage (or hash for backward compatibility)
+    if (params.has("theme")) params.set("t", params.get("theme"));
+    const theme = params.get("t") || localStorage.getItem("monaco-toolbox-theme");
+    if (theme) {
+      themeSelect.value = theme;
+      monaco.editor.setTheme(theme);
     }
-    if (params.has("minimap")) {
-      minimapInput.checked = params.get("minimap") === "1";
+    
+    if (params.has("minimap")) params.set("m", params.get("minimap"));
+    if (params.has("m")) {
+      const val = params.get("m");
+      minimapInput.checked = val !== "0" && val !== "false";
       const minimap = { enabled: minimapInput.checked };
       if (editor) editor.updateOptions({ minimap });
       if (diffEditor) {
@@ -1614,18 +1628,21 @@ pre { overflow: auto; width: 100%; height: 100%; margin: 0; color: #1f2328; whit
         diffEditor.getModifiedEditor().updateOptions({ minimap });
       }
     }
-    if (params.has("language")) {
-      const lang = params.get("language");
-      if (languages.includes(lang)) {
-        languageSelect.value = lang;
-        monaco.editor.setModelLanguage(primaryModel, lang);
-        if (diffOriginalModel) {
-          monaco.editor.setModelLanguage(diffOriginalModel, lang);
-        }
+    
+    if (params.has("language")) params.set("l", params.get("language"));
+    const lang = params.get("l");
+    if (lang && languages.includes(lang)) {
+      languageSelect.value = lang;
+      monaco.editor.setModelLanguage(primaryModel, lang);
+      if (diffOriginalModel) {
+        monaco.editor.setModelLanguage(diffOriginalModel, lang);
       }
     }
-    if (params.has("diff")) {
-      diffEnabledInput.checked = params.get("diff") === "1";
+    
+    if (params.has("diff")) params.set("d", params.get("diff"));
+    if (params.has("d")) {
+      const val = params.get("d");
+      diffEnabledInput.checked = val !== "0" && val !== "false";
       diffModeSelect.disabled = !diffEnabledInput.checked;
       if (diffEnabledInput.checked) {
         if (!diffEditor) createDiffEditor();
@@ -1633,15 +1650,23 @@ pre { overflow: auto; width: 100%; height: 100%; margin: 0; color: #1f2328; whit
         if (diffEditor) closeDiffEditor();
       }
     }
-    if (params.has("diffMode")) {
-      diffModeSelect.value = params.get("diffMode");
+    
+    if (params.has("diffMode")) params.set("dm", params.get("diffMode"));
+    const dmVal = params.get("dm");
+    if (dmVal) {
+      const mode = dmVal === "i" ? "inline" : (dmVal === "s" ? "side-by-side" : dmVal);
+      diffModeSelect.value = mode;
       if (diffEditor) {
-        diffEditor.updateOptions({ renderSideBySide: diffModeSelect.value === "side-by-side" });
+        diffEditor.updateOptions({ renderSideBySide: mode === "side-by-side" });
       }
     }
+    
     if (params.has("preview")) {
-      const previewId = params.get("preview");
-      const previewInput = document.getElementById(previewId);
+      params.set("p", params.get("preview").replace("-preview-enabled", ""));
+    }
+    const pVal = params.get("p");
+    if (pVal) {
+      const previewInput = document.getElementById(`${pVal}-preview-enabled`);
       if (previewInput) {
         previewInput.checked = true;
         handlePreviewChange(previewInput);
