@@ -42,7 +42,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const defaultTemplates = {
         "Markdown List": "- [${name}](${html_url})\n  > ${description}\n  > ⭐ ${stargazers_count} | 🕒 ${updated_at}",
         "Markdown Table": "| Name | Description | Stars |\n|---|---|---|\n| [${name}](${html_url}) | ${description} | ⭐ ${stargazers_count} |",
-        "CSV Format": "${name},${html_url},${stargazers_count},${language}"
+        "CSV Format": "Name,URL,Stars,Language\n${name},${html_url},${stargazers_count},${language}"
     };
 
     let userTemplates = {};
@@ -469,11 +469,36 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Template Generator
     const generateOutput = () => {
-        const template = inputTemplate.value;
-        if (!template.trim() || rightSideRepos.length === 0) {
+        const fullTemplate = inputTemplate.value;
+        if (!fullTemplate.trim() || rightSideRepos.length === 0) {
             outputPreview.value = '';
             return;
         }
+
+        // Magical Header Extraction: Lines before the first '${' are considered static header
+        const lines = fullTemplate.split('\n');
+        let headerLines = [];
+        let itemLines = [];
+        let foundTemplate = false;
+
+        for (let line of lines) {
+            if (!foundTemplate && line.includes('${')) {
+                foundTemplate = true;
+            }
+            if (foundTemplate) {
+                itemLines.push(line);
+            } else {
+                headerLines.push(line);
+            }
+        }
+
+        if (!foundTemplate) {
+            itemLines = headerLines;
+            headerLines = [];
+        }
+
+        const headerText = headerLines.length > 0 ? headerLines.join('\n') + '\n' : '';
+        const template = itemLines.join('\n');
 
         // Gather all possible keys to inject them as JS variables
         const allKeysSet = new Set();
@@ -504,9 +529,9 @@ document.addEventListener('DOMContentLoaded', () => {
             } catch(e) {
                 return `[Error rendering repo ${repo.name || index}: ${e.message}]`;
             }
-        }).join('\n\n');
+        }).join('\n');
         
-        outputPreview.value = output;
+        outputPreview.value = headerText + output;
     };
 
     let templateSaveTimeout;
