@@ -149,7 +149,6 @@
             <!-- Node Item -->
             <div 
               :class="['node-item', { active: selectedNodeId === node.id }]"
-              @click="node.id === 'main' ? selectNode(node.id) : toggleNodeCheckbox(node.id)"
               :style="{ paddingLeft: `${Math.max(0.85, node.path.length * 0.6)}rem` }"
               :title="node.id"
             >
