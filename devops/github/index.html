@@ -171,7 +171,7 @@
                     <button id="btnClearAccumulate" class="btn btn-outline" style="padding: 2px 8px; height: 26px; font-size: 0.75rem;">Clear Data</button>
                 </div>
             </div>
-            <div class="template-editor">
+            <div class="template-editor" style="flex: none; gap: 8px;">
                 <div style="display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 8px;">
                     <div>
                         <label for="inputTemplate">Template Preset:</label>
@@ -188,7 +188,7 @@
                         <button id="btnDeleteTemplate" class="btn btn-outline" style="font-size: 0.75rem; padding: 4px 8px; color: #ff7b72; border-color: #ff7b72; visibility: hidden;">Delete</button>
                     </div>
                 </div>
-                <textarea id="inputTemplate" spellcheck="false"></textarea>
+                <textarea id="inputTemplate" spellcheck="false" style="flex: none; overflow-y: hidden; min-height: 80px; resize: none; field-sizing: content;"></textarea>
                 <div style="font-size: 0.7rem; color: var(--success-color); display: none; text-align: right; margin-top: 4px;" id="templateSavedIndicator">Auto-saved ✓</div>
             </div>
             <div class="tabs-area" style="display: flex; flex-direction: column; flex: 2; padding: 0 16px 16px;">

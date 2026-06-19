@@ -21,6 +21,15 @@ document.addEventListener('DOMContentLoaded', () => {
     const repoStats = document.getElementById('repoStats');
     const inputTemplate = document.getElementById('inputTemplate');
     const inputTemplateName = document.getElementById('inputTemplateName');
+
+    // Auto-resize template textarea
+    const autoResizeTemplate = () => {
+        inputTemplate.style.height = 'auto';
+        inputTemplate.style.height = inputTemplate.scrollHeight + 'px';
+    };
+    inputTemplate.addEventListener('input', autoResizeTemplate);
+    // Observe resize observer in case container changes
+    new ResizeObserver(autoResizeTemplate).observe(inputTemplate);
     const selectTemplateHidden = document.getElementById('selectTemplateHidden');
     const btnDeleteTemplate = document.getElementById('btnDeleteTemplate');
     const templateSavedIndicator = document.getElementById('templateSavedIndicator');
