@@ -255,9 +255,16 @@ document.addEventListener('DOMContentLoaded', () => {
             hasNextPage = linkHeader && linkHeader.includes('rel="next"');
             currentPage = page;
             
-            const data = await response.json();
-            currentRepos = data.items || [];
-            repoStats.textContent = `Total: ${data.total_count.toLocaleString()} repos`;
+            const newRepos = data.items || [];
+            if (document.getElementById('chkAccumulate').checked) {
+                const existingIds = new Set(currentRepos.map(r => r.id));
+                const uniqueNew = newRepos.filter(r => !existingIds.has(r.id));
+                currentRepos = [...currentRepos, ...uniqueNew];
+                repoStats.textContent = `List: ${currentRepos.length.toLocaleString()} repos (Accumulating)`;
+            } else {
+                currentRepos = newRepos;
+                repoStats.textContent = `List: ${currentRepos.length.toLocaleString()} repos`;
+            }
             applySortAndFilter();
             
             // Update Pagination UI
@@ -408,6 +415,22 @@ document.addEventListener('DOMContentLoaded', () => {
             );
         }
         
+        // Local Sort
+        const localSort = document.getElementById('selectLocalSort').value;
+        if (localSort !== 'none') {
+            result.sort((a, b) => {
+                if (localSort === 'stars_desc') return (b.stargazers_count || 0) - (a.stargazers_count || 0);
+                if (localSort === 'forks_desc') return (b.forks_count || 0) - (a.forks_count || 0);
+                if (localSort === 'updated_desc') {
+                    const d1 = new Date(b.pushed_at || b.updated_at).getTime() || 0;
+                    const d2 = new Date(a.pushed_at || a.updated_at).getTime() || 0;
+                    return d1 - d2;
+                }
+                if (localSort === 'name_asc') return (a.full_name || '').localeCompare(b.full_name || '');
+                return 0;
+            });
+        }
+        
         displayedRepos = result;
         
         renderRepos();
@@ -416,6 +439,7 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     inputFilter.addEventListener('input', applySortAndFilter);
+    document.getElementById('selectLocalSort').addEventListener('change', applySortAndFilter);
 
     // Template Generator
     const generateOutput = () => {

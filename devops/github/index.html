@@ -110,7 +110,21 @@
 
                 <div style="flex: 1; min-width: 10px;"></div>
 
-                <div class="stats" id="repoStats" style="font-size: 0.8rem; color: var(--text-secondary); white-space: nowrap; margin-left: 0; display: flex; align-items: center; height: 26px;">0 repos</div>
+                <div style="display: flex; align-items: center; gap: 8px; border-left: 1px solid var(--border-color); padding-left: 10px;">
+                    <select id="selectLocalSort" style="padding: 2px 6px; height: 26px; font-size: 0.8rem;" title="Local Sort (Client-side)">
+                        <option value="none">Sort: Default</option>
+                        <option value="stars_desc">⭐ Stars ↓</option>
+                        <option value="forks_desc">🍴 Forks ↓</option>
+                        <option value="updated_desc">🕒 Updated ↓</option>
+                        <option value="name_asc">Name A-Z</option>
+                    </select>
+                    
+                    <label style="display: flex; align-items: center; gap: 4px; font-size: 0.8rem; cursor: pointer; color: var(--text-primary);">
+                        <input type="checkbox" id="chkAccumulate"> Append Mode
+                    </label>
+                </div>
+
+                <div class="stats" id="repoStats" style="font-size: 0.8rem; color: var(--text-secondary); white-space: nowrap; margin-left: 10px; display: flex; align-items: center; height: 26px;">0 repos</div>
                 <div class="pagination" id="paginationControls" style="display: none; padding: 0; border: none; background: transparent; gap: 6px; align-items: center;">
                     <button id="btnPrevPage" class="btn btn-outline" style="padding: 0 8px; height: 26px; font-size: 0.8rem; display: flex; align-items: center; justify-content: center;" disabled>&lt;</button>
                     <span id="pageIndicator" style="font-size: 0.8rem; min-width: 20px; text-align: center;">1</span>
