@@ -22,11 +22,68 @@
 
     <main class="app-main">
         <div class="panel data-panel">
-            <div class="panel-header">
-                <h2>Query</h2>
-                <div class="search-bar">
-                    <input type="text" id="inputUsername" placeholder="Enter User or Org name (e.g. microsoft)" value="microsoft">
-                    <button id="btnSearch" class="btn btn-primary">Search Repos</button>
+            <div class="panel-header" style="flex-direction: column; align-items: stretch; gap: 12px;">
+                <div style="display: flex; justify-content: space-between; align-items: center;">
+                    <h2 style="margin: 0;">Search Repositories</h2>
+                    <button id="btnAdvancedToggle" class="btn btn-outline active" style="font-size: 0.75rem;">Advanced Filters</button>
+                </div>
+                <div class="search-bar" style="display: flex; gap: 8px;">
+                    <input type="text" id="inputQuery" placeholder="Raw Query (e.g. user:microsoft language:python)" style="flex: 1;">
+                    <button id="btnSearch" class="btn btn-primary">Search</button>
+                </div>
+                <div id="advancedPanel" class="advanced-panel" style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; padding: 12px; background: var(--bg-base); border: 1px solid var(--border-color); border-radius: 6px;">
+                    <div class="form-group">
+                        <label style="font-size: 0.75rem; color: var(--text-secondary);">Owner (User/Org)</label>
+                        <input type="text" id="advOwner" list="listOwners" placeholder="e.g. microsoft, google, facebook">
+                        <datalist id="listOwners">
+                            <option value="openai">
+                            <option value="microsoft">
+                            <option value="google">
+                            <option value="facebook">
+                            <option value="vercel">
+                            <option value="alibaba">
+                            <option value="tencent">
+                            <option value="spring-projects">
+                        </datalist>
+                    </div>
+                    <div class="form-group">
+                        <label style="font-size: 0.75rem; color: var(--text-secondary);">Language</label>
+                        <input type="text" id="advLanguage" list="listLanguages" placeholder="e.g. javascript, python">
+                        <datalist id="listLanguages">
+                            <option value="javascript">
+                            <option value="python">
+                            <option value="java">
+                            <option value="go">
+                            <option value="rust">
+                            <option value="typescript">
+                        </datalist>
+                    </div>
+                    <div class="form-group">
+                        <label style="font-size: 0.75rem; color: var(--text-secondary);">Min Stars</label>
+                        <input type="text" id="advMinStars" list="listStars" placeholder="e.g. 1000, 5000">
+                        <datalist id="listStars">
+                            <option value="1000">
+                            <option value="5000">
+                            <option value="10000">
+                            <option value="50000">
+                        </datalist>
+                    </div>
+                    <div class="form-group">
+                        <label style="font-size: 0.75rem; color: var(--text-secondary);">Topic</label>
+                        <input type="text" id="advTopic" list="listTopics" placeholder="e.g. machine-learning, react">
+                        <datalist id="listTopics">
+                            <option value="ai">
+                            <option value="llm">
+                            <option value="spring">
+                            <option value="spring-boot">
+                            <option value="machine-learning">
+                            <option value="react">
+                            <option value="kubernetes">
+                            <option value="deep-learning">
+                            <option value="web">
+                            <option value="cli">
+                        </datalist>
+                    </div>
                 </div>
             </div>
             <div class="panel-toolbar">
@@ -35,7 +92,7 @@
                     <select id="selectSort">
                         <option value="updated">Last Updated</option>
                         <option value="stars">Stars</option>
-                        <option value="name">Name</option>
+                        <option value="forks">Forks</option>
                     </select>
                 </div>
                 <div class="sort-group">

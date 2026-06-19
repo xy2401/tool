@@ -7,7 +7,14 @@ document.addEventListener('DOMContentLoaded', () => {
     const btnSaveSettings = document.getElementById('btnSaveSettings');
     const inputPat = document.getElementById('inputPat');
     
-    const inputUsername = document.getElementById('inputUsername');
+    const btnAdvancedToggle = document.getElementById('btnAdvancedToggle');
+    const advancedPanel = document.getElementById('advancedPanel');
+    const inputQuery = document.getElementById('inputQuery');
+    const advOwner = document.getElementById('advOwner');
+    const advLanguage = document.getElementById('advLanguage');
+    const advMinStars = document.getElementById('advMinStars');
+    const advTopic = document.getElementById('advTopic');
+    
     const btnSearch = document.getElementById('btnSearch');
     const selectSort = document.getElementById('selectSort');
     const selectPerPage = document.getElementById('selectPerPage');
@@ -57,6 +64,37 @@ document.addEventListener('DOMContentLoaded', () => {
         document.documentElement.setAttribute('data-theme', theme);
     };
 
+    // Advanced Toggle
+    btnAdvancedToggle.addEventListener('click', () => {
+        if (advancedPanel.style.display === 'none') {
+            advancedPanel.style.display = 'grid';
+            btnAdvancedToggle.classList.add('active');
+        } else {
+            advancedPanel.style.display = 'none';
+            btnAdvancedToggle.classList.remove('active');
+        }
+    });
+
+    const buildQuery = () => {
+        let parts = [];
+        const raw = inputQuery.value.trim();
+        if (raw) parts.push(raw);
+        
+        const owner = advOwner.value.trim();
+        if (owner) parts.push(`user:${owner}`);
+        
+        const lang = advLanguage.value.trim();
+        if (lang) parts.push(`language:${lang}`);
+        
+        const stars = advMinStars.value.trim();
+        if (stars) parts.push(`stars:>=${stars}`);
+        
+        const topic = advTopic.value.trim();
+        if (topic) parts.push(`topic:${topic}`);
+        
+        return parts.join(' ');
+    };
+
     btnTheme.addEventListener('click', () => {
         const currentTheme = document.documentElement.getAttribute('data-theme') || 'light';
         const newTheme = currentTheme === 'light' ? 'dark' : 'light';
@@ -86,7 +124,14 @@ document.addEventListener('DOMContentLoaded', () => {
     btnSaveSettings.addEventListener('click', saveSettings);
 
     // Fetch Repos
-    const fetchRepos = async (username, page = 1) => {
+    const fetchRepos = async (page = 1) => {
+        const query = buildQuery();
+        if (!query) {
+            repoList.innerHTML = '<div class="empty-state">Please enter a search query or advanced filter.</div>';
+            repoStats.textContent = '0 repos found';
+            return;
+        }
+
         repoList.innerHTML = '<div class="empty-state">Loading repositories...</div>';
         repoStats.textContent = 'Searching...';
         paginationControls.style.display = 'none';
@@ -102,12 +147,13 @@ document.addEventListener('DOMContentLoaded', () => {
         
         try {
             const perPage = selectPerPage.value;
-            let url = `https://api.github.com/users/${encodeURIComponent(username)}/repos?per_page=${perPage}&sort=updated&page=${page}`;
+            const sort = selectSort.value;
+            let url = `https://api.github.com/search/repositories?q=${encodeURIComponent(query)}&sort=${sort}&order=desc&per_page=${perPage}&page=${page}`;
             const response = await fetch(url, { headers });
             
             if (!response.ok) {
-                if (response.status === 404) throw new Error('User or Organization not found');
                 if (response.status === 403) throw new Error('API Rate limit exceeded. Please configure PAT in settings.');
+                if (response.status === 422) throw new Error('Invalid search query. Check your syntax.');
                 throw new Error(`API Error: ${response.status}`);
             }
             
@@ -117,7 +163,8 @@ document.addEventListener('DOMContentLoaded', () => {
             currentPage = page;
             
             const data = await response.json();
-            currentRepos = data;
+            currentRepos = data.items || [];
+            repoStats.textContent = `Total: ${data.total_count.toLocaleString()} repos`;
             applySortAndFilter();
             
             // Update Pagination UI
@@ -137,36 +184,38 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     };
 
-    btnSearch.addEventListener('click', () => {
-        const username = inputUsername.value.trim();
-        if (username) {
-            fetchRepos(username, 1);
+    btnSearch.addEventListener('click', () => fetchRepos(1));
+
+    inputQuery.addEventListener('keypress', (e) => {
+        if (e.key === 'Enter') {
+            fetchRepos(1);
         }
     });
 
-    inputUsername.addEventListener('keypress', (e) => {
-        if (e.key === 'Enter') {
-            btnSearch.click();
-        }
+    [advOwner, advLanguage, advMinStars, advTopic].forEach(input => {
+        input.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') fetchRepos(1);
+        });
     });
 
     btnPrevPage.addEventListener('click', () => {
         if (currentPage > 1) {
-            fetchRepos(inputUsername.value.trim(), currentPage - 1);
+            fetchRepos(currentPage - 1);
         }
     });
 
     btnNextPage.addEventListener('click', () => {
         if (hasNextPage) {
-            fetchRepos(inputUsername.value.trim(), currentPage + 1);
+            fetchRepos(currentPage + 1);
         }
     });
 
     selectPerPage.addEventListener('change', () => {
-        const username = inputUsername.value.trim();
-        if (username) {
-            fetchRepos(username, 1);
-        }
+        fetchRepos(1);
+    });
+    
+    selectSort.addEventListener('change', () => {
+        fetchRepos(1); // API driven sort requires refetch
     });
 
     // Render Data
@@ -178,15 +227,38 @@ document.addEventListener('DOMContentLoaded', () => {
 
         const html = displayedRepos.map(repo => {
             const date = new Date(repo.pushed_at || repo.updated_at).toISOString().split('T')[0];
+            const licenseHtml = repo.license ? `<span title="License">⚖️ ${repo.license.spdx_id || repo.license.name}</span>` : '';
+            const langHtml = repo.language ? `<span>📦 ${repo.language}</span>` : '';
+            
             return `
                 <div class="repo-card">
-                    <a href="${repo.html_url}" target="_blank" class="repo-name">${repo.name}</a>
+                    <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 4px;">
+                        <img src="${repo.owner.avatar_url}" alt="${repo.owner.login}" style="width: 24px; height: 24px; border-radius: 50%;">
+                        <a href="${repo.html_url}" target="_blank" class="repo-name" style="margin: 0; font-size: 1.1rem;">${repo.full_name}</a>
+                    </div>
+                    
                     <div class="repo-desc">${escapeHtml(repo.description || 'No description provided')}</div>
-                    <div class="repo-meta">
-                        <span>⭐ ${repo.stargazers_count}</span>
-                        <span>🍴 ${repo.forks_count}</span>
-                        <span>📦 ${repo.language || 'Unknown'}</span>
-                        <span>🕒 Updated: ${date}</span>
+                    
+                    <div class="clone-url-group" style="display: flex; gap: 0; align-items: center; border: 1px solid var(--border-color); border-radius: 6px; overflow: hidden; margin: 8px 0;">
+                        <select class="clone-type-select" data-https="${repo.clone_url}" data-ssh="${repo.ssh_url}" data-gh="gh repo clone ${repo.full_name}" style="border: none; background: var(--bg-surface); border-right: 1px solid var(--border-color); padding: 4px 8px; font-size: 0.75rem; border-radius: 0; outline: none; cursor: pointer;">
+                            <option value="https">HTTPS</option>
+                            <option value="ssh">SSH</option>
+                            <option value="gh">GitHub CLI</option>
+                        </select>
+                        <input type="text" readonly value="${repo.clone_url}" class="clone-url-input" style="flex: 1; border: none; padding: 4px 8px; font-size: 0.75rem; background: var(--bg-base); color: var(--text-secondary); border-radius: 0; outline: none;">
+                        <button class="btn copy-clone-btn" title="Copy to clipboard" style="border: none; border-left: 1px solid var(--border-color); background: var(--bg-surface); padding: 4px 8px; border-radius: 0; color: var(--text-secondary); cursor: pointer; display: flex; align-items: center; justify-content: center; min-width: 32px;">
+                            <svg class="copy-icon" aria-hidden="true" height="16" viewBox="0 0 16 16" version="1.1" width="16" fill="currentColor"><path fill-rule="evenodd" d="M0 6.75C0 5.784.784 5 1.75 5h1.5a.75.75 0 010 1.5h-1.5a.25.25 0 00-.25.25v7.5c0 .138.112.25.25.25h7.5a.25.25 0 00.25-.25v-1.5a.75.75 0 011.5 0v1.5A1.75 1.75 0 019.25 16h-7.5A1.75 1.75 0 010 14.25v-7.5z"></path><path fill-rule="evenodd" d="M5 1.75C5 .784 5.784 0 6.75 0h7.5C15.216 0 16 .784 16 1.75v7.5A1.75 1.75 0 0114.25 11h-7.5A1.75 1.75 0 015 9.25v-7.5zm1.75-.25a.25.25 0 00-.25.25v7.5c0 .138.112.25.25.25h7.5a.25.25 0 00.25-.25v-7.5a.25.25 0 00-.25-.25h-7.5z"></path></svg>
+                            <svg class="check-icon" aria-hidden="true" height="16" viewBox="0 0 16 16" version="1.1" width="16" fill="var(--success-color)" style="display: none;"><path fill-rule="evenodd" d="M13.78 4.22a.75.75 0 010 1.06l-7.25 7.25a.75.75 0 01-1.06 0L2.22 9.28a.75.75 0 011.06-1.06L6 10.94l6.72-6.72a.75.75 0 011.06 0z"></path></svg>
+                        </button>
+                    </div>
+
+                    <div class="repo-meta" style="flex-wrap: wrap;">
+                        <span title="Stars">⭐ ${repo.stargazers_count}</span>
+                        <span title="Forks">🍴 ${repo.forks_count}</span>
+                        <span title="Open Issues">🚨 ${repo.open_issues_count}</span>
+                        ${langHtml}
+                        ${licenseHtml}
+                        <span title="Last Updated">🕒 Updated: ${date}</span>
                     </div>
                 </div>
             `;
@@ -195,7 +267,36 @@ document.addEventListener('DOMContentLoaded', () => {
         repoList.innerHTML = html;
     };
 
-    // Sort and Filter
+    // Global event delegation for repo list
+    repoList.addEventListener('change', (e) => {
+        if (e.target.classList.contains('clone-type-select')) {
+            const select = e.target;
+            const input = select.parentElement.querySelector('.clone-url-input');
+            const type = select.value;
+            input.value = select.getAttribute(`data-${type}`);
+        }
+    });
+
+    repoList.addEventListener('click', (e) => {
+        const btn = e.target.closest('.copy-clone-btn');
+        if (btn) {
+            const input = btn.parentElement.querySelector('.clone-url-input');
+            if (input && input.value) {
+                navigator.clipboard.writeText(input.value).then(() => {
+                    const copyIcon = btn.querySelector('.copy-icon');
+                    const checkIcon = btn.querySelector('.check-icon');
+                    copyIcon.style.display = 'none';
+                    checkIcon.style.display = 'block';
+                    setTimeout(() => {
+                        copyIcon.style.display = 'block';
+                        checkIcon.style.display = 'none';
+                    }, 2000);
+                });
+            }
+        }
+    });
+
+    // Local Filter (Sort is now global via API)
     const applySortAndFilter = () => {
         let result = [...currentRepos];
         
@@ -203,30 +304,18 @@ document.addEventListener('DOMContentLoaded', () => {
         const filterText = inputFilter.value.toLowerCase().trim();
         if (filterText) {
             result = result.filter(repo => 
-                (repo.name && repo.name.toLowerCase().includes(filterText)) ||
+                (repo.full_name && repo.full_name.toLowerCase().includes(filterText)) ||
                 (repo.description && repo.description.toLowerCase().includes(filterText))
             );
         }
         
-        // Sort
-        const sortType = selectSort.value;
-        if (sortType === 'updated') {
-            result.sort((a, b) => new Date(b.pushed_at || b.updated_at) - new Date(a.pushed_at || a.updated_at));
-        } else if (sortType === 'stars') {
-            result.sort((a, b) => b.stargazers_count - a.stargazers_count);
-        } else if (sortType === 'name') {
-            result.sort((a, b) => a.name.localeCompare(b.name));
-        }
-        
         displayedRepos = result;
-        repoStats.textContent = `${displayedRepos.length} repos found`;
         
         renderRepos();
         outputJson.value = JSON.stringify(displayedRepos, null, 2);
         generateOutput();
     };
 
-    selectSort.addEventListener('change', applySortAndFilter);
     inputFilter.addEventListener('input', applySortAndFilter);
 
     // Template Generator

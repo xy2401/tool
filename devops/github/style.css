@@ -367,3 +367,6 @@ textarea {
 .tab-btn.active { color: var(--accent-color); border-bottom-color: var(--accent-color); }
 .tab-pane { display: none; }
 .tab-pane.active { display: flex; }
+
+/* Fix option styling for Dark Mode in some browsers */
+option { background-color: var(--bg-base); color: var(--text-primary); }
