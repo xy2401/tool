@@ -346,20 +346,14 @@ createApp({
           { id: 'extemails', label: '提取邮箱', desc: '从文本中提取所有邮箱地址' },
           { id: 'extips',    label: '提取 IP',  desc: '从文本中提取所有合法的 IPv4 地址' },
           { id: 'extnums',   label: '提取数字', desc: '从文本中提取所有整数和小数' },
+          { id: 'regmatch',  label: '正则提取', desc: '输入正则表达式，提取文本中所有匹配项' },
         ]},
-        { name: '格式化', ops: [
-          { id: 'numfmt', label: '千分位格式化', desc: '将数字格式化为带千分位分隔符的形式（如 1,234,567）' },
-        ]},
-        { name: '计算', ops: [
-          { id: 'eval', label: '表达式计算', desc: '执行 JavaScript 表达式求值，如 1+1 或 "a"+"b"' },
-        ]},
-        { name: '统计 & 匹配', ops: [
+        { name: '杂项', ops: [
           { id: 'count',    label: '字符统计', desc: '统计字符数、中文字数、词数、字节数和行数' },
-          { id: 'regmatch', label: '正则提取', desc: '输入正则表达式，提取文本中所有匹配项' },
-        ]},
-        { name: '二维码', ops: [
-          { id: 'qrgen',   label: '生成二维码', desc: '将文本内容生成二维码图片（支持中文和 URL）' },
-          { id: 'wifiqr',  label: 'WiFi 二维码', desc: '生成 WiFi 连接二维码，手机扫码即可连接 WiFi' },
+          { id: 'numfmt',   label: '千分位格式化', desc: '将数字格式化为带千分位分隔符的形式（如 1,234,567）' },
+          { id: 'eval',     label: '表达式计算', desc: '执行 JavaScript 表达式求值，如 1+1 或 "a"+"b"' },
+          { id: 'qrgen',    label: '生成二维码', desc: '将文本内容生成二维码图片（支持中文和 URL）' },
+          { id: 'wifiqr',   label: 'WiFi 二维码', desc: '生成 WiFi 连接二维码，手机扫码即可连接 WiFi' },
         ]},
       ],
     };
