@@ -121,13 +121,6 @@
             </template>
             <span 
               v-if="nodes.length > 1"
-              class="badge-secondary" 
-              style="cursor: pointer; user-select: none;"
-              @click="toggleCollapseAll"
-              :title="collapsedNodes.length > 0 ? '展开所有节点' : '折叠所有节点'"
-            >{{ collapsedNodes.length > 0 ? '▶展开' : '▼折叠' }}</span>
-            <span 
-              v-if="nodes.length > 1"
               :class="['badge-secondary', { 'badge-active': allNodesSelected }]" 
               style="cursor: pointer; user-select: none;"
               @click="toggleAllNodes"
