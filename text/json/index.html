@@ -121,6 +121,13 @@
             </template>
             <span 
               v-if="nodes.length > 1"
+              class="badge-secondary" 
+              style="cursor: pointer; user-select: none;"
+              @click="toggleCollapseAll"
+              :title="collapsedNodes.length > 0 ? '展开所有节点' : '折叠所有节点'"
+            >{{ collapsedNodes.length > 0 ? '▶展开' : '▼折叠' }}</span>
+            <span 
+              v-if="nodes.length > 1"
               :class="['badge-secondary', { 'badge-active': allNodesSelected }]" 
               style="cursor: pointer; user-select: none;"
               @click="toggleAllNodes"
@@ -146,7 +153,14 @@
               :style="{ paddingLeft: `${Math.max(0.85, node.path.length * 0.6)}rem` }"
               :title="node.id"
             >
-              <!-- Node Checkbox (Root node 'main' has no parent, so show checkbox for all sub-nodes) -->
+              <!-- Collapse/Expand Toggle -->
+              <span 
+                v-if="hasChildren(node.id)" 
+                class="node-toggle"
+                @click.stop="toggleCollapse(node.id)"
+              >{{ collapsedNodes.includes(node.id) ? '▶' : '▼' }}</span>
+              <span v-else class="node-toggle-spacer"></span>
+              <!-- Node Checkbox -->
               <input 
                 v-if="node.id !== 'main'"
                 type="checkbox" 

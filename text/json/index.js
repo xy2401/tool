@@ -30,6 +30,7 @@
         const isDragging = ref(false);
         const themePreference = ref('system');
         const lineNumbersRef = ref(null);
+        const collapsedNodes = ref([]);
         let toastIdCounter = 0;
         let skipHistoryRecord = false;
         let historyDebounceTimeout = null;
@@ -293,7 +294,15 @@
         });
 
         const filteredNodes = computed(() => {
-          return nodes.value; // No complex search filter specified, show all nodes
+          return nodes.value.filter(node => {
+            // Hide descendants of collapsed nodes
+            for (const collapsedId of collapsedNodes.value) {
+              if (node.id !== collapsedId && node.id.startsWith(collapsedId + '.')) {
+                return false;
+              }
+            }
+            return true;
+          });
         });
 
         const lineNumbersText = computed(() => {
@@ -358,6 +367,28 @@
           return segments;
         });
 
+        const hasChildren = (nodeId) => {
+          return nodes.value.some(n => n.id !== nodeId && n.id.startsWith(nodeId + '.'));
+        };
+
+        const toggleCollapse = (nodeId) => {
+          const index = collapsedNodes.value.indexOf(nodeId);
+          if (index === -1) {
+            collapsedNodes.value.push(nodeId);
+          } else {
+            collapsedNodes.value.splice(index, 1);
+          }
+        };
+
+        const toggleCollapseAll = () => {
+          if (collapsedNodes.value.length > 0) {
+            collapsedNodes.value = [];
+          } else {
+            collapsedNodes.value = nodes.value
+              .filter(n => hasChildren(n.id))
+              .map(n => n.id);
+          }
+        };
 
         const selectedNodeProperties = computed(() => {
           if (!selectedNode.value || !selectedNode.value.val || typeof selectedNode.value.val !== 'object' || Array.isArray(selectedNode.value.val)) {
@@ -592,6 +623,7 @@
             isTextareaDirty.value = false; // Reset dirty state
             excludedProperties.value = []; // Reset excluded properties
             excludedNodes.value = []; // Reset excluded nodes
+            collapsedNodes.value = []; // Reset collapsed nodes
             applyFormatting();
             if (!silent) {
               showToast('提取成功', '成功从文本中提取出主 JSON 结构，已生成节点树。', 'success');
@@ -1219,7 +1251,11 @@
           lineNumbersRef,
           lineNumbersText,
           syncLineNumberScroll,
-          breadcrumbSegments
+          breadcrumbSegments,
+          collapsedNodes,
+          hasChildren,
+          toggleCollapse,
+          toggleCollapseAll
         };
       }
     }).mount('#app');
