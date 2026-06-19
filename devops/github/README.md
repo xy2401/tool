@@ -1,4 +1,4 @@
-# GitHub Explorer & Template Generator
+# GitHub Repositories Explorer
 
 一个专为开发者打造的高级 GitHub 仓库搜索与 Markdown 模板生成工具，完全使用原生 HTML/CSS/JS (Vanilla) 构建，无需任何第三方框架依赖。
 
