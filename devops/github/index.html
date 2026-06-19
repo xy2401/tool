@@ -125,11 +125,19 @@
                 <button id="btnCopy" class="btn btn-success">Copy Markdown</button>
             </div>
             <div class="template-editor">
-                <label for="inputTemplate">Template Syntax (use ${key}):</label>
-                <div class="template-help">Available: <code>name</code>, <code>html_url</code>, <code>description</code>, <code>language</code>, <code>stargazers_count</code>, <code>updated_at</code></div>
-                <textarea id="inputTemplate" spellcheck="false">- [${name}](${html_url})
-  > ${description}
-  > ⭐ ${stargazers_count} | 🕒 ${updated_at}</textarea>
+                <div style="display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 8px;">
+                    <div>
+                        <label for="inputTemplate">Template Preset:</label>
+                        <div class="template-help">Available: <code>name</code>, <code>html_url</code>, <code>description</code>, <code>language</code>, <code>stargazers_count</code>, <code>updated_at</code></div>
+                    </div>
+                    <div style="display: flex; gap: 8px; align-items: center;">
+                        <select id="selectTemplatePreset" style="font-size: 0.75rem; padding: 4px; border-radius: 4px; border: 1px solid var(--border-color); background: var(--bg-base); color: var(--text-primary);"></select>
+                        <button id="btnSaveTemplateAs" class="btn btn-outline" style="font-size: 0.75rem; padding: 4px 8px;">Save As</button>
+                        <button id="btnDeleteTemplate" class="btn btn-outline" style="font-size: 0.75rem; padding: 4px 8px; color: #ff7b72; border-color: #ff7b72;">Delete</button>
+                    </div>
+                </div>
+                <textarea id="inputTemplate" spellcheck="false"></textarea>
+                <div style="font-size: 0.7rem; color: var(--success-color); display: none; text-align: right; margin-top: 4px;" id="templateSavedIndicator">Auto-saved ✓</div>
             </div>
             <div class="tabs-area" style="display: flex; flex-direction: column; flex: 2; padding: 0 16px 16px;">
                 <div class="tab-headers" style="display: flex; border-bottom: 1px solid var(--border-color); margin-bottom: 8px;">

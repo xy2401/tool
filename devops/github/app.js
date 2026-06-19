@@ -21,11 +21,25 @@ document.addEventListener('DOMContentLoaded', () => {
     const inputFilter = document.getElementById('inputFilter');
     const repoList = document.getElementById('repoList');
     const repoStats = document.getElementById('repoStats');
-    
     const inputTemplate = document.getElementById('inputTemplate');
+    const selectTemplatePreset = document.getElementById('selectTemplatePreset');
+    const btnSaveTemplateAs = document.getElementById('btnSaveTemplateAs');
+    const btnDeleteTemplate = document.getElementById('btnDeleteTemplate');
+    const templateSavedIndicator = document.getElementById('templateSavedIndicator');
+    
     const outputPreview = document.getElementById('outputPreview');
     const outputJson = document.getElementById('outputJson');
     const btnCopy = document.getElementById('btnCopy');
+    
+    // Default Templates
+    const defaultTemplates = {
+        "Markdown List": "- [${name}](${html_url})\n  > ${description}\n  > ⭐ ${stargazers_count} | 🕒 ${updated_at}",
+        "Markdown Table": "| Name | Description | Stars |\n|---|---|---|\n| [${name}](${html_url}) | ${description} | ⭐ ${stargazers_count} |",
+        "CSV Format": "${name},${html_url},${stargazers_count},${language}"
+    };
+
+    let userTemplates = {};
+    let currentTemplateKey = "Markdown List";
 
     const paginationControls = document.getElementById('paginationControls');
     const btnPrevPage = document.getElementById('btnPrevPage');
@@ -62,6 +76,73 @@ document.addEventListener('DOMContentLoaded', () => {
         
         const theme = localStorage.getItem('gh_explorer_theme') || 'light';
         document.documentElement.setAttribute('data-theme', theme);
+
+        // Load Templates
+        try {
+            const savedTemplates = JSON.parse(localStorage.getItem('gh_explorer_templates'));
+            userTemplates = savedTemplates && Object.keys(savedTemplates).length > 0 ? savedTemplates : { ...defaultTemplates };
+        } catch(e) {
+            userTemplates = { ...defaultTemplates };
+        }
+        
+        currentTemplateKey = localStorage.getItem('gh_explorer_current_template') || "Markdown List";
+        if (!userTemplates[currentTemplateKey]) currentTemplateKey = Object.keys(userTemplates)[0];
+        
+        renderTemplatePresets();
+        updateTemplateEditor();
+    };
+
+    const renderTemplatePresets = () => {
+        selectTemplatePreset.innerHTML = '';
+        Object.keys(userTemplates).forEach(key => {
+            const opt = document.createElement('option');
+            opt.value = key;
+            opt.textContent = key;
+            selectTemplatePreset.appendChild(opt);
+        });
+        selectTemplatePreset.value = currentTemplateKey;
+    };
+
+    const updateTemplateEditor = () => {
+        inputTemplate.value = userTemplates[currentTemplateKey] || "";
+        btnDeleteTemplate.style.display = defaultTemplates[currentTemplateKey] ? 'none' : 'inline-block';
+        generateOutput();
+    };
+
+    // Template UI Listeners
+    selectTemplatePreset.addEventListener('change', (e) => {
+        currentTemplateKey = e.target.value;
+        localStorage.setItem('gh_explorer_current_template', currentTemplateKey);
+        updateTemplateEditor();
+    });
+
+    btnSaveTemplateAs.addEventListener('click', () => {
+        const newName = prompt('Enter a name for the new template preset:');
+        if (newName && newName.trim()) {
+            const nameTrimmed = newName.trim();
+            userTemplates[nameTrimmed] = inputTemplate.value;
+            currentTemplateKey = nameTrimmed;
+            saveTemplates();
+            renderTemplatePresets();
+            updateTemplateEditor();
+        }
+    });
+
+    btnDeleteTemplate.addEventListener('click', () => {
+        if (!defaultTemplates[currentTemplateKey]) {
+            if (confirm(`Delete template "${currentTemplateKey}"?`)) {
+                delete userTemplates[currentTemplateKey];
+                currentTemplateKey = Object.keys(userTemplates)[0];
+                saveTemplates();
+                renderTemplatePresets();
+                updateTemplateEditor();
+            }
+        }
+    });
+
+    const saveTemplates = () => {
+        localStorage.setItem('gh_explorer_templates', JSON.stringify(userTemplates));
+        localStorage.setItem('gh_explorer_current_template', currentTemplateKey);
     };
 
     // Advanced Toggle
@@ -341,7 +422,22 @@ document.addEventListener('DOMContentLoaded', () => {
         outputPreview.value = output;
     };
 
-    inputTemplate.addEventListener('input', generateOutput);
+    let templateSaveTimeout;
+    inputTemplate.addEventListener('input', () => {
+        generateOutput();
+        userTemplates[currentTemplateKey] = inputTemplate.value;
+        
+        clearTimeout(templateSaveTimeout);
+        templateSaveTimeout = setTimeout(() => {
+            saveTemplates();
+            if (templateSavedIndicator) {
+                templateSavedIndicator.style.display = 'inline';
+                setTimeout(() => {
+                    templateSavedIndicator.style.display = 'none';
+                }, 2000);
+            }
+        }, 500);
+    });
 
     btnCopy.addEventListener('click', () => {
         if (!outputPreview.value) return;
