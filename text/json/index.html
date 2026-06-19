@@ -10,7 +10,16 @@
   <link rel="stylesheet" href="./index.css">
 </head>
 <body>
-
+  <script>
+    (function() {
+      try {
+        var pref = localStorage.getItem('theme_preference') || 'system';
+        var theme = pref === 'system' ? (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light') : pref;
+        if (theme === 'light') document.body.classList.add('theme-light');
+        else document.body.classList.add('theme-dark');
+      } catch (e) {}
+    })();
+  </script>
   <div id="app">
     <!-- Custom Toast Notification System -->
     <div class="toast-container" aria-live="polite">
