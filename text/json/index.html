@@ -244,15 +244,19 @@
             </div>
 
             <div v-else class="textarea-wrapper" style="flex: 1;">
-              <textarea 
-                class="editor-textarea" 
-                rows="18" 
-                v-model="editText"
-                @input="isTextareaDirty = true"
-                :style="{ whiteSpace: wordWrap ? 'pre-wrap' : 'pre', wordBreak: wordWrap ? 'break-all' : 'normal' }"
-                placeholder="{"
-                id="nodeJSONTextarea"
-              ></textarea>
+              <div class="editor-with-lines">
+                <div class="line-numbers" ref="lineNumbersRef" aria-hidden="true">{{ lineNumbersText }}</div>
+                <textarea 
+                  class="editor-textarea" 
+                  rows="18" 
+                  v-model="editText"
+                  @input="isTextareaDirty = true"
+                  @scroll="syncLineNumberScroll"
+                  :style="{ whiteSpace: wordWrap ? 'pre-wrap' : 'pre', wordBreak: wordWrap ? 'break-all' : 'normal' }"
+                  placeholder="{"
+                  id="nodeJSONTextarea"
+                ></textarea>
+              </div>
               <div class="textarea-actions-group">
                 <button class="textarea-action-btn" @click="copyFormattedJSON" data-tooltip="复制 JSON 数据">
                   <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor">

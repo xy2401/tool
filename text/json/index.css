@@ -47,6 +47,10 @@
       --editor-border: var(--panel-border);
       --editor-color: var(--text-main);
 
+      --line-num-bg: rgba(10, 18, 30, 0.4);
+      --line-num-color: rgba(100, 116, 139, 0.5);
+      --line-num-border: rgba(255, 255, 255, 0.06);
+
       --action-btn-bg: rgba(15, 23, 42, 0.75);
       --action-btn-border: var(--panel-border);
       --action-btn-color: var(--text-muted);
@@ -125,6 +129,10 @@
       --editor-focus-bg: rgba(255, 255, 255, 0.95);
       --editor-border: rgba(0, 0, 0, 0.1);
       --editor-color: #1e293b;
+
+      --line-num-bg: rgba(241, 245, 249, 0.8);
+      --line-num-color: rgba(100, 116, 139, 0.5);
+      --line-num-border: rgba(0, 0, 0, 0.06);
 
       --action-btn-bg: rgba(255, 255, 255, 0.8);
       --action-btn-border: rgba(0, 0, 0, 0.1);
@@ -477,6 +485,44 @@
       border-color: var(--panel-border-focus);
       box-shadow: 0 0 15px var(--accent-cyan-glow);
       background: var(--editor-focus-bg);
+    }
+
+    /* Line Numbers Gutter */
+    .editor-with-lines {
+      position: relative;
+    }
+
+    .line-numbers {
+      position: absolute;
+      top: 0;
+      left: 0;
+      bottom: 0;
+      width: 3.5rem;
+      overflow: hidden;
+      background: var(--line-num-bg);
+      border: 1px solid var(--line-num-border);
+      border-right: none;
+      border-radius: 0.75rem 0 0 0.75rem;
+      color: var(--line-num-color);
+      font-family: var(--font-mono);
+      font-size: 0.9rem;
+      line-height: 1.6;
+      padding: 1rem 0.5rem 1rem 0;
+      text-align: right;
+      user-select: none;
+      white-space: pre;
+      transition: background var(--transition-normal), border-color var(--transition-normal);
+    }
+
+    .editor-with-lines:focus-within .line-numbers {
+      border-color: var(--panel-border-focus);
+    }
+
+    .textarea-wrapper .editor-with-lines textarea.editor-textarea {
+      margin-left: 3.5rem;
+      width: calc(100% - 3.5rem);
+      border-top-left-radius: 0;
+      border-bottom-left-radius: 0;
     }
 
     /* Formatting settings integrated inline in viewer-header */
@@ -913,6 +959,11 @@
 
     .viewer-panel.fullscreen-mode {
       gap: 1rem !important;
+    }
+
+    .fullscreen-mode .editor-with-lines {
+      flex: 1 !important;
+      height: 100% !important;
     }
 
     .textarea-wrapper {

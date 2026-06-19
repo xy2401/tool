@@ -29,6 +29,7 @@
         const loadedDemoText = ref('');
         const isDragging = ref(false);
         const themePreference = ref('system');
+        const lineNumbersRef = ref(null);
         let toastIdCounter = 0;
         let skipHistoryRecord = false;
         let historyDebounceTimeout = null;
@@ -294,6 +295,23 @@
         const filteredNodes = computed(() => {
           return nodes.value; // No complex search filter specified, show all nodes
         });
+
+        const lineNumbersText = computed(() => {
+          const text = editText.value || '';
+          const count = text.split('\n').length;
+          let result = '';
+          for (let i = 1; i <= count; i++) {
+            if (i > 1) result += '\n';
+            result += i;
+          }
+          return result;
+        });
+
+        const syncLineNumberScroll = (e) => {
+          if (lineNumbersRef.value) {
+            lineNumbersRef.value.scrollTop = e.target.scrollTop;
+          }
+        };
 
 
 
@@ -1153,7 +1171,10 @@
           saveNodeChanges,
           handleDataSelect,
           reorderKeys,
-          removeToast
+          removeToast,
+          lineNumbersRef,
+          lineNumbersText,
+          syncLineNumberScroll
         };
       }
     }).mount('#app');
