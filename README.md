@@ -9,7 +9,7 @@
 - [Any - 智能识别](./text/any/) - 粘贴任意文本自动识别类型（哈希、时间戳、Base64、UUID、IP、颜色等）并提供转换操作。
 - [Monaco 工具箱](./text/monaco/) - 集文本与代码编辑、对比、格式转换、内容预览和 JavaScript Console 于一体。
 - [JSON 查看](./text/json/) - 从日志或不规则文本中深度提取 JSON，支持转义解构与局部回填。
-- [JSON 对比编辑](./text/json/editor.html) - 基于 Svelte-JSONEditor 的现代 JSON 对比与可视化树形编辑工具。
+- [JSON 节点编辑](./text/json/editor.html) - 基于 Svelte-JSONEditor 的现代 JSON 对比与可视化树形编辑工具。
 
 ### human
 
@@ -65,7 +65,7 @@
 - **多维度全屏查看**：支持双击编辑区标题栏或卡片空白处，亦或通过文本框右上角悬浮显示的图标一键全屏，按 `Esc` 键可迅速还原。
 - **便捷同步与输出**：内嵌缩进选择与字段过滤器，支持一键复制，或将当前节点数据下载保存为本地 `.json` 文件。
 
-#### [JSON 对比编辑](./text/json/editor.html)
+#### [JSON 节点编辑](./text/json/editor.html)
 
 基于 Svelte-JSONEditor 库构建的双栏 JSON 对比与编辑器。左栏支持代码模式，右栏支持树形模式，并包含以下功能：
 - **左右双栏独立与同步**：支持左侧到右侧、右侧到左侧的单向一键数据同步，操作灵活、对称分布。
@@ -146,7 +146,7 @@ tool/
 │  │  └─ index.html   # Any 智能识别工具
 │  ├─ json/
 │  │  ├─ index.html   # JSON 提取查看
-│  │  ├─ editor.html  # JSON 对比编辑（Svelte-JSONEditor）
+│  │  ├─ editor.html  # JSON 节点编辑（Svelte-JSONEditor）
 │  │  ├─ editor.css
 │  │  └─ editor.js
 │  └─ monaco/
@@ -229,12 +229,12 @@ tool/
 - `Any 智能识别`：多面板智能文本识别与转换，覆盖哈希、时间戳、Base64、JWT、IPv4、颜色、UUID、URL 等类型，并支持计算操作。
 - `Monaco 工具箱`：多语言编辑、文本对比、格式转换、内容预览和隔离 JavaScript Console。
 - `JSON 查看`：从日志或不规则文本中深度提取并可视化 JSON。
-- `JSON 对比编辑`：基于 Svelte-JSONEditor 的双栏对比与编辑工具，含完整汉化。
+- `JSON 节点编辑`：基于 Svelte-JSONEditor 的双栏对比与编辑工具，含完整汉化。
 - `微信群接龙助手`：移动端接龙打卡统计、人员维护、通知文案生成、CSV 查看与下载。
 
 ## 开发规划与 TODO
 
-- **JSON 对比编辑 (Svelte-JSONEditor) 汉化方案更新**：
+- **JSON 节点编辑 (Svelte-JSONEditor) 汉化方案更新**：
   - **现状**：Svelte-JSONEditor 的最新稳定发布版 CDN (`v3.12.0`) 尚未合并 native `language` 汉化配置，因此目前在 [editor.js](./text/json/editor.js) 中使用 `MutationObserver` 结合 `onRenderMenu` 的双层翻译引擎来处理。
   - **TODO**：待 Svelte-JSONEditor 的官方稳定版 CDN 正式发布并支持 native 汉化属性后（合并了 PR #565 / 相关 issue #368 后），应将翻译机制精简，直接将翻译字典传递给 native 的 `language` 配置项。
   - **参考链接**：
