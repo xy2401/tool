@@ -7,7 +7,6 @@ document.addEventListener('DOMContentLoaded', () => {
     const btnSaveSettings = document.getElementById('btnSaveSettings');
     const inputPat = document.getElementById('inputPat');
     
-    const btnAdvancedToggle = document.getElementById('btnAdvancedToggle');
     const advancedPanel = document.getElementById('advancedPanel');
     const inputQuery = document.getElementById('inputQuery');
     const advOwner = document.getElementById('advOwner');
@@ -158,17 +157,6 @@ document.addEventListener('DOMContentLoaded', () => {
         localStorage.setItem('gh_explorer_templates', JSON.stringify(userTemplates));
         localStorage.setItem('gh_explorer_current_template', currentTemplateKey);
     };
-
-    // Advanced Toggle
-    btnAdvancedToggle.addEventListener('click', () => {
-        if (advancedPanel.style.display === 'none') {
-            advancedPanel.style.display = 'grid';
-            btnAdvancedToggle.classList.add('active');
-        } else {
-            advancedPanel.style.display = 'none';
-            btnAdvancedToggle.classList.remove('active');
-        }
-    });
 
     const buildQuery = () => {
         let parts = [];
