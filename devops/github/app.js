@@ -259,7 +259,7 @@ document.addEventListener('DOMContentLoaded', () => {
             
             const data = await response.json();
             currentRepos = data.items || [];
-            repoStats.textContent = `List: ${currentRepos.length.toLocaleString()} repos`;
+            repoStats.textContent = `Total: ${data.total_count.toLocaleString()} repos`;
             
             if (document.getElementById('chkAccumulate').checked) {
                 const existingIds = new Set(accumulatedRepos.map(r => r.id));
@@ -453,6 +453,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     const d2 = new Date(a.pushed_at || a.updated_at).getTime() || 0;
                     return d1 - d2;
                 }
+                if (rightSort === 'name_asc') return (a.full_name || '').localeCompare(b.full_name || '');
                 return 0;
             });
         }
