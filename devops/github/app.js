@@ -18,9 +18,16 @@ document.addEventListener('DOMContentLoaded', () => {
     const outputPreview = document.getElementById('outputPreview');
     const btnCopy = document.getElementById('btnCopy');
 
+    const paginationControls = document.getElementById('paginationControls');
+    const btnPrevPage = document.getElementById('btnPrevPage');
+    const btnNextPage = document.getElementById('btnNextPage');
+    const pageIndicator = document.getElementById('pageIndicator');
+
     // State
     let currentRepos = [];
     let displayedRepos = [];
+    let currentPage = 1;
+    let hasNextPage = false;
 
     // Initialize Settings & Theme
     const loadSettings = () => {
@@ -60,9 +67,10 @@ document.addEventListener('DOMContentLoaded', () => {
     btnSaveSettings.addEventListener('click', saveSettings);
 
     // Fetch Repos
-    const fetchRepos = async (username) => {
+    const fetchRepos = async (username, page = 1) => {
         repoList.innerHTML = '<div class="empty-state">Loading repositories...</div>';
         repoStats.textContent = 'Searching...';
+        paginationControls.style.display = 'none';
         
         const pat = localStorage.getItem('gh_explorer_pat');
         const headers = {
@@ -74,9 +82,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         
         try {
-            // Fetch multiple pages if user has many repos. For simplicity, we just fetch per_page=100.
-            // If we wanted all, we would need to handle pagination via Link headers.
-            let url = `https://api.github.com/users/${encodeURIComponent(username)}/repos?per_page=100&sort=updated`;
+            let url = `https://api.github.com/users/${encodeURIComponent(username)}/repos?per_page=100&sort=updated&page=${page}`;
             const response = await fetch(url, { headers });
             
             if (!response.ok) {
@@ -85,9 +91,23 @@ document.addEventListener('DOMContentLoaded', () => {
                 throw new Error(`API Error: ${response.status}`);
             }
             
+            // Handle Pagination Link Header
+            const linkHeader = response.headers.get('Link');
+            hasNextPage = linkHeader && linkHeader.includes('rel="next"');
+            currentPage = page;
+            
             const data = await response.json();
             currentRepos = data;
             applySortAndFilter();
+            
+            // Update Pagination UI
+            if (currentPage > 1 || hasNextPage) {
+                paginationControls.style.display = 'flex';
+                pageIndicator.textContent = `Page ${currentPage}`;
+                btnPrevPage.disabled = currentPage === 1;
+                btnNextPage.disabled = !hasNextPage;
+            }
+            
         } catch (err) {
             repoList.innerHTML = `<div class="empty-state" style="color: #ff7b72;">Error: ${err.message}</div>`;
             repoStats.textContent = 'Error';
@@ -100,13 +120,25 @@ document.addEventListener('DOMContentLoaded', () => {
     btnSearch.addEventListener('click', () => {
         const username = inputUsername.value.trim();
         if (username) {
-            fetchRepos(username);
+            fetchRepos(username, 1);
         }
     });
 
     inputUsername.addEventListener('keypress', (e) => {
         if (e.key === 'Enter') {
             btnSearch.click();
+        }
+    });
+
+    btnPrevPage.addEventListener('click', () => {
+        if (currentPage > 1) {
+            fetchRepos(inputUsername.value.trim(), currentPage - 1);
+        }
+    });
+
+    btnNextPage.addEventListener('click', () => {
+        if (hasNextPage) {
+            fetchRepos(inputUsername.value.trim(), currentPage + 1);
         }
     });
 

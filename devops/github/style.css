@@ -357,3 +357,6 @@ textarea {
     display: flex;
     justify-content: flex-end;
 }
+
+.pagination { padding: 12px 16px; border-top: 1px solid var(--border-color); display: flex; justify-content: center; align-items: center; gap: 16px; background-color: var(--bg-surface); }
+.pagination button:disabled { opacity: 0.5; cursor: not-allowed; }
