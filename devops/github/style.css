@@ -237,8 +237,18 @@ input[type="text"]:focus, input[type="password"]:focus, select:focus, textarea:f
 .repo-meta {
     display: flex;
     gap: 16px;
-    font-size: 0.75rem;
+    font-size: 0.8rem;
     color: var(--text-secondary);
+}
+
+.topic-tag {
+    background: var(--bg-surface);
+    color: var(--accent-color);
+    font-size: 0.7rem;
+    padding: 2px 8px;
+    border-radius: 12px;
+    border: 1px solid var(--border-color);
+    white-space: nowrap;
 }
 
 .repo-meta span {

@@ -322,6 +322,11 @@ document.addEventListener('DOMContentLoaded', () => {
             const date = new Date(repo.pushed_at || repo.updated_at).toISOString().split('T')[0];
             const licenseHtml = repo.license ? `<span title="License">⚖️ ${repo.license.spdx_id || repo.license.name}</span>` : '';
             const langHtml = repo.language ? `<span>📦 ${repo.language}</span>` : '';
+            const topicsHtml = (repo.topics && repo.topics.length > 0) 
+                ? `<div class="repo-topics" style="display: flex; gap: 6px; flex-wrap: wrap; margin-top: 8px;">` +
+                  repo.topics.map(t => `<span class="topic-tag">${escapeHtml(t)}</span>`).join('') +
+                  `</div>`
+                : '';
             
             return `
                 <div class="repo-card">
@@ -331,6 +336,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     </div>
                     
                     <div class="repo-desc">${escapeHtml(repo.description || 'No description provided')}</div>
+                    ${topicsHtml}
                     
                     <div class="clone-url-group" style="display: flex; gap: 0; align-items: center; border: 1px solid var(--border-color); border-radius: 6px; overflow: hidden; margin: 8px 0;">
                         <select class="clone-type-select" data-https="${repo.clone_url}" data-ssh="${repo.ssh_url}" data-gh="gh repo clone ${repo.full_name}" style="border: none; background: var(--bg-surface); border-right: 1px solid var(--border-color); padding: 4px 8px; font-size: 0.75rem; border-radius: 0; outline: none; cursor: pointer;">
