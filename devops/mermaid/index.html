@@ -32,6 +32,9 @@
             
             <!-- Center Actions -->
             <div class="sync-group">
+                <button class="glass-btn primary" @click="saveLocal">💾 保存</button>
+                <button class="glass-btn" v-if="currentContext.isLocal" @click="deleteLocal" title="删除此本地保存" style="padding: 6px 10px; color: #ef4444; border-color: rgba(239,68,68,0.2); background: rgba(239,68,68,0.1);">🗑️</button>
+                <div class="divider"></div>
                 <label class="checkbox-label">
                     <input type="checkbox" v-model="state.autoSync" @change="onAutoSyncChange"> Auto sync
                 </label>
@@ -41,9 +44,14 @@
             <!-- Right Actions -->
             <div class="btn-group">
                 <select class="glass-select" v-model="selectedTemplate" @change="loadTemplate">
-                    <option value="">加载预设模板...</option>
+                    <option value="">加载预设 / 本地模板...</option>
+                    <optgroup v-if="localDiagrams.length > 0" label="💾 我的本地保存">
+                        <option v-for="local in localDiagrams" :key="'local-'+local.id" :value="'local:'+local.id">
+                            {{ local.title }}
+                        </option>
+                    </optgroup>
                     <optgroup v-for="group in diagramData" :key="group.id" :label="group.name">
-                        <option v-for="example in group.examples" :key="example.title" :value="example.code">
+                        <option v-for="example in group.examples" :key="example.title" :value="'official:'+example.title">
                             {{ example.title }}
                         </option>
                     </optgroup>

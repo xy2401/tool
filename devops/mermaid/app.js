@@ -33,6 +33,22 @@ createApp({
         let currentSvgCode = '';
         let initialLoad = true;
 
+        const localDiagrams = ref([]);
+        const currentContext = reactive({
+            isLocal: false,
+            id: null,
+            title: diagramData[0]?.examples[0]?.title || 'Custom Diagram'
+        });
+
+        try {
+            const stored = localStorage.getItem('mermaid_local_diagrams');
+            if (stored) localDiagrams.value = JSON.parse(stored);
+        } catch(e) {}
+
+        const syncLocal = () => {
+            localStorage.setItem('mermaid_local_diagrams', JSON.stringify(localDiagrams.value));
+        };
+
         const showToast = (msg) => {
             toastMessage.value = msg;
             setTimeout(() => toastMessage.value = '', 3000);
@@ -166,11 +182,85 @@ createApp({
         };
 
         const loadTemplate = () => {
-            if (selectedTemplate.value) {
-                if (codeEditor) codeEditor.setValue(selectedTemplate.value);
-                if (configEditor) configEditor.setValue(DEFAULT_CONFIG);
+            const val = selectedTemplate.value;
+            if (!val) return;
+            
+            if (val.startsWith('official:')) {
+                const title = val.substring(9);
+                let found = null;
+                for (const group of diagramData) {
+                    found = group.examples.find(e => e.title === title);
+                    if (found) break;
+                }
+                if (found) {
+                    if (codeEditor) codeEditor.setValue(found.code);
+                    if (configEditor) configEditor.setValue(DEFAULT_CONFIG);
+                    currentContext.isLocal = false;
+                    currentContext.id = null;
+                    currentContext.title = title;
+                }
+            } else if (val.startsWith('local:')) {
+                const id = parseInt(val.substring(6));
+                const found = localDiagrams.value.find(d => d.id === id);
+                if (found) {
+                    if (codeEditor) codeEditor.setValue(found.code);
+                    if (configEditor) configEditor.setValue(found.config || DEFAULT_CONFIG);
+                    currentContext.isLocal = true;
+                    currentContext.id = id;
+                    currentContext.title = found.title;
+                }
             }
             selectedTemplate.value = '';
+        };
+
+        const saveLocal = () => {
+            if (currentContext.isLocal) {
+                const idx = localDiagrams.value.findIndex(d => d.id === currentContext.id);
+                if (idx !== -1) {
+                    localDiagrams.value[idx].code = state.code;
+                    localDiagrams.value[idx].config = state.mermaid;
+                    syncLocal();
+                    showToast('💾 已覆盖保存至: ' + currentContext.title);
+                    return;
+                }
+            }
+            
+            let baseName = currentContext.title;
+            // Clean ' copy...' from baseName if it exists to prevent 'copy copy'
+            baseName = baseName.replace(/ copy(\s\d+)?$/, '');
+            let newName = baseName + ' copy';
+            
+            let counter = 2;
+            while (localDiagrams.value.some(d => d.title === newName)) {
+                newName = baseName + ' copy ' + counter;
+                counter++;
+            }
+            
+            const newLocal = {
+                id: Date.now(),
+                title: newName,
+                code: state.code,
+                config: state.mermaid
+            };
+            
+            localDiagrams.value.unshift(newLocal);
+            syncLocal();
+            
+            currentContext.isLocal = true;
+            currentContext.id = newLocal.id;
+            currentContext.title = newLocal.title;
+            
+            showToast('💾 已新建保存: ' + newName);
+        };
+
+        const deleteLocal = () => {
+            if (!currentContext.isLocal) return;
+            localDiagrams.value = localDiagrams.value.filter(d => d.id !== currentContext.id);
+            syncLocal();
+            
+            showToast('🗑️ 已删除: ' + currentContext.title);
+            currentContext.isLocal = false;
+            currentContext.id = null;
         };
 
         const resetZoom = () => {
@@ -347,6 +437,8 @@ createApp({
             activeTab,
             selectedTemplate,
             diagramData,
+            localDiagrams,
+            currentContext,
             isDarkTheme,
             errorMessage,
             isRendering,
@@ -362,7 +454,9 @@ createApp({
             copyMarkdown,
             copyPng,
             triggerRender,
-            onAutoSyncChange
+            onAutoSyncChange,
+            saveLocal,
+            deleteLocal
         };
     }
 }).mount('#app');
