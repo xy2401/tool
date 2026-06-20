@@ -75,6 +75,7 @@
     <button id="save-btn" class="btn">Save Config</button>
 
     <button id="format-btn" class="btn">Format JSON</button>
+    <button id="toggle-collapse-btn" class="btn">Collapse All</button>
 
     <div class="status" id="status-text">Ready</div>
   </div>
@@ -89,6 +90,7 @@
   <script>
     let editor;
     let swaggerUi;
+    let isCollapsed = false;
     
     const defaultFiles = [
       { name: 'swagger.json', path: './data/swagger.json' },
@@ -229,6 +231,13 @@
         }
       };
 
+      // 7. Toggle Collapse Handler
+      document.getElementById('toggle-collapse-btn').onclick = () => {
+        isCollapsed = !isCollapsed;
+        document.getElementById('toggle-collapse-btn').innerText = isCollapsed ? "Expand All" : "Collapse All";
+        renderSwagger();
+      };
+
       // 7. Initial Load from LocalStorage or default
       const saved = localStorage.getItem('openapi-edit-content');
       if (saved) {
@@ -271,6 +280,7 @@
       swaggerUi = SwaggerUIBundle({
         spec: spec,
         dom_id: '#swagger-ui',
+        docExpansion: isCollapsed ? "none" : "list",
         deepLinking: true,
         presets: [
           SwaggerUIBundle.presets.apis,
