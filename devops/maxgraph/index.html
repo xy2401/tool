@@ -3,23 +3,19 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>maxGraph + Vue 3 现代绘图编辑器</title>
-    <!-- 引入现代字体 -->
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+    <title>maxGraph 专业绘图工作台</title>
     
-    <!-- 配置 Import Map 引入现代 ES Modules -->
     <script type="importmap">
         {
             "imports": {
-                "vue": "https://unpkg.com/vue@3/dist/vue.esm-browser.js",
-                "@maxgraph/core": "https://esm.sh/@maxgraph/core@0.4.0?bundle"
+                "vue": "https://cdn.jsdelivr.net/npm/vue@3/dist/vue.esm-browser.js",
+                "@maxgraph/core": "https://cdn.jsdelivr.net/npm/@maxgraph/core@0.23.0/+esm"
             }
         }
     </script>
     
     <style>
         :root {
-            /* 现代暗色主题色板 (Tailwind 风格) */
             --bg-color: #0f172a; 
             --panel-bg: #1e293b; 
             --text-color: #f8fafc; 
@@ -30,7 +26,7 @@
         * { box-sizing: border-box; }
         body, html {
             margin: 0; padding: 0; width: 100%; height: 100%;
-            font-family: 'Inter', system-ui, sans-serif;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
             background-color: var(--bg-color);
             color: var(--text-color);
             overflow: hidden;
@@ -38,12 +34,14 @@
         #app {
             display: flex; flex-direction: column; height: 100vh;
         }
+        
+        /* 头部导航栏 */
         header {
             background-color: var(--panel-bg);
             padding: 12px 24px;
             display: flex; justify-content: space-between; align-items: center;
             border-bottom: 1px solid var(--border-color);
-            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
             z-index: 10;
         }
         h1 { 
@@ -51,61 +49,55 @@
             display: flex; align-items: center; gap: 8px;
             color: #e2e8f0;
         }
+        .btn-group { display: flex; gap: 8px; }
         .glass-btn {
             background: rgba(59, 130, 246, 0.1);
             border: 1px solid rgba(59, 130, 246, 0.2);
             color: var(--accent-color);
-            padding: 8px 16px;
-            border-radius: 6px;
-            font-weight: 500;
-            font-size: 0.9rem;
+            padding: 6px 14px;
+            border-radius: 4px;
+            font-size: 0.85rem;
             cursor: pointer;
             transition: all 0.2s ease;
         }
-        .glass-btn:hover {
-            background: var(--accent-color);
-            color: white;
-        }
-        .main-content {
-            display: flex; flex: 1; overflow: hidden;
-        }
-        .sidebar {
+        .glass-btn:hover { background: var(--accent-color); color: white; }
+        
+        .main-content { display: flex; flex: 1; overflow: hidden; }
+        
+        /* 左侧形状库面板 */
+        .sidebar-left {
             width: 260px;
             background-color: var(--panel-bg);
             border-right: 1px solid var(--border-color);
-            padding: 20px;
+            padding: 16px;
             display: flex; flex-direction: column; gap: 12px;
             z-index: 5;
-            box-shadow: 4px 0 6px -1px rgba(0, 0, 0, 0.05);
+            user-select: none;
         }
-        .sidebar h3 {
-            margin: 0 0 10px 0; font-size: 0.8rem; text-transform: uppercase; 
-            color: #94a3b8; letter-spacing: 0.05em;
+        .panel-title {
+            margin: 0 0 10px 0; font-size: 0.75rem; text-transform: uppercase; 
+            color: #94a3b8; letter-spacing: 0.05em; font-weight: 600;
         }
-        .shape-btn {
+        .palette-item {
             background: var(--bg-color);
-            border: 1px solid var(--border-color);
+            border: 1px dashed var(--border-color);
             color: var(--text-color);
-            padding: 12px;
-            border-radius: 8px;
-            cursor: pointer;
-            display: flex; align-items: center; gap: 12px;
-            transition: all 0.2s;
-            font-size: 0.9rem;
+            padding: 10px;
+            border-radius: 6px;
+            cursor: grab;
+            display: flex; align-items: center; gap: 10px;
+            font-size: 0.85rem;
+            transition: border-color 0.2s;
         }
-        .shape-btn:hover {
-            border-color: var(--accent-color);
-            transform: translateY(-1px);
-        }
-        .shape-icon {
-            width: 24px; height: 24px;
-            border: 2px solid var(--text-color);
-            opacity: 0.8;
-        }
-        .icon-rect { border-radius: 4px; }
+        .palette-item:hover { border-color: var(--accent-color); }
+        .palette-item:active { cursor: grabbing; }
+        .shape-icon { width: 24px; height: 24px; border: 2px solid var(--text-color); opacity: 0.7; }
+        .icon-rect { border-radius: 3px; }
         .icon-circle { border-radius: 50%; }
+        .icon-rhombus { transform: rotate(45deg) scale(0.7); }
         
-        .canvas-container {
+        /* 中间核心画布 */
+        .canvas-wrapper {
             flex: 1;
             position: relative;
             background-color: #0f172a; 
@@ -114,12 +106,49 @@
                 linear-gradient(90deg, rgba(255,255,255,0.03) 1px, transparent 1px);
             background-size: 20px 20px;
             background-position: center center;
+            overflow: hidden; /* 交给 maxGraph 内部处理 */
         }
         #graph-container {
             width: 100%; height: 100%;
             cursor: crosshair;
+            outline: none; /* 移除点击边框 */
         }
-        /* 覆盖 maxGraph 默认的滚动条设置 */
+        
+        /* 右侧属性面板 & 鹰眼图 */
+        .sidebar-right {
+            width: 280px;
+            background-color: var(--panel-bg);
+            border-left: 1px solid var(--border-color);
+            display: flex; flex-direction: column;
+            z-index: 5;
+        }
+        .properties-panel {
+            padding: 16px;
+            flex: 1;
+            border-bottom: 1px solid var(--border-color);
+        }
+        .empty-state {
+            color: #64748b; font-size: 0.85rem; text-align: center; margin-top: 40px;
+        }
+        .prop-group { margin-bottom: 16px; }
+        .prop-group label { display: block; font-size: 0.8rem; color: #94a3b8; margin-bottom: 6px; }
+        .prop-group input {
+            width: 100%; background: var(--bg-color); border: 1px solid var(--border-color);
+            color: white; padding: 8px; border-radius: 4px; font-size: 0.85rem; outline: none;
+        }
+        .prop-group input:focus { border-color: var(--accent-color); }
+        
+        /* 鹰眼小地图容器 */
+        .outline-wrapper {
+            height: 200px;
+            padding: 16px;
+            display: flex; flex-direction: column;
+        }
+        #outline-container {
+            flex: 1; background: var(--bg-color); border: 1px solid var(--border-color);
+            border-radius: 4px; overflow: hidden; position: relative;
+        }
+        
         svg { overflow: visible !important; }
     </style>
 </head>
@@ -127,143 +156,201 @@
     <div id="app">
         <header>
             <h1>
-                <!-- 简单的 Logo 图标 -->
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#3b82f6" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"></path><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path></svg>
-                maxGraph + Vue 3 现代架构
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#3b82f6" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"></path><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path></svg>
+                maxGraph 专业绘图工作台
             </h1>
-            <div style="display:flex; gap:12px;">
+            <div class="btn-group">
+                <button class="glass-btn" @click="zoomIn">放大</button>
+                <button class="glass-btn" @click="zoomOut">缩小</button>
+                <button class="glass-btn" @click="zoomActual">1:1</button>
+                <div style="width: 1px; background: #334155; margin: 0 8px;"></div>
                 <button class="glass-btn" @click="clearGraph">清空画布</button>
-                <button class="glass-btn" style="background:var(--accent-color); color:white; border-color:var(--accent-hover);" @click="exportData">
-                    获取图表状态
-                </button>
             </div>
         </header>
+        
         <div class="main-content">
-            <aside class="sidebar">
-                <h3>形状面板</h3>
-                <button class="shape-btn" @click="addNode('rectangle')">
-                    <div class="shape-icon icon-rect"></div>
-                    添加业务节点
-                </button>
-                <button class="shape-btn" @click="addNode('ellipse')">
-                    <div class="shape-icon icon-circle"></div>
-                    添加状态节点
-                </button>
+            <!-- 左侧：控件面板 -->
+            <aside class="sidebar-left">
+                <h3 class="panel-title">基础图形 (拖拽到画布)</h3>
+                <div class="palette-item" ref="dragRect" data-shape="rectangle">
+                    <div class="shape-icon icon-rect"></div> 矩形处理节点
+                </div>
+                <div class="palette-item" ref="dragCircle" data-shape="ellipse">
+                    <div class="shape-icon icon-circle"></div> 圆形状态节点
+                </div>
+                <div class="palette-item" ref="dragRhombus" data-shape="rhombus">
+                    <div class="shape-icon icon-rhombus"></div> 菱形判断节点
+                </div>
                 
-                <div style="margin-top: auto; padding-top: 20px; border-top: 1px solid var(--border-color); color: #64748b; font-size: 0.8rem; line-height: 1.5;">
-                    💡 提示：<br/>
-                    支持拖拽节点<br/>
-                    支持鼠标悬浮连线<br/>
-                    支持框选 (Rubberband)
+                <div style="margin-top: auto; color: #64748b; font-size: 0.75rem; line-height: 1.6;">
+                    💡 快捷操作：<br/>
+                    • 拖拽图形入场<br/>
+                    • 鼠标滚轮 = 上下滚动<br/>
+                    • Alt/Option + 滚轮 = 缩放<br/>
+                    • 右键按住拖动 = 平移画布<br/>
+                    • Delete/Backspace = 删除节点
                 </div>
             </aside>
-            <main class="canvas-container">
+            
+            <!-- 中间：核心画布 -->
+            <main class="canvas-wrapper">
                 <div id="graph-container"></div>
             </main>
+            
+            <!-- 右侧：属性面板与鹰眼图 -->
+            <aside class="sidebar-right">
+                <div class="properties-panel">
+                    <h3 class="panel-title">属性设置</h3>
+                    <div v-if="selectedCell" class="prop-form">
+                        <div class="prop-group">
+                            <label>节点文本</label>
+                            <!-- Vue 双向绑定拦截键盘事件，避免触发 maxGraph 的删除快捷键 -->
+                            <input type="text" v-model="cellValue" @input="updateLabel" @keydown.stop>
+                        </div>
+                        <div class="prop-group">
+                            <label>内部 ID (只读)</label>
+                            <input type="text" :value="selectedCell.id" disabled style="opacity: 0.6">
+                        </div>
+                    </div>
+                    <div v-else class="empty-state">
+                        未选中任何节点<br>请点击画布上的图形
+                    </div>
+                </div>
+                
+                <div class="outline-wrapper">
+                    <h3 class="panel-title">鹰眼视图 (Outline)</h3>
+                    <div id="outline-container"></div>
+                </div>
+            </aside>
         </div>
     </div>
 
-    <!-- 纯前端 ESM 入口 -->
     <script type="module">
-        import { createApp, onMounted } from 'vue';
-        import { Graph, RubberBandHandler } from '@maxgraph/core';
+        import { createApp, ref, onMounted } from 'vue';
+        import { 
+            Graph, RubberBandHandler, KeyHandler, Outline, 
+            InternalEvent, gestureUtils
+        } from '@maxgraph/core';
 
         createApp({
             setup() {
                 let graph = null;
+                const selectedCell = ref(null);
+                const cellValue = ref('');
+
+                // 模板 refs
+                const dragRect = ref(null);
+                const dragCircle = ref(null);
+                const dragRhombus = ref(null);
 
                 const initGraph = () => {
                     const container = document.getElementById('graph-container');
                     
-                    // 1. 实例化现代 maxGraph
+                    // 1. 实例化图表核心
                     graph = new Graph(container);
                     
-                    // 2. 启用橡皮筋框选
-                    new RubberBandHandler(graph);
+                    // 2. 基础交互
+                    new RubberBandHandler(graph); // 框选
+                    graph.setConnectable(true); // 允许连线
+                    graph.setAllowDanglingEdges(false); // 禁止连线悬空
+                    graph.setMultigraph(false); // 禁止两点间多条连线
+                    graph.setPanning(true); // 允许右键平移画布
                     
-                    // 3. 基础交互配置
-                    graph.setConnectable(true);
-                    graph.setAllowDanglingEdges(false);
-                    graph.setMultigraph(false);
-                    
-                    // 4. 配置现代暗黑风格默认样式
+                    // 3. 快捷键监听
+                    const keyHandler = new KeyHandler(graph);
+                    // 绑定 Delete (46) 和 Backspace (8) 键删除节点
+                    const deleteAction = () => {
+                        if (graph.isEnabled()) {
+                            const cells = graph.getSelectionCells();
+                            if (cells && cells.length > 0) graph.removeCells(cells);
+                        }
+                    };
+                    keyHandler.bindKey(46, deleteAction);
+                    keyHandler.bindKey(8, deleteAction);
+
+                    // 4. 初始化鹰眼小地图 (Outline)
+                    const outlineContainer = document.getElementById('outline-container');
+                    new Outline(graph, outlineContainer);
+
+                    // 5. 样式配置 (暗黑系)
                     const vertexStyle = graph.getStylesheet().getDefaultVertexStyle();
-                    vertexStyle.fillColor = '#3b82f6'; // 蓝色
+                    vertexStyle.fillColor = '#3b82f6'; 
                     vertexStyle.fontColor = '#ffffff';
                     vertexStyle.strokeColor = '#2563eb';
                     vertexStyle.rounded = true;
-                    vertexStyle.shadow = true;
 
                     const edgeStyle = graph.getStylesheet().getDefaultEdgeStyle();
                     edgeStyle.strokeColor = '#94a3b8';
                     edgeStyle.fontColor = '#ffffff';
+                    edgeStyle.edgeStyle = 'orthogonalEdgeStyle'; // 折线连线风格
 
-                    // 5. 初始化示例节点
-                    const parent = graph.getDefaultParent();
-                    graph.getDataModel().beginUpdate();
-                    try {
-                        const v1 = graph.insertVertex({
-                            parent, value: 'Vue 3', position: [150, 100], size: [100, 40]
-                        });
-                        const v2 = graph.insertVertex({
-                            parent, value: 'maxGraph', position: [400, 100], size: [100, 40]
-                        });
-                        graph.insertEdge({
-                            parent, value: '原生驱动', source: v1, target: v2
-                        });
-                    } finally {
-                        graph.getDataModel().endUpdate();
-                    }
-                };
+                    // 6. 注册左侧工具栏的拖拽逻辑 (Drag & Drop)
+                    setupDraggable(dragRect.value, 'rectangle', 120, 50, '#3b82f6', '#2563eb');
+                    setupDraggable(dragCircle.value, 'ellipse', 80, 80, '#10b981', '#059669');
+                    setupDraggable(dragRhombus.value, 'rhombus', 100, 100, '#f59e0b', '#d97706');
 
-                const addNode = (type) => {
-                    if (!graph) return;
-                    const parent = graph.getDefaultParent();
-                    graph.getDataModel().beginUpdate();
-                    try {
-                        // 随机生成位置，提升体验
-                        const x = 200 + Math.random() * 150;
-                        const y = 150 + Math.random() * 150;
-                        
-                        let styleObj = {};
-                        if(type === 'ellipse') {
-                            styleObj.shape = 'ellipse';
-                            styleObj.fillColor = '#10b981'; // 绿色
-                            styleObj.strokeColor = '#059669';
+                    // 7. 监听选中事件，同步到右侧属性面板
+                    graph.getSelectionModel().addListener(InternalEvent.CHANGE, () => {
+                        const cell = graph.getSelectionCell();
+                        if (cell && cell.isVertex()) {
+                            selectedCell.value = cell;
+                            cellValue.value = graph.getLabel(cell) || '';
+                        } else {
+                            selectedCell.value = null;
+                            cellValue.value = '';
                         }
-                        
-                        graph.insertVertex({
-                            parent, 
-                            value: type === 'ellipse' ? '新状态' : '新业务', 
-                            position: [x, y], 
-                            size: type === 'ellipse' ? [60, 60] : [120, 40],
-                            style: styleObj
-                        });
-                    } finally {
-                        graph.getDataModel().endUpdate();
+                    });
+                };
+
+                // 设置单个工具栏元素的拖拽
+                const setupDraggable = (domElement, shapeName, width, height, fillColor, strokeColor) => {
+                    const dropHandler = (targetGraph, evt, targetCell, x, y) => {
+                        const parent = targetGraph.getDefaultParent();
+                        targetGraph.getDataModel().beginUpdate();
+                        try {
+                            targetGraph.insertVertex({
+                                parent, 
+                                value: shapeName === 'ellipse' ? '新状态' : (shapeName === 'rhombus' ? '判断条件' : '新节点'), 
+                                position: [x, y], 
+                                size: [width, height],
+                                style: { shape: shapeName, fillColor, strokeColor }
+                            });
+                        } finally {
+                            targetGraph.getDataModel().endUpdate();
+                        }
+                    };
+
+                    // 使用 maxGraph 官方提供的拖拽包装器
+                    gestureUtils.makeDraggable(domElement, graph, dropHandler);
+                };
+
+                // 更新选中节点的文本
+                const updateLabel = () => {
+                    if (graph && selectedCell.value) {
+                        graph.getDataModel().beginUpdate();
+                        try {
+                            graph.cellLabelChanged(selectedCell.value, cellValue.value, false);
+                        } finally {
+                            graph.getDataModel().endUpdate();
+                        }
                     }
                 };
 
-                const clearGraph = () => {
-                    if (!graph) return;
-                    graph.getDataModel().clear();
-                };
+                // 视图缩放控制
+                const zoomIn = () => graph?.zoomIn();
+                const zoomOut = () => graph?.zoomOut();
+                const zoomActual = () => graph?.zoomActual();
+                
+                const clearGraph = () => graph?.getDataModel().clear();
 
-                const exportData = () => {
-                    if (!graph) return;
-                    const cellCount = Object.keys(graph.getDataModel().cells).length - 2; // 减去根节点和默认层
-                    alert(`当前画布状态：\n共包含 ${cellCount} 个元素（节点/连线）。\n\n您可以在此挂载您的持久化逻辑。`);
-                };
-
-                // 在 DOM 挂载后初始化图表
                 onMounted(() => {
                     initGraph();
                 });
 
                 return {
-                    addNode,
-                    clearGraph,
-                    exportData
+                    dragRect, dragCircle, dragRhombus,
+                    selectedCell, cellValue, updateLabel,
+                    zoomIn, zoomOut, zoomActual, clearGraph
                 }
             }
         }).mount('#app');
