@@ -366,7 +366,8 @@
       }
       
       const info = currentSpec.info;
-      let html = `<div style="padding: 20px 30px; max-width: 800px; margin: 0 auto; color: var(--text);">
+      let html = `<div style="flex: 1; overflow-y: auto; width: 100%; box-sizing: border-box;">
+        <div style="padding: 20px 30px; max-width: 800px; margin: 0 auto; color: var(--text);">
         <h1 style="font-size: 1.8rem; margin-top: 0; margin-bottom: 10px; color: var(--accent);">${info.title || 'API Reference'} <span style="font-size: 0.9rem; color: var(--primary); border: 1px solid var(--primary); padding: 2px 8px; border-radius: 12px; vertical-align: middle; margin-left: 10px;">${info.version || '1.0.0'}</span></h1>
         ${info.description ? `<p style="line-height: 1.5; font-size: 1rem; opacity: 0.8; margin-top: 0; margin-bottom: 15px; white-space: pre-wrap;">${info.description}</p>` : ''}
       `;
@@ -458,7 +459,7 @@
         html += `</tbody></table></div></div>`;
       }
 
-      html += `</div>`;
+      html += `</div></div>`;
       main.innerHTML = html;
     }
 
