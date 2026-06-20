@@ -6,6 +6,22 @@ const storiesJsonPath = path.join(__dirname, 'stories.json');
 const storiesDir = __dirname;
 
 async function run() {
+    const injectGraphHookPlugin = {
+        name: 'inject-graph-hook',
+        setup(build) {
+            build.onLoad({ filter: /Graph\.js$/ }, async (args) => {
+                if (args.path.replace(/\\/g, '/').includes('@maxgraph/core/lib/esm/view/Graph.js')) {
+                    let contents = await fs.promises.readFile(args.path, 'utf8');
+                    contents = contents.replace(
+                        `super({ container, model, plugins, stylesheet: stylesheet ?? undefined });`,
+                        `super({ container, model, plugins, stylesheet: stylesheet ?? undefined });\n        window.__demo_graph = this;`
+                    );
+                    return { contents, loader: 'js' };
+                }
+            });
+        }
+    };
+
     const raw = fs.readFileSync(storiesJsonPath, 'utf8');
     const storiesData = JSON.parse(raw);
     
@@ -41,6 +57,7 @@ async function run() {
                 '.png': 'dataurl',
                 '.gif': 'dataurl'
             },
+            plugins: [injectGraphHookPlugin],
             sourcemap: true,
             minify: true,
             logLevel: 'info',

@@ -342,8 +342,9 @@
                 <!-- 官方 Demo 画布隔离区 -->
                 <div class="demo-wrapper" v-show="centerTab === 'demo'">
                     <div id="demo-container"></div>
-                    <div class="demo-toolbar" v-if="demoSourceUrl">
-                        <a :href="demoSourceUrl" target="_blank" class="glass-btn primary" style="text-decoration: none;">👨‍💻 查看 Github 源码</a>
+                    <div class="demo-toolbar" v-if="demoSourcePath">
+                        <button class="glass-btn success" @click="copyDemoToWorkspace" style="margin-right: 8px;">📥 提取数据到工作台</button>
+                        <button class="glass-btn primary" @click="viewSourceCode">👨‍💻 查看本地源码</button>
                     </div>
                 </div>
             </main>
@@ -382,15 +383,21 @@
         <div v-if="showModal" class="modal-overlay" @click.self="closeModal">
             <div class="modal-content">
                 <div class="modal-header">
-                    <h3 style="margin:0; font-size: 1rem;">{{ modalMode === 'import' ? '导入 XML' : '导出 XML' }}</h3>
+                    <h3 style="margin:0; font-size: 1rem;">
+                        <template v-if="modalMode === 'import'">导入 XML</template>
+                        <template v-else-if="modalMode === 'export'">导出 XML</template>
+                        <template v-else>Demo 源码 ({{ demoSourcePath }})</template>
+                    </h3>
                     <button class="glass-btn" style="border:none; padding:4px;" @click="closeModal">✕</button>
                 </div>
                 <div class="modal-body">
-                    <textarea v-model="xmlContent" :readonly="modalMode === 'export'" placeholder="在此粘贴 XML 代码..."></textarea>
+                    <textarea v-model="xmlContent" :readonly="modalMode === 'export' || modalMode === 'source'" 
+                              :placeholder="modalMode === 'import' ? '在此粘贴 XML 代码...' : ''"
+                              :style="modalMode === 'source' ? 'height: 500px; font-size: 0.8rem; font-family: Consolas, monospace;' : ''"></textarea>
                 </div>
                 <div class="modal-footer">
                     <button class="glass-btn" @click="closeModal">取消</button>
-                    <button class="glass-btn primary" v-if="modalMode === 'export'" @click="copyXml">复制到剪贴板</button>
+                    <button class="glass-btn primary" v-if="modalMode === 'export' || modalMode === 'source'" @click="copyXml">复制到剪贴板</button>
                     <button class="glass-btn success" v-if="modalMode === 'import'" @click="confirmImport">确认导入</button>
                 </div>
             </div>
@@ -418,7 +425,7 @@
                 const centerTab = ref('editor'); // 'editor' | 'demo'
                 const expandedCategories = ref({});
                 const hasRenderedDemo = ref(false);
-                const demoSourceUrl = ref('');
+                const demoSourcePath = ref('');
 
                 // Fetch stories.json
                 const fetchStories = async () => {
@@ -449,16 +456,62 @@
                 const selectOfficialStory = (story) => {
                     selectedOfficialStory.value = story.id;
                     
-                    // Generate Github URL for source code viewing
-                    const rawImport = story.importPath; // e.g. "./stories/HelloWorld.stories.ts"
-                    if (rawImport) {
-                        const gitPath = rawImport.replace('./', '');
-                        demoSourceUrl.value = `https://github.com/maxGraph/maxGraph/tree/main/packages/core/src/${gitPath}`;
-                    } else {
-                        demoSourceUrl.value = '';
-                    }
+                    // Keep the raw import path to fetch it locally
+                    demoSourcePath.value = story.importPath; // e.g. "./stories/HelloWorld.stories.ts"
 
                     loadOfficialStory(story.id);
+                };
+
+                const viewSourceCode = async () => {
+                    if (!demoSourcePath.value) return;
+                    try {
+                        const res = await fetch(demoSourcePath.value);
+                        if (res.ok) {
+                            const text = await res.text();
+                            xmlContent.value = text;
+                            modalMode.value = 'source';
+                            showModal.value = true;
+                        } else {
+                            alert('无法读取本地源码文件！');
+                        }
+                    } catch (e) {
+                        alert('读取源码失败: ' + e.message);
+                    }
+                };
+
+                const copyDemoToWorkspace = () => {
+                    if (!window.__demo_graph) {
+                        alert('未找到当前 Demo 的图形实例，可能该 Demo 未使用标准 Graph。');
+                        return;
+                    }
+                    if (!graph) return;
+                    
+                    try {
+                        // Serialize from demo
+                        const serializer = new window.__test_ModelXmlSerializer(window.__demo_graph.getDataModel());
+                        const xml = serializer.export();
+                        
+                        // Switch to editor
+                        centerTab.value = 'editor';
+                        leftTab.value = 'palette';
+                        
+                        // Import into our graph
+                        const mainSerializer = new window.__test_ModelXmlSerializer(graph.getDataModel());
+                        graph.getDataModel().beginUpdate();
+                        try {
+                            graph.getDataModel().clear();
+                            mainSerializer.import(xml);
+                        } finally {
+                            graph.getDataModel().endUpdate();
+                        }
+                        
+                        // Refocus layout if possible
+                        graph.fit();
+                        
+                    } catch (e) {
+                        console.error('Copy demo to workspace failed', e);
+                        alert('提取数据失败: ' + e.message);
+                    }
                 };
 
                 const loadOfficialStory = (storyId) => {
@@ -708,7 +761,7 @@
                 return {
                     dragRect, dragRounded, dragCircle, dragRhombus, dragHexagon, dragCylinder, dragCloud, dragActor,
                     selectedCell, cellValue, updateLabel, selectedTemplate, loadTemplate,
-                    leftTab, centerTab, expandedCategories, toggleCategory, hasRenderedDemo, demoSourceUrl,
+                    leftTab, centerTab, expandedCategories, toggleCategory, hasRenderedDemo, demoSourcePath, viewSourceCode, copyDemoToWorkspace,
                     selectedOfficialStory, officialStoriesGrouped, selectOfficialStory,
                     zoomIn, zoomOut, zoomActual, clearGraph,
                     showModal, modalMode, xmlContent, openImportModal, exportXml, confirmImport, closeModal, copyXml
