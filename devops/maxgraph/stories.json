@@ -1,0 +1,1193 @@
+{
+    "v": 5,
+    "entries": {
+        "introduction--docs": {
+            "id": "introduction--docs",
+            "title": "Introduction",
+            "name": "Docs",
+            "importPath": "./stories/Introduction.mdx",
+            "storiesImports": [],
+            "type": "docs",
+            "tags": [
+                "dev",
+                "test",
+                "unattached-mdx"
+            ]
+        },
+        "connections-anchors--default": {
+            "type": "story",
+            "subtype": "story",
+            "id": "connections-anchors--default",
+            "name": "Default",
+            "title": "Connections/Anchors",
+            "importPath": "./stories/Anchors.stories.ts",
+            "tags": [
+                "dev",
+                "test"
+            ],
+            "exportName": "Default"
+        },
+        "effects-animation--default": {
+            "type": "story",
+            "subtype": "story",
+            "id": "effects-animation--default",
+            "name": "Default",
+            "title": "Effects/Animation",
+            "importPath": "./stories/Animation.stories.ts",
+            "tags": [
+                "dev",
+                "test"
+            ],
+            "exportName": "Default"
+        },
+        "layouts-autolayout--default": {
+            "type": "story",
+            "subtype": "story",
+            "id": "layouts-autolayout--default",
+            "name": "Default",
+            "title": "Layouts/AutoLayout",
+            "importPath": "./stories/AutoLayout.stories.ts",
+            "tags": [
+                "dev",
+                "test"
+            ],
+            "exportName": "Default"
+        },
+        "events-boundary--default": {
+            "type": "story",
+            "subtype": "story",
+            "id": "events-boundary--default",
+            "name": "Default",
+            "title": "Events/Boundary",
+            "importPath": "./stories/Boundary.stories.js",
+            "tags": [
+                "dev",
+                "test"
+            ],
+            "exportName": "Default"
+        },
+        "dnd-copypaste-clipboard--default": {
+            "type": "story",
+            "subtype": "story",
+            "id": "dnd-copypaste-clipboard--default",
+            "name": "Default",
+            "title": "DnD_CopyPaste/Clipboard",
+            "importPath": "./stories/Clipboard.stories.js",
+            "tags": [
+                "dev",
+                "test"
+            ],
+            "exportName": "Default"
+        },
+        "misc-codecimport-mxgraph--default": {
+            "type": "story",
+            "subtype": "story",
+            "id": "misc-codecimport-mxgraph--default",
+            "name": "Default",
+            "title": "Misc/CodecImport_mxGraph",
+            "importPath": "./stories/Codec.stories.ts",
+            "tags": [
+                "dev",
+                "test"
+            ],
+            "exportName": "Default"
+        },
+        "layouts-collapse--default": {
+            "type": "story",
+            "subtype": "story",
+            "id": "layouts-collapse--default",
+            "name": "Default",
+            "title": "Layouts/Collapse",
+            "importPath": "./stories/Collapse.stories.ts",
+            "tags": [
+                "dev",
+                "test"
+            ],
+            "exportName": "Default"
+        },
+        "styles-colorstyleplaceholders--default": {
+            "type": "story",
+            "subtype": "story",
+            "id": "styles-colorstyleplaceholders--default",
+            "name": "Default",
+            "title": "Styles/ColorStylePlaceHolders",
+            "importPath": "./stories/ColorStylePlaceHolders.stories.ts",
+            "tags": [
+                "dev",
+                "test"
+            ],
+            "exportName": "Default"
+        },
+        "layouts-constituent--default": {
+            "type": "story",
+            "subtype": "story",
+            "id": "layouts-constituent--default",
+            "name": "Default",
+            "title": "Layouts/Constituent",
+            "importPath": "./stories/Constituent.stories.ts",
+            "tags": [
+                "dev",
+                "test"
+            ],
+            "exportName": "Default"
+        },
+        "icon-images-contexticons--default": {
+            "type": "story",
+            "subtype": "story",
+            "id": "icon-images-contexticons--default",
+            "name": "Default",
+            "title": "Icon_Images/ContextIcons",
+            "importPath": "./stories/ContextIcons.stories.ts",
+            "tags": [
+                "dev",
+                "test"
+            ],
+            "exportName": "Default"
+        },
+        "icon-images-control--default": {
+            "type": "story",
+            "subtype": "story",
+            "id": "icon-images-control--default",
+            "name": "Default",
+            "title": "Icon_Images/Control",
+            "importPath": "./stories/Control.stories.ts",
+            "tags": [
+                "dev",
+                "test"
+            ],
+            "exportName": "Default"
+        },
+        "styles-customhandlesconfigurations--default": {
+            "type": "story",
+            "subtype": "story",
+            "id": "styles-customhandlesconfigurations--default",
+            "name": "Default",
+            "title": "Styles/CustomHandlesConfigurations",
+            "importPath": "./stories/CustomHandlesConfiguration.stories.ts",
+            "tags": [
+                "dev",
+                "test"
+            ],
+            "exportName": "Default"
+        },
+        "styles-customstyledefaults--default": {
+            "type": "story",
+            "subtype": "story",
+            "id": "styles-customstyledefaults--default",
+            "name": "Default",
+            "title": "Styles/CustomStyleDefaults",
+            "importPath": "./stories/CustomStyleDefaults.stories.ts",
+            "tags": [
+                "dev",
+                "test"
+            ],
+            "exportName": "Default"
+        },
+        "dnd-copypaste-dragsource--default": {
+            "type": "story",
+            "subtype": "story",
+            "id": "dnd-copypaste-dragsource--default",
+            "name": "Default",
+            "title": "DnD_CopyPaste/DragSource",
+            "importPath": "./stories/DragSource.stories.ts",
+            "tags": [
+                "dev",
+                "test"
+            ],
+            "exportName": "Default"
+        },
+        "dnd-copypaste-drop--default": {
+            "type": "story",
+            "subtype": "story",
+            "id": "dnd-copypaste-drop--default",
+            "name": "Default",
+            "title": "DnD_CopyPaste/Drop",
+            "importPath": "./stories/Drop.stories.js",
+            "tags": [
+                "dev",
+                "test"
+            ],
+            "exportName": "Default"
+        },
+        "misc-dynamicloading--default": {
+            "type": "story",
+            "subtype": "story",
+            "id": "misc-dynamicloading--default",
+            "name": "Default",
+            "title": "Misc/DynamicLoading",
+            "importPath": "./stories/DynamicLoading.stories.ts",
+            "tags": [
+                "dev",
+                "test"
+            ],
+            "exportName": "Default"
+        },
+        "styles-dynamicstyle--default": {
+            "type": "story",
+            "subtype": "story",
+            "id": "styles-dynamicstyle--default",
+            "name": "Default",
+            "title": "Styles/DynamicStyle",
+            "importPath": "./stories/DynamicStyle.stories.js",
+            "tags": [
+                "dev",
+                "test"
+            ],
+            "exportName": "Default"
+        },
+        "toolbars-dynamictoolbar--default": {
+            "type": "story",
+            "subtype": "story",
+            "id": "toolbars-dynamictoolbar--default",
+            "name": "Default",
+            "title": "Toolbars/DynamicToolbar",
+            "importPath": "./stories/DynamicToolbar.stories.ts",
+            "tags": [
+                "dev",
+                "test"
+            ],
+            "exportName": "Default"
+        },
+        "styles-edgecurvedandrounded--default": {
+            "type": "story",
+            "subtype": "story",
+            "id": "styles-edgecurvedandrounded--default",
+            "name": "Default",
+            "title": "Styles/EdgeCurvedAndRounded",
+            "importPath": "./stories/EdgeCurvedAndRounded.stories.ts",
+            "tags": [
+                "dev",
+                "test"
+            ],
+            "exportName": "Default"
+        },
+        "connections-edgetolerance--default": {
+            "type": "story",
+            "subtype": "story",
+            "id": "connections-edgetolerance--default",
+            "name": "Default",
+            "title": "Connections/EdgeTolerance",
+            "importPath": "./stories/EdgeTolerance.stories.js",
+            "tags": [
+                "dev",
+                "test"
+            ],
+            "exportName": "Default"
+        },
+        "editing-editing--default": {
+            "type": "story",
+            "subtype": "story",
+            "id": "editing-editing--default",
+            "name": "Default",
+            "title": "Editing/Editing",
+            "importPath": "./stories/Editing.stories.js",
+            "tags": [
+                "dev",
+                "test"
+            ],
+            "exportName": "Default"
+        },
+        "events-events--default": {
+            "type": "story",
+            "subtype": "story",
+            "id": "events-events--default",
+            "name": "Default",
+            "title": "Events/Events",
+            "importPath": "./stories/Events.stories.ts",
+            "tags": [
+                "dev",
+                "test"
+            ],
+            "exportName": "Default"
+        },
+        "backgrounds-extendcanvas--default": {
+            "type": "story",
+            "subtype": "story",
+            "id": "backgrounds-extendcanvas--default",
+            "name": "Default",
+            "title": "Backgrounds/ExtendCanvas",
+            "importPath": "./stories/ExtendCanvas.stories.js",
+            "tags": [
+                "dev",
+                "test"
+            ],
+            "exportName": "Default"
+        },
+        "xml-json-fileio--default": {
+            "type": "story",
+            "subtype": "story",
+            "id": "xml-json-fileio--default",
+            "name": "Default",
+            "title": "Xml_Json/FileIO",
+            "importPath": "./stories/FileIO.stories.ts",
+            "tags": [
+                "dev",
+                "test"
+            ],
+            "exportName": "Default"
+        },
+        "icon-images-fixedicons--default": {
+            "type": "story",
+            "subtype": "story",
+            "id": "icon-images-fixedicons--default",
+            "name": "Default",
+            "title": "Icon_Images/FixedIcons",
+            "importPath": "./stories/FixedIcons.stories.js",
+            "tags": [
+                "dev",
+                "test"
+            ],
+            "exportName": "Default"
+        },
+        "connections-fixedpoints--default": {
+            "type": "story",
+            "subtype": "story",
+            "id": "connections-fixedpoints--default",
+            "name": "Default",
+            "title": "Connections/FixedPoints",
+            "importPath": "./stories/FixedPoints.stories.ts",
+            "tags": [
+                "dev",
+                "test"
+            ],
+            "exportName": "Default"
+        },
+        "layouts-folding--default": {
+            "type": "story",
+            "subtype": "story",
+            "id": "layouts-folding--default",
+            "name": "Default",
+            "title": "Layouts/Folding",
+            "importPath": "./stories/Folding.stories.ts",
+            "tags": [
+                "dev",
+                "test"
+            ],
+            "exportName": "Default"
+        },
+        "layouts-graphlayout--default": {
+            "type": "story",
+            "subtype": "story",
+            "id": "layouts-graphlayout--default",
+            "name": "Default",
+            "title": "Layouts/GraphLayout",
+            "importPath": "./stories/GraphLayout.stories.ts",
+            "tags": [
+                "dev",
+                "test"
+            ],
+            "exportName": "Default"
+        },
+        "backgrounds-grid--default": {
+            "type": "story",
+            "subtype": "story",
+            "id": "backgrounds-grid--default",
+            "name": "Default",
+            "title": "Backgrounds/Grid",
+            "importPath": "./stories/Grid.stories.js",
+            "tags": [
+                "dev",
+                "test"
+            ],
+            "exportName": "Default"
+        },
+        "layouts-groups--default": {
+            "type": "story",
+            "subtype": "story",
+            "id": "layouts-groups--default",
+            "name": "Default",
+            "title": "Layouts/Groups",
+            "importPath": "./stories/Groups.stories.js",
+            "tags": [
+                "dev",
+                "test"
+            ],
+            "exportName": "Default"
+        },
+        "misc-guides--default": {
+            "type": "story",
+            "subtype": "story",
+            "id": "misc-guides--default",
+            "name": "Default",
+            "title": "Misc/Guides",
+            "importPath": "./stories/Guides.stories.ts",
+            "tags": [
+                "dev",
+                "test"
+            ],
+            "exportName": "Default"
+        },
+        "layouts-handles--default": {
+            "type": "story",
+            "subtype": "story",
+            "id": "layouts-handles--default",
+            "name": "Default",
+            "title": "Layouts/Handles",
+            "importPath": "./stories/Handles.stories.ts",
+            "tags": [
+                "dev",
+                "test"
+            ],
+            "exportName": "Default"
+        },
+        "connections-helloport--default": {
+            "type": "story",
+            "subtype": "story",
+            "id": "connections-helloport--default",
+            "name": "Default",
+            "title": "Connections/HelloPort",
+            "importPath": "./stories/HelloPort.stories.ts",
+            "tags": [
+                "dev",
+                "test"
+            ],
+            "exportName": "Default"
+        },
+        "basic-helloworld--default": {
+            "type": "story",
+            "subtype": "story",
+            "id": "basic-helloworld--default",
+            "name": "Default",
+            "title": "Basic/HelloWorld",
+            "importPath": "./stories/HelloWorld.stories.ts",
+            "tags": [
+                "dev",
+                "test"
+            ],
+            "exportName": "Default"
+        },
+        "layouts-hierarchicallayout--default": {
+            "type": "story",
+            "subtype": "story",
+            "id": "layouts-hierarchicallayout--default",
+            "name": "Default",
+            "title": "Layouts/HierarchicalLayout",
+            "importPath": "./stories/HierarchicalLayout.stories.ts",
+            "tags": [
+                "dev",
+                "test"
+            ],
+            "exportName": "Default"
+        },
+        "icon-images-hovericons--default": {
+            "type": "story",
+            "subtype": "story",
+            "id": "icon-images-hovericons--default",
+            "name": "Default",
+            "title": "Icon_Images/HoverIcons",
+            "importPath": "./stories/HoverIcons.stories.js",
+            "tags": [
+                "dev",
+                "test"
+            ],
+            "exportName": "Default"
+        },
+        "styles-hoverstyle--default": {
+            "type": "story",
+            "subtype": "story",
+            "id": "styles-hoverstyle--default",
+            "name": "Default",
+            "title": "Styles/HoverStyle",
+            "importPath": "./stories/HoverStyle.stories.js",
+            "tags": [
+                "dev",
+                "test"
+            ],
+            "exportName": "Default"
+        },
+        "labels-htmllabel--default": {
+            "type": "story",
+            "subtype": "story",
+            "id": "labels-htmllabel--default",
+            "name": "Default",
+            "title": "Labels/HtmlLabel",
+            "importPath": "./stories/HtmlLabel.stories.js",
+            "tags": [
+                "dev",
+                "test"
+            ],
+            "exportName": "Default"
+        },
+        "icon-images-imagebundle--default": {
+            "type": "story",
+            "subtype": "story",
+            "id": "icon-images-imagebundle--default",
+            "name": "Default",
+            "title": "Icon_Images/ImageBundle",
+            "importPath": "./stories/ImageBundle.stories.ts",
+            "tags": [
+                "dev",
+                "test"
+            ],
+            "exportName": "Default"
+        },
+        "icon-images-images--default": {
+            "type": "story",
+            "subtype": "story",
+            "id": "icon-images-images--default",
+            "name": "Default",
+            "title": "Icon_Images/Images",
+            "importPath": "./stories/Images.stories.ts",
+            "tags": [
+                "dev",
+                "test"
+            ],
+            "exportName": "Default"
+        },
+        "icon-images-indicators--default": {
+            "type": "story",
+            "subtype": "story",
+            "id": "icon-images-indicators--default",
+            "name": "Default",
+            "title": "Icon_Images/Indicators",
+            "importPath": "./stories/Indicators.stories.js",
+            "tags": [
+                "dev",
+                "test"
+            ],
+            "exportName": "Default"
+        },
+        "xml-json-jsondata--default": {
+            "type": "story",
+            "subtype": "story",
+            "id": "xml-json-jsondata--default",
+            "name": "Default",
+            "title": "Xml_Json/JsonData",
+            "importPath": "./stories/JsonData.stories.ts",
+            "tags": [
+                "dev",
+                "test"
+            ],
+            "exportName": "Default"
+        },
+        "labels-labelposition--default": {
+            "type": "story",
+            "subtype": "story",
+            "id": "labels-labelposition--default",
+            "name": "Default",
+            "title": "Labels/LabelPosition",
+            "importPath": "./stories/LabelPosition.stories.js",
+            "tags": [
+                "dev",
+                "test"
+            ],
+            "exportName": "Default"
+        },
+        "labels-labels--default": {
+            "type": "story",
+            "subtype": "story",
+            "id": "labels-labels--default",
+            "name": "Default",
+            "title": "Labels/Labels",
+            "importPath": "./stories/Labels.stories.js",
+            "tags": [
+                "dev",
+                "test"
+            ],
+            "exportName": "Default"
+        },
+        "layouts-layers--default": {
+            "type": "story",
+            "subtype": "story",
+            "id": "layouts-layers--default",
+            "name": "Default",
+            "title": "Layouts/Layers",
+            "importPath": "./stories/Layers.stories.js",
+            "tags": [
+                "dev",
+                "test"
+            ],
+            "exportName": "Default"
+        },
+        "zoom-offpage-lod--default": {
+            "type": "story",
+            "subtype": "story",
+            "id": "zoom-offpage-lod--default",
+            "name": "Default",
+            "title": "Zoom_OffPage/LoD",
+            "importPath": "./stories/LoD.stories.js",
+            "tags": [
+                "dev",
+                "test"
+            ],
+            "exportName": "Default"
+        },
+        "connections-manhattan--default": {
+            "type": "story",
+            "subtype": "story",
+            "id": "connections-manhattan--default",
+            "name": "Default",
+            "title": "Connections/Manhattan",
+            "importPath": "./stories/Manhattan.stories.ts",
+            "tags": [
+                "dev",
+                "test"
+            ],
+            "exportName": "Default"
+        },
+        "icon-images-markers--default": {
+            "type": "story",
+            "subtype": "story",
+            "id": "icon-images-markers--default",
+            "name": "Default",
+            "title": "Icon_Images/Markers",
+            "importPath": "./stories/Markers.stories.ts",
+            "tags": [
+                "dev",
+                "test"
+            ],
+            "exportName": "Default"
+        },
+        "misc-menustyle--default": {
+            "type": "story",
+            "subtype": "story",
+            "id": "misc-menustyle--default",
+            "name": "Default",
+            "title": "Misc/MenuStyle",
+            "importPath": "./stories/MenuStyle.stories.ts",
+            "tags": [
+                "dev",
+                "test"
+            ],
+            "exportName": "Default"
+        },
+        "misc-merge--default": {
+            "type": "story",
+            "subtype": "story",
+            "id": "misc-merge--default",
+            "name": "Default",
+            "title": "Misc/Merge",
+            "importPath": "./stories/Merge.stories.ts",
+            "tags": [
+                "dev",
+                "test"
+            ],
+            "exportName": "Default"
+        },
+        "misc-monitor--default": {
+            "type": "story",
+            "subtype": "story",
+            "id": "misc-monitor--default",
+            "name": "Default",
+            "title": "Misc/Monitor",
+            "importPath": "./stories/Monitor.stories.ts",
+            "tags": [
+                "dev",
+                "test"
+            ],
+            "exportName": "Default"
+        },
+        "effects-morph--default": {
+            "type": "story",
+            "subtype": "story",
+            "id": "effects-morph--default",
+            "name": "Default",
+            "title": "Effects/Morph",
+            "importPath": "./stories/Morph.stories.js",
+            "tags": [
+                "dev",
+                "test"
+            ],
+            "exportName": "Default"
+        },
+        "zoom-offpage-offpage--default": {
+            "type": "story",
+            "subtype": "story",
+            "id": "zoom-offpage-offpage--default",
+            "name": "Default",
+            "title": "Zoom_OffPage/OffPage",
+            "importPath": "./stories/OffPage.stories.js",
+            "tags": [
+                "dev",
+                "test"
+            ],
+            "exportName": "Default"
+        },
+        "layouts-orgchart--default": {
+            "type": "story",
+            "subtype": "story",
+            "id": "layouts-orgchart--default",
+            "name": "Default",
+            "title": "Layouts/OrgChart",
+            "importPath": "./stories/OrgChart.stories.js",
+            "tags": [
+                "dev",
+                "test"
+            ],
+            "exportName": "Default"
+        },
+        "connections-orthogonal--default": {
+            "type": "story",
+            "subtype": "story",
+            "id": "connections-orthogonal--default",
+            "name": "Default",
+            "title": "Connections/Orthogonal",
+            "importPath": "./stories/Orthogonal.stories.ts",
+            "tags": [
+                "dev",
+                "test"
+            ],
+            "exportName": "Default"
+        },
+        "effects-overlays--default": {
+            "type": "story",
+            "subtype": "story",
+            "id": "effects-overlays--default",
+            "name": "Default",
+            "title": "Effects/Overlays",
+            "importPath": "./stories/Overlays.stories.ts",
+            "tags": [
+                "dev",
+                "test"
+            ],
+            "exportName": "Default"
+        },
+        "printing-pagebreaks--default": {
+            "type": "story",
+            "subtype": "story",
+            "id": "printing-pagebreaks--default",
+            "name": "Default",
+            "title": "Printing/PageBreaks",
+            "importPath": "./stories/PageBreaks.stories.ts",
+            "tags": [
+                "dev",
+                "test"
+            ],
+            "exportName": "Default"
+        },
+        "labels-perimeteronlabelbounds--default": {
+            "type": "story",
+            "subtype": "story",
+            "id": "labels-perimeteronlabelbounds--default",
+            "name": "Default",
+            "title": "Labels/PerimeterOnLabelBounds",
+            "importPath": "./stories/PerimeterOnLabelBounds.stories.ts",
+            "tags": [
+                "dev",
+                "test"
+            ],
+            "exportName": "Default"
+        },
+        "styles-perimetervariousimplementations--default": {
+            "type": "story",
+            "subtype": "story",
+            "id": "styles-perimetervariousimplementations--default",
+            "name": "Default",
+            "title": "Styles/PerimeterVariousImplementations",
+            "importPath": "./stories/PerimeterVariousImplementations.stories.ts",
+            "tags": [
+                "dev",
+                "test"
+            ],
+            "exportName": "Default"
+        },
+        "misc-permissions--default": {
+            "type": "story",
+            "subtype": "story",
+            "id": "misc-permissions--default",
+            "name": "Default",
+            "title": "Misc/Permissions",
+            "importPath": "./stories/Permissions.stories.js",
+            "tags": [
+                "dev",
+                "test"
+            ],
+            "exportName": "Default"
+        },
+        "connections-portrefs--default": {
+            "type": "story",
+            "subtype": "story",
+            "id": "connections-portrefs--default",
+            "name": "Default",
+            "title": "Connections/PortRefs",
+            "importPath": "./stories/PortRefs.stories.js",
+            "tags": [
+                "dev",
+                "test"
+            ],
+            "exportName": "Default"
+        },
+        "layouts-radialtreelayout--default": {
+            "type": "story",
+            "subtype": "story",
+            "id": "layouts-radialtreelayout--default",
+            "name": "Default",
+            "title": "Layouts/RadialTreeLayout",
+            "importPath": "./stories/RadialTreeLayout.stories.ts",
+            "tags": [
+                "dev",
+                "test"
+            ],
+            "exportName": "Default"
+        },
+        "misc-scrollbars--default": {
+            "type": "story",
+            "subtype": "story",
+            "id": "misc-scrollbars--default",
+            "name": "Default",
+            "title": "Misc/Scrollbars",
+            "importPath": "./stories/Scrollbars.stories.js",
+            "tags": [
+                "dev",
+                "test"
+            ],
+            "exportName": "Default"
+        },
+        "labels-secondlabel--default": {
+            "type": "story",
+            "subtype": "story",
+            "id": "labels-secondlabel--default",
+            "name": "Default",
+            "title": "Labels/SecondLabel",
+            "importPath": "./stories/SecondLabel.stories.js",
+            "tags": [
+                "dev",
+                "test"
+            ],
+            "exportName": "Default"
+        },
+        "shapes-shape--default": {
+            "type": "story",
+            "subtype": "story",
+            "id": "shapes-shape--default",
+            "name": "Default",
+            "title": "Shapes/Shape",
+            "importPath": "./stories/Shape.stories.js",
+            "tags": [
+                "dev",
+                "test"
+            ],
+            "exportName": "Default"
+        },
+        "misc-showregion--default": {
+            "type": "story",
+            "subtype": "story",
+            "id": "misc-showregion--default",
+            "name": "Default",
+            "title": "Misc/ShowRegion",
+            "importPath": "./stories/ShowRegion.stories.ts",
+            "tags": [
+                "dev",
+                "test"
+            ],
+            "exportName": "Default"
+        },
+        "shapes-stencils--default": {
+            "type": "story",
+            "subtype": "story",
+            "id": "shapes-stencils--default",
+            "name": "Default",
+            "title": "Shapes/Stencils",
+            "importPath": "./stories/Stencils.stories.ts",
+            "tags": [
+                "dev",
+                "test"
+            ],
+            "exportName": "Default"
+        },
+        "shapes-stencilsviewer--default": {
+            "type": "story",
+            "subtype": "story",
+            "id": "shapes-stencilsviewer--default",
+            "name": "Default",
+            "title": "Shapes/StencilsViewer",
+            "importPath": "./stories/StencilsViewer.stories.ts",
+            "tags": [
+                "dev",
+                "test"
+            ],
+            "exportName": "Default"
+        },
+        "styles-stylesheet--default": {
+            "type": "story",
+            "subtype": "story",
+            "id": "styles-stylesheet--default",
+            "name": "Default",
+            "title": "Styles/Stylesheet",
+            "importPath": "./stories/Stylesheet.stories.ts",
+            "tags": [
+                "dev",
+                "test"
+            ],
+            "exportName": "Default"
+        },
+        "layouts-swimlanes--default": {
+            "type": "story",
+            "subtype": "story",
+            "id": "layouts-swimlanes--default",
+            "name": "Default",
+            "title": "Layouts/SwimLanes",
+            "importPath": "./stories/SwimLanes.stories.ts",
+            "tags": [
+                "dev",
+                "test"
+            ],
+            "exportName": "Default"
+        },
+        "misc-thread--default": {
+            "type": "story",
+            "subtype": "story",
+            "id": "misc-thread--default",
+            "name": "Default",
+            "title": "Misc/Thread",
+            "importPath": "./stories/Thread.stories.ts",
+            "tags": [
+                "dev",
+                "test"
+            ],
+            "exportName": "Default"
+        },
+        "toolbars-toolbar--default": {
+            "type": "story",
+            "subtype": "story",
+            "id": "toolbars-toolbar--default",
+            "name": "Default",
+            "title": "Toolbars/Toolbar",
+            "importPath": "./stories/Toolbar.stories.ts",
+            "tags": [
+                "dev",
+                "test"
+            ],
+            "exportName": "Default"
+        },
+        "layouts-tree--default": {
+            "type": "story",
+            "subtype": "story",
+            "id": "layouts-tree--default",
+            "name": "Default",
+            "title": "Layouts/Tree",
+            "importPath": "./stories/Tree.stories.js",
+            "tags": [
+                "dev",
+                "test"
+            ],
+            "exportName": "Default"
+        },
+        "xml-json-userobject--default": {
+            "type": "story",
+            "subtype": "story",
+            "id": "xml-json-userobject--default",
+            "name": "Default",
+            "title": "Xml_Json/UserObject",
+            "importPath": "./stories/UserObject.stories.ts",
+            "tags": [
+                "dev",
+                "test"
+            ],
+            "exportName": "Default"
+        },
+        "misc-validation--default": {
+            "type": "story",
+            "subtype": "story",
+            "id": "misc-validation--default",
+            "name": "Default",
+            "title": "Misc/Validation",
+            "importPath": "./stories/Validation.stories.ts",
+            "tags": [
+                "dev",
+                "test"
+            ],
+            "exportName": "Default"
+        },
+        "misc-visibility--default": {
+            "type": "story",
+            "subtype": "story",
+            "id": "misc-visibility--default",
+            "name": "Default",
+            "title": "Misc/Visibility",
+            "importPath": "./stories/Visibility.stories.js",
+            "tags": [
+                "dev",
+                "test"
+            ],
+            "exportName": "Default"
+        },
+        "windows-windows--default": {
+            "type": "story",
+            "subtype": "story",
+            "id": "windows-windows--default",
+            "name": "Default",
+            "title": "Windows/Windows",
+            "importPath": "./stories/Window.stories.ts",
+            "tags": [
+                "dev",
+                "test"
+            ],
+            "exportName": "Default"
+        },
+        "connections-wires--default": {
+            "type": "story",
+            "subtype": "story",
+            "id": "connections-wires--default",
+            "name": "Default",
+            "title": "Connections/Wires",
+            "importPath": "./stories/Wires.stories.ts",
+            "tags": [
+                "dev",
+                "test"
+            ],
+            "exportName": "Default"
+        },
+        "labels-wrapping--default": {
+            "type": "story",
+            "subtype": "story",
+            "id": "labels-wrapping--default",
+            "name": "Default",
+            "title": "Labels/Wrapping",
+            "importPath": "./stories/Wrapping.stories.ts",
+            "tags": [
+                "dev",
+                "test"
+            ],
+            "exportName": "Default"
+        },
+        "zoom-offpage-zoomandfit--default": {
+            "type": "story",
+            "subtype": "story",
+            "id": "zoom-offpage-zoomandfit--default",
+            "name": "Default",
+            "title": "Zoom_OffPage/ZoomAndFit",
+            "importPath": "./stories/ZoomAndFit.stories.ts",
+            "tags": [
+                "dev",
+                "test"
+            ],
+            "exportName": "Default"
+        },
+        "connections-anchors--docs": {
+            "id": "connections-anchors--docs",
+            "title": "Connections/Anchors",
+            "name": "Docs",
+            "importPath": "./stories/Anchors.mdx",
+            "storiesImports": [
+                "./stories/Anchors.stories.ts"
+            ],
+            "type": "docs",
+            "tags": [
+                "dev",
+                "test",
+                "attached-mdx"
+            ]
+        },
+        "effects-animation--docs": {
+            "id": "effects-animation--docs",
+            "title": "Effects/Animation",
+            "name": "Docs",
+            "importPath": "./stories/Animation.mdx",
+            "storiesImports": [
+                "./stories/Animation.stories.ts"
+            ],
+            "type": "docs",
+            "tags": [
+                "dev",
+                "test",
+                "attached-mdx"
+            ]
+        },
+        "layouts-autolayout--docs": {
+            "id": "layouts-autolayout--docs",
+            "title": "Layouts/AutoLayout",
+            "name": "Docs",
+            "importPath": "./stories/AutoLayout.mdx",
+            "storiesImports": [
+                "./stories/AutoLayout.stories.ts"
+            ],
+            "type": "docs",
+            "tags": [
+                "dev",
+                "test",
+                "attached-mdx"
+            ]
+        },
+        "events-boundary--docs": {
+            "id": "events-boundary--docs",
+            "title": "Events/Boundary",
+            "name": "Docs",
+            "importPath": "./stories/Boundary.mdx",
+            "storiesImports": [
+                "./stories/Boundary.stories.js"
+            ],
+            "type": "docs",
+            "tags": [
+                "dev",
+                "test",
+                "attached-mdx"
+            ]
+        },
+        "icon-images-control--docs": {
+            "id": "icon-images-control--docs",
+            "title": "Icon_Images/Control",
+            "name": "Docs",
+            "importPath": "./stories/Control.mdx",
+            "storiesImports": [
+                "./stories/Control.stories.ts"
+            ],
+            "type": "docs",
+            "tags": [
+                "dev",
+                "test",
+                "attached-mdx"
+            ]
+        },
+        "connections-fixedpoints--docs": {
+            "id": "connections-fixedpoints--docs",
+            "title": "Connections/FixedPoints",
+            "name": "Docs",
+            "importPath": "./stories/FixedPoints.mdx",
+            "storiesImports": [
+                "./stories/FixedPoints.stories.ts"
+            ],
+            "type": "docs",
+            "tags": [
+                "dev",
+                "test",
+                "attached-mdx"
+            ]
+        },
+        "connections-wires--docs": {
+            "id": "connections-wires--docs",
+            "title": "Connections/Wires",
+            "name": "Docs",
+            "importPath": "./stories/Wires.mdx",
+            "storiesImports": [
+                "./stories/Wires.stories.ts"
+            ],
+            "type": "docs",
+            "tags": [
+                "dev",
+                "test",
+                "attached-mdx"
+            ]
+        },
+        "labels-wrapping--docs": {
+            "id": "labels-wrapping--docs",
+            "title": "Labels/Wrapping",
+            "name": "Docs",
+            "importPath": "./stories/Wrapping.mdx",
+            "storiesImports": [
+                "./stories/Wrapping.stories.ts"
+            ],
+            "type": "docs",
+            "tags": [
+                "dev",
+                "test",
+                "attached-mdx"
+            ]
+        },
+        "zoom-offpage-zoomandfit--docs": {
+            "id": "zoom-offpage-zoomandfit--docs",
+            "title": "Zoom_OffPage/ZoomAndFit",
+            "name": "Docs",
+            "importPath": "./stories/ZoomAndFit.mdx",
+            "storiesImports": [
+                "./stories/ZoomAndFit.stories.ts"
+            ],
+            "type": "docs",
+            "tags": [
+                "dev",
+                "test",
+                "attached-mdx"
+            ]
+        }
+    }
+}
