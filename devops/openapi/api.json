@@ -1,0 +1,10 @@
+[
+  {
+    "url": "./data/swagger.json",
+    "name": "Swagger API"
+  },
+  {
+    "url": "./data/api.github.com.yaml",
+    "name": "GitHub API"
+  }
+]
