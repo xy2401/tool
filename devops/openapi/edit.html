@@ -68,6 +68,14 @@
     .switcher-btn { padding: 6px 12px; border-radius: 6px; text-decoration: none; color: #555; font-size: 13px; font-weight: bold; transition: 0.2s; }
     .switcher-btn:hover { background: #e4e6e9; color: #000; }
     .switcher-btn.active { background: #fff; color: #000; box-shadow: 0 1px 3px rgba(0,0,0,0.1); pointer-events: none; }
+    
+    /* Floating Tools */
+    #editor-pane { position: relative; }
+    .floating-tools { position: absolute; top: 12px; right: 25px; z-index: 10; display: flex; gap: 8px; opacity: 0.4; transition: opacity 0.2s; }
+    .floating-tools:hover { opacity: 1; }
+    .float-btn { background: rgba(255,255,255,0.9); border: 1px solid #ccc; border-radius: 4px; padding: 0; cursor: pointer; color: #555; box-shadow: 0 1px 3px rgba(0,0,0,0.1); display: flex; align-items: center; justify-content: center; width: 26px; height: 26px; }
+    .float-btn:hover { background: #f0f0f0; color: #000; }
+    .float-btn svg { width: 14px; height: 14px; }
   </style>
 </head>
 <body>
@@ -88,18 +96,25 @@
           <optgroup label="Saved Configs" id="optgroup-saved"></optgroup>
         </select>
 
-        <label class="btn">
-          Upload File
-          <input type="file" id="upload-btn" accept=".json,.yaml,.yml" style="display:none">
-        </label>
-
         <input type="text" id="save-name" class="input-text" placeholder="Config name..." style="width: 140px;">
         <button id="save-btn" class="btn">Save</button>
         <button id="format-btn" class="btn">Format</button>
 
         <div class="status" id="status-text">Ready</div>
       </div>
-      <div id="editor-pane"></div>
+      <div id="editor-pane">
+        <div class="floating-tools">
+          <button class="float-btn" id="float-copy" title="Copy to Clipboard">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+          </button>
+          <button class="float-btn" id="float-download" title="Download File">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+          <button class="float-btn" id="float-upload" title="Upload File">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>
+          </button>
+          <input type="file" id="upload-btn" accept=".json,.yaml,.yml" style="display:none">
+        </div>
+      </div>
     </div>
 
     <!-- Right Side: Swagger UI -->
@@ -224,6 +239,9 @@
       };
 
       // 4. File Upload Handler
+      document.getElementById('float-upload').onclick = () => {
+        document.getElementById('upload-btn').click();
+      };
       document.getElementById('upload-btn').onchange = (e) => {
         const file = e.target.files[0];
         if (!file) return;
@@ -235,6 +253,33 @@
         };
         reader.readAsText(file);
         e.target.value = ""; // reset
+      };
+
+      // Floating Copy
+      document.getElementById('float-copy').onclick = async () => {
+        try {
+          await navigator.clipboard.writeText(editor.getValue());
+          showStatus("Copied to clipboard!");
+        } catch (err) {
+          showStatus("Copy failed", true);
+        }
+      };
+
+      // Floating Download
+      document.getElementById('float-download').onclick = () => {
+        const content = editor.getValue();
+        let name = document.getElementById('save-name').value.trim() || 'openapi.json';
+        if (!name.endsWith('.json') && !name.endsWith('.yaml') && !name.endsWith('.yml')) {
+           name += content.trim().startsWith('{') ? '.json' : '.yaml';
+        }
+        const blob = new Blob([content], {type: "text/plain;charset=utf-8"});
+        const a = document.createElement('a');
+        a.href = URL.createObjectURL(blob);
+        a.download = name;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        showStatus(`Downloaded ${name}`);
       };
 
       // 5. Save Config Handler
