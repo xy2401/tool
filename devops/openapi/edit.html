@@ -64,10 +64,10 @@
     .status { font-size: 12px; color: #666; margin-left: auto; }
 
     /* Switcher */
-    .page-switcher { display: flex; background: #f0f2f5; border-radius: 8px; padding: 4px; gap: 4px; align-items: center; }
-    .switcher-btn { padding: 6px 12px; border-radius: 6px; text-decoration: none; color: #555; font-size: 13px; font-weight: bold; transition: 0.2s; }
-    .switcher-btn:hover { background: #e4e6e9; color: #000; }
-    .switcher-btn.active { background: #fff; color: #000; box-shadow: 0 1px 3px rgba(0,0,0,0.1); pointer-events: none; }
+    .page-switcher { display: flex; background: #f8f9fa; border-radius: 8px; padding: 4px; gap: 4px; align-items: center; border: 1px solid #dee2e6; width: 200px; box-sizing: border-box; flex-shrink: 0; }
+    .switcher-btn { padding: 6px 0; border-radius: 6px; text-decoration: none; color: #212529; font-size: 13px; font-weight: bold; transition: 0.2s; opacity: 0.7; flex: 1; text-align: center; border: 1px solid transparent; }
+    .switcher-btn:hover { background: #e9ecef; opacity: 1; border-color: #dee2e6; }
+    .switcher-btn.active { background: #ffffff; opacity: 1; box-shadow: 0 1px 3px rgba(0,0,0,0.15); border: 1px solid #dee2e6; pointer-events: none; }
     
     /* Floating Tools */
     #editor-pane { position: relative; }
@@ -234,8 +234,6 @@
             showStatus(`Loaded saved config: ${name}`);
           }
         }
-        
-        select.value = ""; // reset
       };
 
       // 4. File Upload Handler

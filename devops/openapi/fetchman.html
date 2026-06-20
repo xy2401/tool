@@ -37,10 +37,10 @@
     body { margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: var(--bg); color: var(--text); height: 100vh; display: flex; flex-direction: column; overflow: hidden; transition: background 0.3s, color 0.3s; }
     
     /* Switcher */
-    .page-switcher { display: flex; background: var(--bg); border-radius: 8px; padding: 4px; gap: 4px; align-items: center; border: 1px solid var(--border); }
-    .switcher-btn { padding: 6px 12px; border-radius: 6px; text-decoration: none; color: var(--text); font-size: 0.85rem; font-weight: bold; transition: 0.2s; opacity: 0.7; flex: 1; text-align: center; }
-    .switcher-btn:hover { background: var(--border); opacity: 1; }
-    .switcher-btn.active { background: var(--panel); opacity: 1; box-shadow: 0 1px 3px rgba(0,0,0,0.3); border: 1px solid var(--border); pointer-events: none; }
+    .page-switcher { display: flex; background: var(--bg); border-radius: 8px; padding: 4px; gap: 4px; align-items: center; border: 1px solid var(--border); width: 200px; box-sizing: border-box; flex-shrink: 0; }
+    .switcher-btn { padding: 6px 0; border-radius: 6px; text-decoration: none; color: var(--text); font-size: 13px; font-weight: bold; transition: 0.2s; opacity: 0.7; flex: 1; text-align: center; border: 1px solid transparent; }
+    .switcher-btn:hover { background: var(--border); opacity: 1; border-color: var(--border); }
+    .switcher-btn.active { background: var(--panel); opacity: 1; box-shadow: 0 1px 3px rgba(0,0,0,0.15); border: 1px solid var(--border); pointer-events: none; }
     
     .main { display: flex; flex: 1; overflow: hidden; }
     
