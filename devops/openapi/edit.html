@@ -61,7 +61,31 @@
       flex: 1; display: flex; flex-direction: column; overflow: hidden; background: #fafafa;
     }
     #swagger-ui-container { flex: 1; overflow-y: auto; }
-    .status { font-size: 12px; color: #666; margin-left: auto; }
+    #swagger-ui-container { flex: 1; overflow-y: auto; }
+    
+    .status-toast {
+      position: absolute;
+      bottom: 20px;
+      right: 20px;
+      z-index: 50;
+      background: rgba(33, 37, 41, 0.9);
+      color: #fff;
+      padding: 8px 16px;
+      border-radius: 6px;
+      font-size: 13px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+      pointer-events: none;
+      transition: opacity 0.3s, transform 0.3s;
+      opacity: 0;
+      transform: translateY(10px);
+    }
+    .status-toast.show {
+      opacity: 1;
+      transform: translateY(0);
+    }
+    .status-toast.error {
+      background: rgba(220, 53, 69, 0.95);
+    }
 
     /* Switcher */
     .page-switcher { display: flex; background: #f8f9fa; border-radius: 8px; padding: 4px; gap: 4px; align-items: center; border: 1px solid #dee2e6; width: 200px; box-sizing: border-box; flex-shrink: 0; }
@@ -100,7 +124,6 @@
         <button id="save-btn" class="btn">Save</button>
         <button id="format-btn" class="btn">Format</button>
 
-        <div class="status" id="status-text">Ready</div>
       </div>
       <div id="editor-pane">
         <div class="floating-tools">
@@ -114,6 +137,7 @@
           </button>
           <input type="file" id="upload-btn" accept=".json,.yaml,.yml" style="display:none">
         </div>
+        <div class="status-toast" id="status-text">Ready</div>
       </div>
     </div>
 
@@ -175,13 +199,22 @@
     let editor;
     let swaggerUi;
     let isCollapsed = false;
+    let currentOriginalText = "";
     
     let defaultFiles = [];
 
+    let statusTimeout;
     function showStatus(text, isError = false) {
       const el = document.getElementById('status-text');
       el.textContent = text;
-      el.style.color = isError ? 'red' : '#666';
+      if (isError) el.classList.add('error');
+      else el.classList.remove('error');
+      
+      el.classList.add('show');
+      clearTimeout(statusTimeout);
+      statusTimeout = setTimeout(() => {
+        el.classList.remove('show');
+      }, 3000);
     }
 
     async function getSavedConfigs() {
@@ -243,6 +276,22 @@
           } catch(e) {
             showStatus("Storage quota exceeded!", true);
           }
+
+          const val = document.getElementById('file-select').value;
+          if (val && val.startsWith('default:')) {
+            const normalize = s => (s||'').replace(/\r\n/g, '\n').trim();
+            const saveNameInput = document.getElementById('save-name');
+            if (normalize(editor.getValue()) !== normalize(currentOriginalText)) {
+              if (saveNameInput.value && !saveNameInput.value.endsWith('-copy')) {
+                saveNameInput.value = saveNameInput.value + '-copy';
+              }
+            } else {
+              if (saveNameInput.value && saveNameInput.value.endsWith('-copy')) {
+                saveNameInput.value = saveNameInput.value.replace('-copy', '');
+              }
+            }
+          }
+
           renderSwagger();
         }, 800);
       });
@@ -266,8 +315,9 @@
               const res = await fetch(file.path);
               if(!res.ok) throw new Error("Network response was not ok");
               const text = await res.text();
+              currentOriginalText = text;
               setEditorContent(text, file.name);
-              document.getElementById('save-name').value = file.name + '-copy';
+              document.getElementById('save-name').value = file.name;
               showStatus(`Loaded ${file.name}`);
             } catch(e) {
               showStatus(`Failed to load ${file.name}`, true);
@@ -277,6 +327,7 @@
           const name = val.substring(6);
           const savedConfigs = await getSavedConfigs();
           if (savedConfigs[name]) {
+            currentOriginalText = savedConfigs[name];
             setEditorContent(savedConfigs[name], name);
             document.getElementById('save-name').value = name;
             showStatus(`Loaded saved config: ${name}`);
@@ -293,6 +344,7 @@
         if (!file) return;
         const reader = new FileReader();
         reader.onload = (event) => {
+          currentOriginalText = event.target.result;
           setEditorContent(event.target.result, file.name);
           document.getElementById('save-name').value = file.name;
           showStatus(`Loaded local file: ${file.name}`);
@@ -379,6 +431,28 @@
       const lastSelected = localStorage.getItem('openapi-last-selected');
       if (lastSelected) {
         select.value = lastSelected;
+      } else {
+        select.value = "default:0";
+      }
+
+      // Pre-fetch original text and set save-name to handle active workspace correctly
+      if (select.value.startsWith('default:')) {
+        const index = parseInt(select.value.split(':')[1]);
+        const file = defaultFiles[index];
+        if (file) {
+          document.getElementById('save-name').value = file.name;
+          try {
+            const res = await fetch(file.path);
+            if (res.ok) currentOriginalText = await res.text();
+          } catch(e) {}
+        }
+      } else if (select.value.startsWith('saved:')) {
+        const name = select.value.substring(6);
+        document.getElementById('save-name').value = name;
+        const savedConfigs = await getSavedConfigs();
+        if (savedConfigs[name]) {
+          currentOriginalText = savedConfigs[name];
+        }
       }
 
       const saved = await dbGet('openapi-edit-content');
@@ -386,7 +460,6 @@
         setEditorContent(saved, saved.trim().startsWith('{') ? 'data.json' : 'data.yaml');
         showStatus("Loaded from active workspace");
       } else {
-        if (!lastSelected) select.value = "default:0";
         select.onchange({target: select});
       }
     }
