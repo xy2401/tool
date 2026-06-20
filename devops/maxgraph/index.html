@@ -1,0 +1,272 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>maxGraph + Vue 3 现代绘图编辑器</title>
+    <!-- 引入现代字体 -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+    
+    <!-- 配置 Import Map 引入现代 ES Modules -->
+    <script type="importmap">
+        {
+            "imports": {
+                "vue": "https://unpkg.com/vue@3/dist/vue.esm-browser.js",
+                "@maxgraph/core": "https://esm.sh/@maxgraph/core@0.4.0?bundle"
+            }
+        }
+    </script>
+    
+    <style>
+        :root {
+            /* 现代暗色主题色板 (Tailwind 风格) */
+            --bg-color: #0f172a; 
+            --panel-bg: #1e293b; 
+            --text-color: #f8fafc; 
+            --accent-color: #3b82f6; 
+            --accent-hover: #2563eb; 
+            --border-color: #334155; 
+        }
+        * { box-sizing: border-box; }
+        body, html {
+            margin: 0; padding: 0; width: 100%; height: 100%;
+            font-family: 'Inter', system-ui, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            overflow: hidden;
+        }
+        #app {
+            display: flex; flex-direction: column; height: 100vh;
+        }
+        header {
+            background-color: var(--panel-bg);
+            padding: 12px 24px;
+            display: flex; justify-content: space-between; align-items: center;
+            border-bottom: 1px solid var(--border-color);
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+            z-index: 10;
+        }
+        h1 { 
+            margin: 0; font-size: 1.1rem; font-weight: 600; 
+            display: flex; align-items: center; gap: 8px;
+            color: #e2e8f0;
+        }
+        .glass-btn {
+            background: rgba(59, 130, 246, 0.1);
+            border: 1px solid rgba(59, 130, 246, 0.2);
+            color: var(--accent-color);
+            padding: 8px 16px;
+            border-radius: 6px;
+            font-weight: 500;
+            font-size: 0.9rem;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+        .glass-btn:hover {
+            background: var(--accent-color);
+            color: white;
+        }
+        .main-content {
+            display: flex; flex: 1; overflow: hidden;
+        }
+        .sidebar {
+            width: 260px;
+            background-color: var(--panel-bg);
+            border-right: 1px solid var(--border-color);
+            padding: 20px;
+            display: flex; flex-direction: column; gap: 12px;
+            z-index: 5;
+            box-shadow: 4px 0 6px -1px rgba(0, 0, 0, 0.05);
+        }
+        .sidebar h3 {
+            margin: 0 0 10px 0; font-size: 0.8rem; text-transform: uppercase; 
+            color: #94a3b8; letter-spacing: 0.05em;
+        }
+        .shape-btn {
+            background: var(--bg-color);
+            border: 1px solid var(--border-color);
+            color: var(--text-color);
+            padding: 12px;
+            border-radius: 8px;
+            cursor: pointer;
+            display: flex; align-items: center; gap: 12px;
+            transition: all 0.2s;
+            font-size: 0.9rem;
+        }
+        .shape-btn:hover {
+            border-color: var(--accent-color);
+            transform: translateY(-1px);
+        }
+        .shape-icon {
+            width: 24px; height: 24px;
+            border: 2px solid var(--text-color);
+            opacity: 0.8;
+        }
+        .icon-rect { border-radius: 4px; }
+        .icon-circle { border-radius: 50%; }
+        
+        .canvas-container {
+            flex: 1;
+            position: relative;
+            background-color: #0f172a; 
+            background-image: 
+                linear-gradient(rgba(255,255,255,0.03) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(255,255,255,0.03) 1px, transparent 1px);
+            background-size: 20px 20px;
+            background-position: center center;
+        }
+        #graph-container {
+            width: 100%; height: 100%;
+            cursor: crosshair;
+        }
+        /* 覆盖 maxGraph 默认的滚动条设置 */
+        svg { overflow: visible !important; }
+    </style>
+</head>
+<body>
+    <div id="app">
+        <header>
+            <h1>
+                <!-- 简单的 Logo 图标 -->
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#3b82f6" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"></path><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path></svg>
+                maxGraph + Vue 3 现代架构
+            </h1>
+            <div style="display:flex; gap:12px;">
+                <button class="glass-btn" @click="clearGraph">清空画布</button>
+                <button class="glass-btn" style="background:var(--accent-color); color:white; border-color:var(--accent-hover);" @click="exportData">
+                    获取图表状态
+                </button>
+            </div>
+        </header>
+        <div class="main-content">
+            <aside class="sidebar">
+                <h3>形状面板</h3>
+                <button class="shape-btn" @click="addNode('rectangle')">
+                    <div class="shape-icon icon-rect"></div>
+                    添加业务节点
+                </button>
+                <button class="shape-btn" @click="addNode('ellipse')">
+                    <div class="shape-icon icon-circle"></div>
+                    添加状态节点
+                </button>
+                
+                <div style="margin-top: auto; padding-top: 20px; border-top: 1px solid var(--border-color); color: #64748b; font-size: 0.8rem; line-height: 1.5;">
+                    💡 提示：<br/>
+                    支持拖拽节点<br/>
+                    支持鼠标悬浮连线<br/>
+                    支持框选 (Rubberband)
+                </div>
+            </aside>
+            <main class="canvas-container">
+                <div id="graph-container"></div>
+            </main>
+        </div>
+    </div>
+
+    <!-- 纯前端 ESM 入口 -->
+    <script type="module">
+        import { createApp, onMounted } from 'vue';
+        import { Graph, RubberBandHandler } from '@maxgraph/core';
+
+        createApp({
+            setup() {
+                let graph = null;
+
+                const initGraph = () => {
+                    const container = document.getElementById('graph-container');
+                    
+                    // 1. 实例化现代 maxGraph
+                    graph = new Graph(container);
+                    
+                    // 2. 启用橡皮筋框选
+                    new RubberBandHandler(graph);
+                    
+                    // 3. 基础交互配置
+                    graph.setConnectable(true);
+                    graph.setAllowDanglingEdges(false);
+                    graph.setMultigraph(false);
+                    
+                    // 4. 配置现代暗黑风格默认样式
+                    const vertexStyle = graph.getStylesheet().getDefaultVertexStyle();
+                    vertexStyle.fillColor = '#3b82f6'; // 蓝色
+                    vertexStyle.fontColor = '#ffffff';
+                    vertexStyle.strokeColor = '#2563eb';
+                    vertexStyle.rounded = true;
+                    vertexStyle.shadow = true;
+
+                    const edgeStyle = graph.getStylesheet().getDefaultEdgeStyle();
+                    edgeStyle.strokeColor = '#94a3b8';
+                    edgeStyle.fontColor = '#ffffff';
+
+                    // 5. 初始化示例节点
+                    const parent = graph.getDefaultParent();
+                    graph.getDataModel().beginUpdate();
+                    try {
+                        const v1 = graph.insertVertex({
+                            parent, value: 'Vue 3', position: [150, 100], size: [100, 40]
+                        });
+                        const v2 = graph.insertVertex({
+                            parent, value: 'maxGraph', position: [400, 100], size: [100, 40]
+                        });
+                        graph.insertEdge({
+                            parent, value: '原生驱动', source: v1, target: v2
+                        });
+                    } finally {
+                        graph.getDataModel().endUpdate();
+                    }
+                };
+
+                const addNode = (type) => {
+                    if (!graph) return;
+                    const parent = graph.getDefaultParent();
+                    graph.getDataModel().beginUpdate();
+                    try {
+                        // 随机生成位置，提升体验
+                        const x = 200 + Math.random() * 150;
+                        const y = 150 + Math.random() * 150;
+                        
+                        let styleObj = {};
+                        if(type === 'ellipse') {
+                            styleObj.shape = 'ellipse';
+                            styleObj.fillColor = '#10b981'; // 绿色
+                            styleObj.strokeColor = '#059669';
+                        }
+                        
+                        graph.insertVertex({
+                            parent, 
+                            value: type === 'ellipse' ? '新状态' : '新业务', 
+                            position: [x, y], 
+                            size: type === 'ellipse' ? [60, 60] : [120, 40],
+                            style: styleObj
+                        });
+                    } finally {
+                        graph.getDataModel().endUpdate();
+                    }
+                };
+
+                const clearGraph = () => {
+                    if (!graph) return;
+                    graph.getDataModel().clear();
+                };
+
+                const exportData = () => {
+                    if (!graph) return;
+                    const cellCount = Object.keys(graph.getDataModel().cells).length - 2; // 减去根节点和默认层
+                    alert(`当前画布状态：\n共包含 ${cellCount} 个元素（节点/连线）。\n\n您可以在此挂载您的持久化逻辑。`);
+                };
+
+                // 在 DOM 挂载后初始化图表
+                onMounted(() => {
+                    initGraph();
+                });
+
+                return {
+                    addNode,
+                    clearGraph,
+                    exportData
+                }
+            }
+        }).mount('#app');
+    </script>
+</body>
+</html>

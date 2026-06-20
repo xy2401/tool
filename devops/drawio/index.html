@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Native Draw.io (mxGraph) Canvas</title>
+    <!-- 引入 mxGraph (Draw.io 的底层引擎) CDN -->
+    <script type="text/javascript">
+        mxBasePath = 'https://cdn.jsdelivr.net/npm/mxgraph@4.2.2/javascript/src';
+    </script>
+    <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/mxgraph@4.2.2/javascript/mxClient.min.js"></script>
+    <style>
+        body, html {
+            margin: 0; 
+            padding: 0; 
+            height: 100%; 
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            display: flex; 
+            flex-direction: column;
+        }
+        #toolbar {
+            background-color: #ffffff;
+            padding: 12px 24px;
+            border-bottom: 1px solid #e1e4e8;
+            box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+        #toolbar h2 {
+            margin: 0;
+            font-size: 18px;
+            color: #333;
+            margin-right: 20px;
+        }
+        button {
+            padding: 8px 16px;
+            cursor: pointer;
+            background-color: #0052cc;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            font-size: 14px;
+            transition: background-color 0.2s;
+        }
+        button:hover {
+            background-color: #0043a6;
+        }
+        #graphContainer {
+            flex: 1;
+            /* 绘制类似 draw.io 的网格背景 */
+            background: url('https://cdn.jsdelivr.net/npm/mxgraph@4.2.2/javascript/src/images/grid.gif');
+            cursor: crosshair;
+            position: relative;
+            overflow: hidden;
+            touch-action: none;
+        }
+    </style>
+</head>
+<body onload="initGraph(document.getElementById('graphContainer'))">
+
+    <div id="toolbar">
+        <h2>原生绘图引擎</h2>
+        <button onclick="addRectangle()">添加矩形</button>
+        <button onclick="addCircle()">添加圆形</button>
+        <button onclick="exportXML()">导出 XML</button>
+    </div>
+    
+    <!-- 原生绘制容器，不使用 iframe -->
+    <div id="graphContainer"></div>
+
+    <script type="text/javascript">
+        let graph;
+
+        function initGraph(container) {
+            // 检查浏览器支持
+            if (!mxClient.isBrowserSupported()) {
+                mxUtils.error('浏览器不支持！', 200, false);
+                return;
+            }
+
+            // 禁用右键默认菜单
+            mxEvent.disableContextMenu(container);
+
+            // 在指定的容器内创建图表
+            graph = new mxGraph(container);
+
+            // 开启框选功能 (橡皮筋)
+            new mxRubberband(graph);
+
+            // 允许连线、移动、改变大小等原生 draw.io 特性
+            graph.setConnectable(true);
+            graph.setMultigraph(false);
+            graph.setAllowDanglingEdges(false);
+
+            // 获取默认父节点
+            var parent = graph.getDefaultParent();
+
+            // 批量更新画布 (性能优化)
+            graph.getModel().beginUpdate();
+            try {
+                // 默认初始化几个示例节点
+                var v1 = graph.insertVertex(parent, null, '开始', 50, 50, 80, 30);
+                var v2 = graph.insertVertex(parent, null, '处理', 250, 50, 80, 30);
+                var e1 = graph.insertEdge(parent, null, '流程', v1, v2);
+            } finally {
+                // 结束更新并渲染
+                graph.getModel().endUpdate();
+            }
+        }
+
+        // 外部 UI 交互：添加矩形
+        function addRectangle() {
+            var parent = graph.getDefaultParent();
+            graph.getModel().beginUpdate();
+            try {
+                // 随机生成一些坐标避免重叠
+                var x = 100 + Math.random() * 100;
+                var y = 100 + Math.random() * 100;
+                graph.insertVertex(parent, null, '新矩形', x, y, 100, 50);
+            } finally {
+                graph.getModel().endUpdate();
+            }
+        }
+
+        // 外部 UI 交互：添加圆形
+        function addCircle() {
+            var parent = graph.getDefaultParent();
+            graph.getModel().beginUpdate();
+            try {
+                var x = 150 + Math.random() * 100;
+                var y = 150 + Math.random() * 100;
+                // 'shape=ellipse' 定义了形状属性
+                graph.insertVertex(parent, null, '新圆形', x, y, 80, 80, 'shape=ellipse');
+            } finally {
+                graph.getModel().endUpdate();
+            }
+        }
+
+        // 外部 UI 交互：导出 XML 数据
+        function exportXML() {
+            var encoder = new mxCodec();
+            var node = encoder.encode(graph.getModel());
+            var xmlText = mxUtils.getXml(node);
+            console.log(xmlText);
+            alert("图表 XML 已成功导出，请查看控制台 (F12) 获取数据。");
+        }
+    </script>
+</body>
+</html>
