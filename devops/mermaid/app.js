@@ -318,25 +318,30 @@ createApp({
 
         const generatePngCanvas = () => {
             return new Promise((resolve) => {
-                const svgElement = document.querySelector('#mermaid-output svg');
-                if (!svgElement) return resolve(null);
-
-                const viewBox = svgElement.getAttribute('viewBox');
-                let width = svgElement.getAttribute('width');
-                let height = svgElement.getAttribute('height');
+                if (!currentSvgCode) return resolve(null);
                 
-                if (viewBox && (!width || width === '100%')) {
-                    const parts = viewBox.split(' ');
-                    width = parts[2];
-                    height = parts[3];
+                const tempDiv = document.createElement('div');
+                tempDiv.innerHTML = currentSvgCode;
+                const cloneSvg = tempDiv.querySelector('svg');
+                if (!cloneSvg) return resolve(null);
+
+                const viewBox = cloneSvg.getAttribute('viewBox');
+                let width = cloneSvg.getAttribute('width');
+                let height = cloneSvg.getAttribute('height');
+                
+                if (viewBox) {
+                    const parts = viewBox.split(/\s+|,/);
+                    width = parseFloat(parts[2]);
+                    height = parseFloat(parts[3]);
                 } else {
-                    width = parseInt(width || 800, 10);
-                    height = parseInt(height || 600, 10);
+                    width = parseFloat(width || 800);
+                    height = parseFloat(height || 600);
                 }
 
-                const cloneSvg = svgElement.cloneNode(true);
                 cloneSvg.setAttribute('width', width);
                 cloneSvg.setAttribute('height', height);
+                // Ensure background is applied
+                cloneSvg.style.backgroundColor = isDarkTheme.value ? '#1e293b' : '#ffffff';
 
                 const svgData = new XMLSerializer().serializeToString(cloneSvg);
                 const canvas = document.createElement('canvas');
