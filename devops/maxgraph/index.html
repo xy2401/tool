@@ -439,9 +439,10 @@
                             }
                         });
                         officialStoriesGrouped.value = grouped;
-                        // Default expand first category
-                        const firstCat = Object.keys(grouped)[0];
-                        if (firstCat) expandedCategories.value[firstCat] = true;
+                        // Default expand all categories
+                        Object.keys(grouped).forEach(cat => {
+                            expandedCategories.value[cat] = true;
+                        });
                     } catch (e) {
                         console.error('Failed to load stories.json', e);
                     }
