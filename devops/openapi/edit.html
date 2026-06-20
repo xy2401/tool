@@ -136,6 +136,42 @@
   </div>
 
   <script>
+    // --- IndexedDB Storage Wrapper ---
+    const DB_NAME = 'OpenAPIDB';
+    const STORE_NAME = 'store';
+
+    function initDB() {
+      return new Promise((resolve, reject) => {
+        const request = indexedDB.open(DB_NAME, 1);
+        request.onerror = () => reject(request.error);
+        request.onsuccess = () => resolve(request.result);
+        request.onupgradeneeded = (e) => {
+          e.target.result.createObjectStore(STORE_NAME);
+        };
+      });
+    }
+
+    async function dbGet(key) {
+      const db = await initDB();
+      return new Promise((resolve, reject) => {
+        const tx = db.transaction(STORE_NAME, 'readonly');
+        const request = tx.objectStore(STORE_NAME).get(key);
+        request.onsuccess = () => resolve(request.result);
+        request.onerror = () => reject(request.error);
+      });
+    }
+
+    async function dbSet(key, value) {
+      const db = await initDB();
+      return new Promise((resolve, reject) => {
+        const tx = db.transaction(STORE_NAME, 'readwrite');
+        const request = tx.objectStore(STORE_NAME).put(value, key);
+        request.onsuccess = () => resolve();
+        request.onerror = () => reject(request.error);
+      });
+    }
+
+    // --- State & UI Logic ---
     let editor;
     let swaggerUi;
     let isCollapsed = false;
@@ -151,15 +187,16 @@
       el.style.color = isError ? 'red' : '#666';
     }
 
-    function getSavedConfigs() {
+    async function getSavedConfigs() {
       try {
-        return JSON.parse(localStorage.getItem('openapi-custom-configs') || '{}');
+        const data = await dbGet('openapi-custom-configs');
+        return data ? JSON.parse(data) : {};
       } catch(e) {
         return {};
       }
     }
 
-    function refreshDropdown() {
+    async function refreshDropdown() {
       const groupDefaults = document.getElementById('optgroup-defaults');
       const groupSaved = document.getElementById('optgroup-saved');
       
@@ -173,7 +210,7 @@
         groupDefaults.appendChild(opt);
       });
 
-      const savedConfigs = getSavedConfigs();
+      const savedConfigs = await getSavedConfigs();
       for (const name in savedConfigs) {
         const opt = document.createElement('option');
         opt.value = `saved:${name}`;
@@ -195,9 +232,9 @@
       let timeout;
       editor.on('change', () => {
         clearTimeout(timeout);
-        timeout = setTimeout(() => {
+        timeout = setTimeout(async () => {
           try {
-            localStorage.setItem('openapi-edit-content', editor.getValue());
+            await dbSet('openapi-edit-content', editor.getValue());
           } catch(e) {
             showStatus("Storage quota exceeded!", true);
           }
@@ -206,7 +243,7 @@
       });
 
       // 3. Populate Select Options
-      refreshDropdown();
+      await refreshDropdown();
       
       const select = document.getElementById('file-select');
       select.onchange = async (e) => {
@@ -233,7 +270,7 @@
           }
         } else if (val.startsWith('saved:')) {
           const name = val.substring(6);
-          const savedConfigs = getSavedConfigs();
+          const savedConfigs = await getSavedConfigs();
           if (savedConfigs[name]) {
             setEditorContent(savedConfigs[name], name);
             document.getElementById('save-name').value = name;
@@ -287,18 +324,18 @@
       };
 
       // 5. Save Config Handler
-      document.getElementById('save-btn').onclick = () => {
+      document.getElementById('save-btn').onclick = async () => {
         let name = document.getElementById('save-name').value.trim();
         if (!name) {
           showStatus("Please enter a config name", true);
           return;
         }
         const content = editor.getValue();
-        const savedConfigs = getSavedConfigs();
+        const savedConfigs = await getSavedConfigs();
         savedConfigs[name] = content;
         try {
-          localStorage.setItem('openapi-custom-configs', JSON.stringify(savedConfigs));
-          refreshDropdown();
+          await dbSet('openapi-custom-configs', JSON.stringify(savedConfigs));
+          await refreshDropdown();
           showStatus(`Config '${name}' saved!`);
         } catch(e) {
           showStatus("Save failed: Storage Quota Exceeded!", true);
@@ -339,7 +376,7 @@
         select.value = lastSelected;
       }
 
-      const saved = localStorage.getItem('openapi-edit-content');
+      const saved = await dbGet('openapi-edit-content');
       if (saved) {
         setEditorContent(saved, saved.trim().startsWith('{') ? 'data.json' : 'data.yaml');
         showStatus("Loaded from active workspace");

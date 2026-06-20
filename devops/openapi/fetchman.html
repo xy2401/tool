@@ -167,15 +167,53 @@
   </div>
 
   <script>
+    // --- IndexedDB Storage Wrapper ---
+    const DB_NAME = 'OpenAPIDB';
+    const STORE_NAME = 'store';
+
+    function initDB() {
+      return new Promise((resolve, reject) => {
+        const request = indexedDB.open(DB_NAME, 1);
+        request.onerror = () => reject(request.error);
+        request.onsuccess = () => resolve(request.result);
+        request.onupgradeneeded = (e) => {
+          e.target.result.createObjectStore(STORE_NAME);
+        };
+      });
+    }
+
+    async function dbGet(key) {
+      const db = await initDB();
+      return new Promise((resolve, reject) => {
+        const tx = db.transaction(STORE_NAME, 'readonly');
+        const request = tx.objectStore(STORE_NAME).get(key);
+        request.onsuccess = () => resolve(request.result);
+        request.onerror = () => reject(request.error);
+      });
+    }
+
+    async function dbSet(key, value) {
+      const db = await initDB();
+      return new Promise((resolve, reject) => {
+        const tx = db.transaction(STORE_NAME, 'readwrite');
+        const request = tx.objectStore(STORE_NAME).put(value, key);
+        request.onsuccess = () => resolve();
+        request.onerror = () => reject(request.error);
+      });
+    }
+
+    // --- State ---
     let currentSpec = null;
     let endpoints = [];
     let activeEndpoint = null;
     let reqBodyEditor = null;
     let resBodyEditor = null;
+    let proxyMode = 'none';
 
     const defaultFiles = [
-      { name: 'swagger.json', path: './data/swagger.json' },
-      { name: 'api.github.com.yaml', path: './data/api.github.com.yaml' }
+      { name: "Petstore", path: "./data/petstore.yaml" },
+      { name: "Swagger.io", path: "./data/swagger.yaml" },
+      { name: "Github", path: "./data/github.yaml" }
     ];
 
     let appSettings = {
@@ -243,12 +281,13 @@
           content = await res.text();
         } else if (val.startsWith('saved:')) {
           const name = val.substring(6);
-          const saved = JSON.parse(localStorage.getItem('openapi-custom-configs') || '{}');
+          const savedData = await dbGet('openapi-custom-configs');
+          const saved = savedData ? JSON.parse(savedData) : {};
           content = saved[name] || '';
         }
 
         try {
-          localStorage.setItem('openapi-edit-content', content); // Sync to active workspace
+          await dbSet('openapi-edit-content', content); // Sync to active workspace
         } catch(e) {
           console.warn('Storage quota exceeded. Cannot sync to edit workspace.');
         }
@@ -289,7 +328,7 @@
         select.value = lastSelected;
       }
 
-      const activeContent = localStorage.getItem('openapi-edit-content');
+      const activeContent = await dbGet('openapi-edit-content');
       if (activeContent) {
         try {
           currentSpec = activeContent.trim().startsWith('{') ? JSON.parse(activeContent) : jsyaml.load(activeContent);
@@ -338,7 +377,7 @@
       main.innerHTML = html;
     }
 
-    function populateSpecSelect() {
+    async function populateSpecSelect() {
       const gDefs = document.getElementById('optgroup-defaults');
       const gSaved = document.getElementById('optgroup-saved');
       gDefs.innerHTML = ''; gSaved.innerHTML = '';
@@ -346,7 +385,8 @@
       defaultFiles.forEach((f, i) => {
         const o = document.createElement('option'); o.value = `default:${i}`; o.text = f.name; gDefs.appendChild(o);
       });
-      const saved = JSON.parse(localStorage.getItem('openapi-custom-configs') || '{}');
+      const savedData = await dbGet('openapi-custom-configs');
+      const saved = savedData ? JSON.parse(savedData) : {};
       for (const name in saved) {
         const o = document.createElement('option'); o.value = `saved:${name}`; o.text = name; gSaved.appendChild(o);
       }
