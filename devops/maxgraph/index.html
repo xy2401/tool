@@ -80,43 +80,35 @@
 
         .main-content { display: flex; flex: 1; overflow: hidden; }
         
-        /* 左侧形状库面板 */
+        /* 左侧形状库面板新网格布局 (Draw.io 风格) */
         .sidebar-left {
             width: 260px;
             background-color: var(--panel-bg);
             border-right: 1px solid var(--border-color);
-            padding: 16px;
-            display: flex; flex-direction: column; gap: 12px;
+            display: flex; flex-direction: column;
             z-index: 5;
             user-select: none;
-            overflow-y: auto;
         }
-        .panel-title {
-            margin: 0 0 10px 0; font-size: 0.75rem; text-transform: uppercase; 
-            color: #94a3b8; letter-spacing: 0.05em; font-weight: 600;
+        .palette-category { margin-bottom: 2px; }
+        .palette-header {
+            padding: 8px 12px; cursor: pointer; background: rgba(0,0,0,0.15);
+            font-size: 0.75rem; font-weight: 600; color: #cbd5e1; display: flex; align-items: center; gap: 6px;
+            border-bottom: 1px solid rgba(255,255,255,0.05);
+            text-transform: uppercase; letter-spacing: 0.05em;
         }
-        .palette-item {
-            background: var(--bg-color);
-            border: 1px dashed var(--border-color);
-            color: var(--text-color);
-            padding: 10px;
-            border-radius: 6px;
-            cursor: grab;
-            display: flex; align-items: center; gap: 10px;
-            font-size: 0.85rem;
-            transition: border-color 0.2s;
+        .palette-header:hover { background: rgba(255,255,255,0.05); }
+        .palette-grid {
+            display: grid; grid-template-columns: repeat(5, 1fr); gap: 4px; padding: 12px;
+            background: var(--panel-bg);
         }
-        .palette-item:hover { border-color: var(--accent-color); }
-        .palette-item:active { cursor: grabbing; }
-        .shape-icon { width: 24px; height: 24px; border: 2px solid var(--text-color); opacity: 0.7; }
-        .icon-rect { border-radius: 3px; }
-        .icon-rounded { border-radius: 8px; }
-        .icon-circle { border-radius: 50%; }
-        .icon-rhombus { transform: rotate(45deg) scale(0.7); }
-        .icon-hexagon { clip-path: polygon(25% 0%, 75% 0%, 100% 50%, 75% 100%, 25% 100%, 0% 50%); border: none; background: var(--text-color); opacity: 0.4;}
-        .icon-cloud { border-radius: 12px; height: 16px; margin-top: 4px; }
-        .icon-cylinder { border-radius: 50% / 10%; border-top: 2px solid var(--text-color); border-bottom: 2px solid var(--text-color); }
-        .icon-actor { border-radius: 50%; width: 12px; height: 12px; margin: 0 auto; border-bottom-width: 10px; border-bottom-style: solid; border-radius: 50% 50% 0 0; }
+        .palette-grid-item {
+            aspect-ratio: 1; background: var(--bg-color); border: 1px solid var(--border-color);
+            border-radius: 4px; cursor: grab; display: flex; justify-content: center; align-items: center;
+            color: #94a3b8; transition: all 0.2s;
+        }
+        .palette-grid-item:hover { border-color: var(--accent-color); color: #e2e8f0; background: rgba(59, 130, 246, 0.1); }
+        .palette-grid-item:active { cursor: grabbing; }
+        .palette-grid-item svg { width: 24px; height: 24px; }
         
         /* 中间核心画布 */
         .canvas-wrapper {
@@ -212,7 +204,7 @@
         .sidebar-tab.active, .center-tab.active {
             background: rgba(59, 130, 246, 0.2); color: #60a5fa; border: 1px solid rgba(59, 130, 246, 0.3);
         }
-        .sidebar-content { flex: 1; padding: 16px; overflow-y: auto; display: flex; flex-direction: column; gap: 12px; }
+        .sidebar-content { flex: 1; padding: 0; overflow-y: auto; display: flex; flex-direction: column; }
         
         .main-center { flex: 1; display: flex; flex-direction: column; min-width: 0; background-color: #0f172a; }
         .demo-wrapper {
@@ -278,34 +270,20 @@
                     <div class="sidebar-tab" :class="{active: leftTab === 'demos'}" @click="leftTab = 'demos'">📚 官方 Demo</div>
                 </div>
                 
-                <!-- 拖拽控件库 -->
+                <!-- 新版分类网格控件库 -->
                 <div v-show="leftTab === 'palette'" class="sidebar-content">
-                    <h3 class="panel-title">基础图形 (拖拽)</h3>
-                    <div class="palette-item" ref="dragRect" data-shape="rectangle">
-                        <div class="shape-icon icon-rect"></div> 矩形
-                    </div>
-                    <div class="palette-item" ref="dragRounded" data-shape="rectangle">
-                        <div class="shape-icon icon-rounded"></div> 圆角矩形
-                    </div>
-                    <div class="palette-item" ref="dragCircle" data-shape="ellipse">
-                        <div class="shape-icon icon-circle"></div> 圆形 / 状态
-                    </div>
-                    <div class="palette-item" ref="dragRhombus" data-shape="rhombus">
-                        <div class="shape-icon icon-rhombus"></div> 菱形 / 判断
-                    </div>
-                    <div class="palette-item" ref="dragHexagon" data-shape="hexagon">
-                        <div class="shape-icon icon-hexagon"></div> 六边形
-                    </div>
-                    
-                    <h3 class="panel-title" style="margin-top: 15px;">高级图形</h3>
-                    <div class="palette-item" ref="dragCylinder" data-shape="cylinder">
-                        <div class="shape-icon icon-cylinder"></div> 数据库 (Cylinder)
-                    </div>
-                    <div class="palette-item" ref="dragCloud" data-shape="cloud">
-                        <div class="shape-icon icon-cloud"></div> 云网络 (Cloud)
-                    </div>
-                    <div class="palette-item" ref="dragActor" data-shape="actor">
-                        <div class="shape-icon icon-actor"></div> 角色 (Actor)
+                    <div class="palette-category" v-for="cat in paletteCategories" :key="cat.id">
+                        <div class="palette-header" @click="cat.expanded = !cat.expanded">
+                            <span>{{ cat.expanded ? '▼' : '▶' }}</span> {{ cat.title }}
+                        </div>
+                        <div class="palette-grid" v-show="cat.expanded">
+                            <div v-for="item in cat.items" :key="item.name" 
+                                 class="palette-grid-item" 
+                                 :title="item.name" 
+                                 :ref="el => registerDraggable(el, item)">
+                                <svg viewBox="0 0 32 32" v-html="item.icon"></svg>
+                            </div>
+                        </div>
                     </div>
                 </div>
 
@@ -579,15 +557,86 @@
                 const modalMode = ref('export');
                 const xmlContent = ref('');
 
-                // 模板 refs
-                const dragRect = ref(null);
-                const dragRounded = ref(null);
-                const dragCircle = ref(null);
-                const dragRhombus = ref(null);
-                const dragHexagon = ref(null);
-                const dragCylinder = ref(null);
-                const dragCloud = ref(null);
-                const dragActor = ref(null);
+                const paletteCategories = ref([
+                    {
+                        id: 'general',
+                        title: 'General (通用)',
+                        expanded: true,
+                        items: [
+                            { name: '矩形', shape: 'rectangle', width: 120, height: 60, fill: '#3b82f6', icon: '<rect x="4" y="8" width="24" height="16" rx="2" fill="none" stroke="currentColor" stroke-width="2"/>' },
+                            { name: '圆角矩形', shape: 'rectangle', width: 120, height: 60, fill: '#3b82f6', style: { rounded: 1 }, icon: '<rect x="4" y="8" width="24" height="16" rx="6" fill="none" stroke="currentColor" stroke-width="2"/>' },
+                            { name: '文本', shape: 'label', width: 60, height: 30, fill: 'none', style: { strokeColor: 'none', fontColor: '#ffffff', fontSize: 14 }, value: 'Text', icon: '<text x="16" y="21" font-size="12" font-weight="bold" fill="currentColor" text-anchor="middle">A</text>' },
+                            { name: '图片占位', shape: 'image', width: 80, height: 80, fill: 'none', style: { image: 'https://via.placeholder.com/150' }, icon: '<rect x="4" y="4" width="24" height="24" rx="2" fill="none" stroke="currentColor" stroke-width="2"/><path d="M4,22 L12,14 L20,22 L28,14" fill="none" stroke="currentColor" stroke-width="2"/><circle cx="10" cy="10" r="2" fill="currentColor"/>' }
+                        ]
+                    },
+                    {
+                        id: 'basic',
+                        title: 'Basic (基础)',
+                        expanded: true,
+                        items: [
+                            { name: '圆形/椭圆', shape: 'ellipse', width: 80, height: 80, fill: '#10b981', icon: '<circle cx="16" cy="16" r="10" fill="none" stroke="currentColor" stroke-width="2"/>' },
+                            { name: '双层椭圆', shape: 'doubleEllipse', width: 80, height: 80, fill: '#10b981', icon: '<circle cx="16" cy="16" r="10" fill="none" stroke="currentColor" stroke-width="2"/><circle cx="16" cy="16" r="7" fill="none" stroke="currentColor" stroke-width="2"/>' },
+                            { name: '菱形', shape: 'rhombus', width: 100, height: 100, fill: '#f59e0b', icon: '<polygon points="16,4 28,16 16,28 4,16" fill="none" stroke="currentColor" stroke-width="2"/>' },
+                            { name: '三角形', shape: 'triangle', width: 80, height: 80, fill: '#8b5cf6', icon: '<polygon points="16,6 26,24 6,24" fill="none" stroke="currentColor" stroke-width="2"/>' },
+                            { name: '六边形', shape: 'hexagon', width: 100, height: 80, fill: '#ec4899', icon: '<polygon points="8,6 24,6 30,16 24,26 8,26 2,16" fill="none" stroke="currentColor" stroke-width="2"/>' },
+                            { name: '圆柱体 (数据库)', shape: 'cylinder', width: 80, height: 100, fill: '#64748b', icon: '<path d="M6,10 C6,6 26,6 26,10 C26,14 6,14 6,10 M6,10 L6,22 C6,26 26,26 26,22 L26,10" fill="none" stroke="currentColor" stroke-width="2"/>' },
+                            { name: '云网络', shape: 'cloud', width: 120, height: 80, fill: '#0ea5e9', icon: '<path d="M10,20 Q6,20 6,16 Q6,12 10,12 Q10,8 16,8 Q22,8 22,12 Q26,12 26,16 Q26,20 22,20 Z" fill="none" stroke="currentColor" stroke-width="2"/>' },
+                            { name: '角色/小人', shape: 'actor', width: 60, height: 80, fill: '#ef4444', icon: '<circle cx="16" cy="10" r="4" fill="none" stroke="currentColor" stroke-width="2"/><path d="M16,14 L16,22 M10,18 L22,18 M16,22 L12,28 M16,22 L20,28" fill="none" stroke="currentColor" stroke-width="2"/>' }
+                        ]
+                    },
+                    {
+                        id: 'flowchart',
+                        title: 'Flowchart (流程图)',
+                        expanded: true,
+                        items: [
+                            { name: '处理 (Process)', shape: 'rectangle', width: 120, height: 60, fill: '#3b82f6', icon: '<rect x="4" y="8" width="24" height="16" fill="none" stroke="currentColor" stroke-width="2"/>' },
+                            { name: '判断 (Decision)', shape: 'rhombus', width: 100, height: 100, fill: '#f59e0b', icon: '<polygon points="16,4 28,16 16,28 4,16" fill="none" stroke="currentColor" stroke-width="2"/>' },
+                            { name: '终端 (Terminal)', shape: 'rectangle', width: 120, height: 60, fill: '#ef4444', style: { rounded: 1, arcSize: 50 }, icon: '<rect x="4" y="8" width="24" height="16" rx="8" fill="none" stroke="currentColor" stroke-width="2"/>' },
+                            { name: '数据 (Data)', shape: 'hexagon', width: 120, height: 60, fill: '#8b5cf6', icon: '<polygon points="8,8 28,8 24,24 4,24" fill="none" stroke="currentColor" stroke-width="2"/>' },
+                        ]
+                    },
+                    {
+                        id: 'arrows',
+                        title: 'Arrows (箭头)',
+                        expanded: false,
+                        items: [
+                            { name: '块状箭头', shape: 'arrow', width: 80, height: 50, fill: '#10b981', icon: '<polygon points="4,12 16,12 16,6 28,16 16,26 16,20 4,20" fill="none" stroke="currentColor" stroke-width="2"/>' },
+                            { name: '连接线箭头', shape: 'arrowConnector', width: 80, height: 10, fill: '#10b981', icon: '<path d="M4,16 L24,16 M20,10 L28,16 L20,22" fill="none" stroke="currentColor" stroke-width="2"/>' }
+                        ]
+                    },
+                    {
+                        id: 'containers',
+                        title: 'Containers (容器)',
+                        expanded: false,
+                        items: [
+                            { name: '泳道 (Swimlane)', shape: 'swimlane', width: 200, height: 200, fill: 'none', style: { fill: '#1e293b', startSize: 30 }, value: 'Swimlane', icon: '<rect x="4" y="4" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2"/><line x1="4" y1="12" x2="28" y2="12" stroke="currentColor" stroke-width="2"/>' }
+                        ]
+                    }
+                ]);
+
+                // Register drag functionality dynamically for grid items
+                const registerDraggable = (el, item) => {
+                    if (el && graph && !el._draggableRegistered) {
+                        el._draggableRegistered = true;
+                        const dropHandler = (targetGraph, evt, targetCell, x, y) => {
+                            const parent = targetGraph.getDefaultParent();
+                            targetGraph.getDataModel().beginUpdate();
+                            try {
+                                const styleObj = { shape: item.shape, fillColor: item.fill, strokeColor: 'none', ...item.style };
+                                targetGraph.insertVertex({
+                                    parent, 
+                                    value: item.value || item.name, 
+                                    position: [x, y], 
+                                    size: [item.width, item.height],
+                                    style: styleObj
+                                });
+                            } finally {
+                                targetGraph.getDataModel().endUpdate();
+                            }
+                        };
+                        gestureUtils.makeDraggable(el, graph, dropHandler);
+                    }
+                };
 
                 const initGraph = () => {
                     const container = document.getElementById('graph-container');
@@ -631,17 +680,7 @@
                     edgeStyle.edgeStyle = 'orthogonalEdgeStyle'; 
                     edgeStyle.rounded = true;
 
-                    // 注册拖拽包 (基础)
-                    setupDraggable(dragRect.value, 'rectangle', 120, 50, '#3b82f6');
-                    setupDraggable(dragRounded.value, 'rectangle', 120, 50, '#3b82f6', { rounded: 1 });
-                    setupDraggable(dragCircle.value, 'ellipse', 80, 80, '#10b981');
-                    setupDraggable(dragRhombus.value, 'rhombus', 100, 100, '#f59e0b');
-                    setupDraggable(dragHexagon.value, 'hexagon', 100, 80, '#8b5cf6');
-                    
-                    // 注册拖拽包 (高级)
-                    setupDraggable(dragCylinder.value, 'cylinder', 80, 100, '#64748b');
-                    setupDraggable(dragCloud.value, 'cloud', 140, 100, '#0ea5e9');
-                    setupDraggable(dragActor.value, 'actor', 60, 80, '#ec4899');
+                    // No static registrations needed anymore, Vue bindings handle it via registerDraggable
 
                     // 监听选中事件
                     graph.getSelectionModel().addListener(InternalEvent.CHANGE, () => {
@@ -656,25 +695,7 @@
                     });
                 };
 
-                const setupDraggable = (domElement, shapeName, width, height, fillColor, extraStyles = {}) => {
-                    const dropHandler = (targetGraph, evt, targetCell, x, y) => {
-                        const parent = targetGraph.getDefaultParent();
-                        targetGraph.getDataModel().beginUpdate();
-                        try {
-                            const styleObj = { shape: shapeName, fillColor, strokeColor: 'none', ...extraStyles };
-                            targetGraph.insertVertex({
-                                parent, 
-                                value: shapeName, 
-                                position: [x, y], 
-                                size: [width, height],
-                                style: styleObj
-                            });
-                        } finally {
-                            targetGraph.getDataModel().endUpdate();
-                        }
-                    };
-                    gestureUtils.makeDraggable(domElement, graph, dropHandler);
-                };
+                // Removed setupDraggable since we use registerDraggable inline
 
                 const updateLabel = () => {
                     if (graph && selectedCell.value) {
@@ -775,7 +796,7 @@
                 });
 
                 return {
-                    dragRect, dragRounded, dragCircle, dragRhombus, dragHexagon, dragCylinder, dragCloud, dragActor,
+                    paletteCategories, registerDraggable,
                     selectedCell, cellValue, updateLabel, selectedTemplate, loadTemplate,
                     leftTab, centerTab, expandedCategories, toggleCategory, hasRenderedDemo, demoSourcePath, viewSourceCode, copyDemoToWorkspace,
                     selectedOfficialStory, officialStoriesGrouped, selectOfficialStory,
