@@ -457,10 +457,13 @@
               <td>{{ dep.packageName }}</td>
               <td><code>{{ dep.currentVersion }}</code></td>
               <td><code>{{ dep.latestVersion }}</code></td>
-              <td :class="dep.status === 'none' || dep.status === 'error' ? '' : (dep.currentVersion === dep.latestVersion ? 'status-ok' : 'status-warn')">
+              <td :class="dep.status === 'ok' || dep.status === 'dynamic' ? 'status-ok' : (dep.status === 'warn' ? 'status-warn' : '')">
                 <span v-if="dep.status === 'none'">✅ 纯原生</span>
                 <span v-else-if="dep.status === 'error'">❌ 无法读取</span>
-                <span v-else>{{ dep.currentVersion === dep.latestVersion ? '✅ 最新' : '⚠️ 可更新' }}</span>
+                <span v-else-if="dep.status === 'dynamic'">✅ 动态跟踪</span>
+                <span v-else-if="dep.status === 'ok'">✅ 最新</span>
+                <span v-else-if="dep.status === 'warn'">⚠️ 可更新</span>
+                <span v-else>查询中...</span>
               </td>
             </tr>
           </tbody>
@@ -764,11 +767,23 @@
                  const data = await res.json();
                  if (data && data.tags && data.tags.latest) {
                     dep.latestVersion = data.tags.latest;
+                    const cv = dep.currentVersion.replace(/^[~^]/, '');
+                    const isMajorMatch = /^\d+$/.test(cv) && dep.latestVersion.startsWith(cv + '.');
+                    const isMinorMatch = /^\d+\.\d+$/.test(cv) && dep.latestVersion.startsWith(cv + '.');
+                    if (cv === dep.latestVersion) {
+                        dep.status = 'ok';
+                    } else if (isMajorMatch || isMinorMatch || cv === 'latest') {
+                        dep.status = 'dynamic';
+                    } else {
+                        dep.status = 'warn';
+                    }
                  } else {
                     dep.latestVersion = '未知';
+                    dep.status = 'error';
                  }
                } catch(e) {
                  dep.latestVersion = '请求失败';
+                 dep.status = 'error';
                }
             });
             
