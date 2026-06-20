@@ -64,9 +64,13 @@
 ### 1. 运行项目
 在项目根目录运行 HTTP 服务：
 ```bash
-npx http-server -p 3001 -c-1
+npx http-server -p 3011 -c-1
 ```
-随后在浏览器中打开：`http://localhost:3001/devops/maxgraph/index.html`
+或使用 Python：
+```bash
+python -m http.server 3011 --bind 127.0.0.1
+```
+随后在浏览器中打开：`http://127.0.0.1:3011/gpt/index.html`
 
 ### 2. 认识主界面
 界面分为三大区域：

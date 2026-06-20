@@ -1,0 +1,271 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <base href="../" />
+    <title>maxGraph Studio</title>
+    <link rel="icon" href="./favicon.svg" />
+    <link rel="stylesheet" href="./stories.js/stories-entry.css" />
+    <link rel="stylesheet" href="./gpt/app.css" />
+  </head>
+  <body>
+    <div id="app" class="app-shell">
+      <header class="topbar">
+        <div class="brand">
+          <img src="./favicon.svg" alt="" />
+          <div>
+            <strong>maxGraph Studio</strong>
+            <span>专业绘图工作台</span>
+          </div>
+        </div>
+
+        <nav class="toolbar" aria-label="主工具栏">
+          <button class="tool-button" type="button" data-action="new" title="新建">
+            <img src="./images/new.gif" alt="" />
+            <span>新建</span>
+          </button>
+          <button class="tool-button" type="button" data-action="open" title="导入 XML">
+            <img src="./images/open.gif" alt="" />
+            <span>导入</span>
+          </button>
+          <button class="tool-button" type="button" data-action="save" title="导出 XML">
+            <img src="./images/save.gif" alt="" />
+            <span>导出</span>
+          </button>
+
+          <span class="tool-divider" aria-hidden="true"></span>
+
+          <button class="icon-button" type="button" data-action="undo" title="撤销">
+            <img src="./images/undo.gif" alt="" />
+          </button>
+          <button class="icon-button" type="button" data-action="redo" title="重做">
+            <img src="./images/redo.gif" alt="" />
+          </button>
+          <button class="icon-button" type="button" data-action="copy" title="复制">
+            <img src="./images/copy.gif" alt="" />
+          </button>
+          <button class="icon-button" type="button" data-action="paste" title="粘贴">
+            <img src="./images/paste.gif" alt="" />
+          </button>
+          <button class="icon-button danger" type="button" data-action="delete" title="删除">
+            <img src="./images/delete.gif" alt="" />
+          </button>
+
+          <span class="tool-divider" aria-hidden="true"></span>
+
+          <button class="icon-button" type="button" data-action="zoom-out" title="缩小">
+            <img src="./images/zoom_out.png" alt="" />
+          </button>
+          <button class="icon-button" type="button" data-action="zoom-actual" title="1:1">
+            <img src="./images/view_1_1.png" alt="" />
+          </button>
+          <button class="icon-button" type="button" data-action="zoom-in" title="放大">
+            <img src="./images/zoom_in.png" alt="" />
+          </button>
+          <button class="icon-button" type="button" data-action="fit" title="适配">
+            <img src="./images/fit_to_size.png" alt="" />
+          </button>
+
+          <span class="tool-divider" aria-hidden="true"></span>
+
+          <label class="switch">
+            <input id="gridToggle" type="checkbox" checked />
+            <span>网格</span>
+          </label>
+          <label class="switch">
+            <input id="snapToggle" type="checkbox" checked />
+            <span>吸附</span>
+          </label>
+          <label class="switch">
+            <input id="connectToggle" type="checkbox" checked />
+            <span>连接</span>
+          </label>
+        </nav>
+      </header>
+
+      <main class="workbench">
+        <aside class="sidebar" aria-label="左侧资源栏">
+          <div class="side-tabs" role="tablist">
+            <button class="active" type="button" data-side-tab="palette" role="tab">
+              <img src="./images/toolbar.gif" alt="" />
+              <span>控件</span>
+            </button>
+            <button type="button" data-side-tab="demos" role="tab">
+              <img src="./images/script.gif" alt="" />
+              <span>Demo</span>
+            </button>
+          </div>
+
+          <div class="side-search">
+            <input id="assetSearch" type="search" placeholder="搜索控件 / Demo" />
+          </div>
+
+          <section id="palettePanel" class="side-panel"></section>
+          <section id="demoPanel" class="side-panel hidden">
+            <div id="demoTree" class="demo-tree"></div>
+          </section>
+        </aside>
+
+        <section class="stage" aria-label="绘图区域">
+          <div class="stage-head">
+            <div class="mode-switch" role="tablist">
+              <button id="workspaceMode" class="active" type="button">工作台</button>
+              <button id="demoMode" type="button">官方 Demo</button>
+            </div>
+            <div id="stageTitle" class="stage-title">工作台</div>
+            <div class="stage-actions">
+              <button id="extractDemo" class="tool-button hidden" type="button">
+                <img src="./images/open.gif" alt="" />
+                <span>提取到工作台</span>
+              </button>
+              <button id="sourceDemo" class="tool-button hidden" type="button">
+                <img src="./images/script.gif" alt="" />
+                <span>源码</span>
+              </button>
+            </div>
+          </div>
+
+          <div class="surface-wrap">
+            <section id="workspaceSurface" class="surface active">
+              <div id="workspaceHost" class="graph-host"></div>
+            </section>
+            <section id="demoSurface" class="surface">
+              <div id="demoMount" class="demo-mount"></div>
+            </section>
+          </div>
+        </section>
+
+        <aside class="inspector" aria-label="右侧属性栏">
+          <section class="panel">
+            <header>
+              <span>属性</span>
+              <small id="selectionSummary">未选中</small>
+            </header>
+            <div id="emptyInspector" class="empty-state">选择一个图形</div>
+            <form id="propertyForm" class="property-form hidden">
+              <label>
+                <span>文本</span>
+                <textarea id="labelInput" data-prop="label" rows="3"></textarea>
+              </label>
+
+              <div class="field-grid">
+                <label>
+                  <span>X</span>
+                  <input type="number" data-prop="x" />
+                </label>
+                <label>
+                  <span>Y</span>
+                  <input type="number" data-prop="y" />
+                </label>
+                <label>
+                  <span>W</span>
+                  <input type="number" data-prop="width" min="1" />
+                </label>
+                <label>
+                  <span>H</span>
+                  <input type="number" data-prop="height" min="1" />
+                </label>
+              </div>
+
+              <label>
+                <span>形状</span>
+                <select data-prop="shape">
+                  <option value="">默认</option>
+                  <option value="rectangle">矩形</option>
+                  <option value="ellipse">椭圆</option>
+                  <option value="rhombus">菱形</option>
+                  <option value="triangle">三角形</option>
+                  <option value="hexagon">六边形</option>
+                  <option value="cylinder">圆柱</option>
+                  <option value="cloud">云</option>
+                  <option value="actor">角色</option>
+                  <option value="swimlane">泳道</option>
+                  <option value="image">图片</option>
+                </select>
+              </label>
+
+              <div class="field-grid colors">
+                <label>
+                  <span>填充</span>
+                  <input type="color" data-prop="fillColor" />
+                </label>
+                <label>
+                  <span>线条</span>
+                  <input type="color" data-prop="strokeColor" />
+                </label>
+                <label>
+                  <span>文字</span>
+                  <input type="color" data-prop="fontColor" />
+                </label>
+                <label>
+                  <span>线宽</span>
+                  <input type="number" data-prop="strokeWidth" min="1" max="12" />
+                </label>
+              </div>
+
+              <div class="swatches" aria-label="快速配色">
+                <button type="button" data-swatch="#ffffff,#475569,#111827"></button>
+                <button type="button" data-swatch="#ecfeff,#0891b2,#164e63"></button>
+                <button type="button" data-swatch="#fff7ed,#ea580c,#7c2d12"></button>
+                <button type="button" data-swatch="#fef9c3,#ca8a04,#713f12"></button>
+                <button type="button" data-swatch="#f0fdf4,#16a34a,#14532d"></button>
+                <button type="button" data-swatch="#fef2f2,#dc2626,#7f1d1d"></button>
+              </div>
+
+              <div class="toggle-grid">
+                <label><input type="checkbox" data-prop="rounded" /> 圆角</label>
+                <label><input type="checkbox" data-prop="shadow" /> 阴影</label>
+                <label><input type="checkbox" data-prop="dashed" /> 虚线</label>
+                <label><input type="checkbox" data-prop="html" /> HTML</label>
+              </div>
+            </form>
+          </section>
+
+          <section class="panel">
+            <header>
+              <span>模板</span>
+            </header>
+            <div class="template-grid">
+              <button type="button" data-template="flow">流程</button>
+              <button type="button" data-template="network">网络</button>
+              <button type="button" data-template="swimlane">泳道</button>
+              <button type="button" data-template="org">组织</button>
+            </div>
+          </section>
+
+          <section class="panel outline-panel">
+            <header>
+              <span>鹰眼</span>
+              <small id="zoomLabel">100%</small>
+            </header>
+            <div id="outline" class="outline"></div>
+          </section>
+        </aside>
+      </main>
+
+      <footer class="statusbar">
+        <span id="statusText">就绪</span>
+        <span id="graphStats">0 节点 / 0 连线</span>
+      </footer>
+    </div>
+
+    <input id="fileInput" type="file" accept=".xml,text/xml,application/xml" hidden />
+
+    <dialog id="sourceDialog" class="source-dialog">
+      <header>
+        <strong id="sourceTitle">源码</strong>
+        <div>
+          <button id="copySource" type="button">复制</button>
+          <button id="closeSource" type="button">关闭</button>
+        </div>
+      </header>
+      <pre><code id="sourceCode"></code></pre>
+    </dialog>
+
+    <div id="toast" class="toast" role="status" aria-live="polite"></div>
+
+    <script src="./stories.js/stories-entry.js"></script>
+    <script src="./gpt/app.js"></script>
+  </body>
+</html>
