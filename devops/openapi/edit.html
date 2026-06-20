@@ -35,26 +35,29 @@
     }
     .toolbar {
       flex: 1;
-      padding: 12px;
+      padding: 6px 12px;
       display: flex;
       align-items: center;
-      gap: 15px;
-      flex-wrap: wrap;
+      gap: 10px;
+      flex-wrap: nowrap;
+      overflow-x: auto;
     }
+    /* Hide scrollbar for toolbar to keep it clean */
+    .toolbar::-webkit-scrollbar { height: 0px; background: transparent; }
     .editor-toolbar { border-right: 2px solid #ddd; }
     .swagger-toolbar { justify-content: space-between; }
-    .swagger-toolbar-left { display: flex; align-items: center; gap: 15px; }
-    .swagger-toolbar-right { display: flex; align-items: center; gap: 15px; }
+    .swagger-toolbar-left { display: flex; align-items: center; gap: 10px; flex-wrap: nowrap; white-space: nowrap; }
+    .swagger-toolbar-right { display: flex; align-items: center; gap: 10px; flex-wrap: nowrap; }
     
-    .toolbar h3 { margin: 0; font-size: 16px; color: #333; }
+    .toolbar h3 { margin: 0; font-size: 15px; color: #333; white-space: nowrap; }
     .btn, .input-text {
-      padding: 6px 12px; border: 1px solid #ccc; background: white; border-radius: 4px; font-size: 14px;
+      padding: 4px 8px; border: 1px solid #ccc; background: white; border-radius: 4px; font-size: 13px; white-space: nowrap;
     }
     .btn { cursor: pointer; }
     .btn:hover { background: #f0f0f0; }
     .input-text { outline: none; }
     .input-text:focus { border-color: #888; }
-    select { padding: 6px; border-radius: 4px; border: 1px solid #ccc; font-size: 14px; }
+    select { padding: 4px; border-radius: 4px; border: 1px solid #ccc; font-size: 13px; }
     
     .editor-section {
       flex: 1; display: flex; flex-direction: column; border-right: 2px solid #ddd; overflow: hidden;
@@ -70,8 +73,8 @@
 
 
     /* Switcher */
-    .page-switcher { display: flex; background: #f8f9fa; border-radius: 8px; padding: 4px; gap: 4px; align-items: center; border: 1px solid #dee2e6; width: 200px; box-sizing: border-box; flex-shrink: 0; }
-    .switcher-btn { padding: 6px 0; border-radius: 6px; text-decoration: none; color: #212529; font-size: 13px; font-weight: bold; transition: 0.2s; opacity: 0.7; flex: 1; text-align: center; border: 1px solid transparent; }
+    .page-switcher { display: flex; background: #f8f9fa; border-radius: 6px; padding: 3px; gap: 4px; align-items: center; border: 1px solid #dee2e6; box-sizing: border-box; flex-shrink: 0; }
+    .switcher-btn { padding: 4px 10px; border-radius: 4px; text-decoration: none; color: #212529; font-size: 12px; font-weight: bold; transition: 0.2s; opacity: 0.7; flex: 1; text-align: center; border: 1px solid transparent; white-space: nowrap; }
     .switcher-btn:hover { background: #e9ecef; opacity: 1; border-color: #dee2e6; }
     .switcher-btn.active { background: #ffffff; opacity: 1; box-shadow: 0 1px 3px rgba(0,0,0,0.15); border: 1px solid #dee2e6; pointer-events: none; }
     
@@ -93,16 +96,16 @@
         <a href="./fetchman.html" class="switcher-btn" title="Test APIs like Postman">⚡ Fetch</a>
       </div>
       
-      <select id="file-select" style="width: 160px; text-overflow: ellipsis;">
+      <select id="file-select" style="width: 140px; text-overflow: ellipsis; flex-shrink: 0;">
         <option value="">-- Load config --</option>
         <optgroup label="Defaults" id="optgroup-defaults"></optgroup>
         <optgroup label="Saved Configs" id="optgroup-saved"></optgroup>
       </select>
 
-      <input type="text" id="save-name" class="input-text" placeholder="Config name..." style="width: 140px;">
-      <button id="save-btn" class="btn">Save</button>
-      <button id="format-btn" class="btn">Format</button>
-      <button id="delete-btn" class="btn" style="color: #dc3545; display: none;" title="Delete current saved config">Delete</button>
+      <input type="text" id="save-name" class="input-text" placeholder="Config name..." style="width: 120px; flex-shrink: 0;">
+      <button id="save-btn" class="btn" style="flex-shrink: 0;">Save</button>
+      <button id="format-btn" class="btn" style="flex-shrink: 0;">Format</button>
+      <button id="delete-btn" class="btn" style="color: #dc3545; display: none; flex-shrink: 0;" title="Delete current saved config">Delete</button>
     </div>
 
     <!-- Right Side: Swagger Toolbar -->
@@ -112,7 +115,7 @@
         <button id="toggle-collapse-btn" class="btn">Collapse All</button>
       </div>
       <div class="swagger-toolbar-right">
-        <input type="text" id="advanced-filter" class="input-text" placeholder="Smart Search (URL, Tag, Name)..." style="width: 250px;">
+        <input type="text" id="advanced-filter" class="input-text" placeholder="Smart Search..." style="width: 200px; flex-shrink: 0;">
       </div>
     </div>
   </div>
