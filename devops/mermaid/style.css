@@ -135,3 +135,6 @@ select.glass-select {
 
 /* SVG Pan Zoom specific */
 .svg-pan-zoom-control { cursor: pointer; }
+
+.glass-input { background: rgba(255, 255, 255, 0.05); border: 1px solid var(--border-color); color: var(--text-color); padding: 6px 12px; border-radius: 4px; font-size: 0.85rem; outline: none; transition: all 0.3s ease; }
+.glass-input:focus { border-color: var(--primary-color); background: rgba(255, 255, 255, 0.1); }

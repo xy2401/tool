@@ -13,6 +13,7 @@ createApp({
     setup() {
         const activeTab = ref('code');
         const selectedTemplate = ref('');
+        const selectedLocalTemplate = ref('');
         const isDarkTheme = ref(false);
         const errorMessage = ref('');
         const isRendering = ref(false);
@@ -199,7 +200,15 @@ createApp({
                     currentContext.id = null;
                     currentContext.title = title;
                 }
-            } else if (val.startsWith('local:')) {
+            }
+            selectedTemplate.value = '';
+        };
+
+        const loadLocalTemplate = () => {
+            const val = selectedLocalTemplate.value;
+            if (!val) return;
+            
+            if (val.startsWith('local:')) {
                 const id = parseInt(val.substring(6));
                 const found = localDiagrams.value.find(d => d.id === id);
                 if (found) {
@@ -210,13 +219,14 @@ createApp({
                     currentContext.title = found.title;
                 }
             }
-            selectedTemplate.value = '';
+            selectedLocalTemplate.value = '';
         };
 
         const saveLocal = () => {
             if (currentContext.isLocal) {
                 const idx = localDiagrams.value.findIndex(d => d.id === currentContext.id);
                 if (idx !== -1) {
+                    localDiagrams.value[idx].title = currentContext.title;
                     localDiagrams.value[idx].code = state.code;
                     localDiagrams.value[idx].config = state.mermaid;
                     syncLocal();
@@ -225,16 +235,20 @@ createApp({
                 }
             }
             
-            let baseName = currentContext.title;
-            // Clean ' copy...' from baseName if it exists to prevent 'copy copy'
-            baseName = baseName.replace(/ copy(\s\d+)?$/, '');
-            let newName = baseName + ' copy';
+            let newName = currentContext.title;
             
-            let counter = 2;
-            while (localDiagrams.value.some(d => d.title === newName)) {
-                newName = baseName + ' copy ' + counter;
-                counter++;
+            const isOfficialName = diagramData.some(g => g.examples.some(e => e.title === newName));
+            if (isOfficialName || localDiagrams.value.some(d => d.title === newName)) {
+                let baseName = newName.replace(/ copy(\s\d+)?$/, '');
+                newName = baseName + ' copy';
+                let counter = 2;
+                while (localDiagrams.value.some(d => d.title === newName)) {
+                    newName = baseName + ' copy ' + counter;
+                    counter++;
+                }
             }
+            
+            currentContext.title = newName;
             
             const newLocal = {
                 id: Date.now(),
@@ -248,7 +262,6 @@ createApp({
             
             currentContext.isLocal = true;
             currentContext.id = newLocal.id;
-            currentContext.title = newLocal.title;
             
             showToast('💾 已新建保存: ' + newName);
         };
@@ -436,6 +449,7 @@ createApp({
         return {
             activeTab,
             selectedTemplate,
+            selectedLocalTemplate,
             diagramData,
             localDiagrams,
             currentContext,
@@ -446,6 +460,7 @@ createApp({
             toastMessage,
             state,
             loadTemplate,
+            loadLocalTemplate,
             resetZoom,
             toggleTheme,
             downloadSvg,
