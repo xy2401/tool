@@ -689,8 +689,11 @@
           try {
             // Include index.html itself and all links in the grid
             const links = Array.from(document.querySelectorAll('.navigation-group__grid a.nav-card')).map(a => a.getAttribute('href'));
-            // Deduplicate and filter local html
-            const uniqueLinks = [...new Set(['./index.html', ...links])].filter(href => href && href.endsWith('.html'));
+            // Normalize and deduplicate local html links
+            const uniqueLinks = [...new Set(['./index.html', ...links])]
+              .filter(href => href && !href.startsWith('http') && !href.startsWith('mailto:'))
+              .map(href => href.endsWith('/') ? href + 'index.html' : href)
+              .filter(href => href.endsWith('.html'));
             
             const results = [];
             const urlRegex = /(?:unpkg\.com|cdn\.jsdelivr\.net\/npm)\/((?:@[^/]+\/)?(?:[^@/]+))@([^/]+)/;
