@@ -30,6 +30,8 @@ async function run() {
     const validEntries = Object.values(entries).filter(e => e.type === 'story' && e.importPath.match(/\.(ts|js)$/) && !e.importPath.includes('ImageBundle'));
 
     let entryFileContent = `window.MaxGraphStories = {};\n\n`;
+    entryFileContent += `import { ModelXmlSerializer } from '@maxgraph/core';\n`;
+    entryFileContent += `window.MaxGraphStories.ModelXmlSerializer = ModelXmlSerializer;\n\n`;
 
     validEntries.forEach(entry => {
         // e.g. import * as Story1 from './stories/HelloWorld.stories.ts'

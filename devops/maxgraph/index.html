@@ -487,8 +487,9 @@
                     if (!graph) return;
                     
                     try {
-                        // Serialize from demo
-                        const serializer = new window.__test_ModelXmlSerializer(window.__demo_graph.getDataModel());
+                        // Use the ModelXmlSerializer from the bundle to avoid cross-realm recursion!
+                        const DemoSerializer = window.MaxGraphStories.ModelXmlSerializer;
+                        const serializer = new DemoSerializer(window.__demo_graph.getDataModel());
                         const xml = serializer.export();
                         
                         // Switch to editor
@@ -505,8 +506,8 @@
                             graph.getDataModel().endUpdate();
                         }
                         
-                        // Refocus layout if possible
-                        graph.fit();
+                        // Refocus layout if possible (Removed graph.fit() as it is not present natively)
+                        // graph.zoomActual();
                         
                     } catch (e) {
                         console.error('Copy demo to workspace failed', e);
