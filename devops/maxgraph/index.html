@@ -232,6 +232,7 @@
             color: #cbd5e1; display: flex; align-items: center; gap: 6px; transition: background 0.2s;
         }
         .tree-category-title:hover { background: rgba(255,255,255,0.05); }
+        .tree-category-title.active { background: rgba(139, 92, 246, 0.2); color: #a78bfa; font-weight: 600; border-left: 2px solid #a78bfa; }
         .tree-category-items { padding-left: 20px; margin-top: 4px; display: flex; flex-direction: column; gap: 2px; }
         .tree-item {
             padding: 6px 8px; cursor: pointer; border-radius: 4px; font-size: 0.8rem; color: #94a3b8;
@@ -311,18 +312,32 @@
                 <!-- 官方 Demo 树状目录 -->
                 <div v-show="leftTab === 'demos'" class="sidebar-content tree-view">
                     <div class="tree-category" v-for="(stories, category) in officialStoriesGrouped" :key="category">
-                        <div class="tree-category-title" @click="toggleCategory(category)">
-                            <span>{{ expandedCategories[category] ? '📂' : '📁' }}</span> {{ category }}
-                        </div>
-                        <div class="tree-category-items" v-show="expandedCategories[category]">
-                            <div class="tree-item" 
-                                v-for="story in stories" 
-                                :key="story.id" 
-                                :class="{active: selectedOfficialStory === story.id}"
-                                @click="selectOfficialStory(story)">
-                                📄 {{ story.name || story.exportName }}
+                        
+                        <!-- 包含多个子项的情况 (渲染为文件夹) -->
+                        <template v-if="stories.length > 1">
+                            <div class="tree-category-title" @click="toggleCategory(category)">
+                                <span>{{ expandedCategories[category] ? '📂' : '📁' }}</span> {{ category }}
                             </div>
-                        </div>
+                            <div class="tree-category-items" v-show="expandedCategories[category]">
+                                <div class="tree-item" 
+                                    v-for="story in stories" 
+                                    :key="story.id" 
+                                    :class="{active: selectedOfficialStory === story.id}"
+                                    @click="selectOfficialStory(story)">
+                                    📄 {{ story.name || story.exportName }}
+                                </div>
+                            </div>
+                        </template>
+
+                        <!-- 只有一个子项的情况 (直接渲染为可点击的文件) -->
+                        <template v-else>
+                            <div class="tree-category-title" 
+                                :class="{active: selectedOfficialStory === stories[0].id}"
+                                @click="selectOfficialStory(stories[0])">
+                                <span>📄</span> {{ category }}
+                            </div>
+                        </template>
+                        
                     </div>
                 </div>
             </aside>
