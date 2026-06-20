@@ -83,7 +83,7 @@
     .tab.active { color: var(--text); }
     .tab.active::after { content: ''; position: absolute; bottom: -1px; left: 0; right: 0; height: 2px; background: var(--accent); }
 
-    .tab-content { display: none; flex-direction: column; gap: 10px; flex: 1; overflow-y: auto; padding-right: 5px; }
+    .tab-content { display: none; flex-direction: column; gap: 10px; flex: 1; padding-right: 5px; }
     .tab-content.active { display: flex; }
 
     .kv-row { display: flex; gap: 10px; align-items: flex-start; margin-bottom: 8px; }
@@ -642,30 +642,30 @@
             ${(function(){
               let docs = '';
               if (ep.op.requestBody) {
-                docs += '<h4 style="margin-top:0; color:var(--accent);">Request Body</h4>';
-                docs += '<div style="font-size:0.9rem; color:#aaa; margin-bottom:10px;">' + (ep.op.requestBody.description || '') + '</div>';
+                docs += '<h4 style="margin-top:0; margin-bottom:5px; font-size:0.9rem; color:var(--accent);">Request Body</h4>';
+                docs += '<div style="font-size:0.8rem; color:#aaa; margin-bottom:5px;">' + (ep.op.requestBody.description || '') + '</div>';
                 const content = ep.op.requestBody.content;
                 if (content && content['application/json'] && content['application/json'].schema) {
-                   docs += '<pre style="background:var(--panel); padding:10px; border-radius:4px; font-size:0.85rem; border:1px solid var(--border); overflow-x:auto;">' + JSON.stringify(content['application/json'].schema, null, 2) + '</pre>';
+                   docs += '<pre style="background:var(--panel); padding:8px; border-radius:4px; font-size:0.75rem; border:1px solid var(--border); overflow:auto; max-height:40vh; margin-bottom:10px;">' + JSON.stringify(content['application/json'].schema, null, 2) + '</pre>';
                 }
               } else {
                 const bodyParam = params.find(p => p.in === 'body');
                 if (bodyParam) {
-                   docs += '<h4 style="margin-top:0; color:var(--accent);">Request Body</h4>';
-                   docs += '<div style="font-size:0.9rem; color:#aaa; margin-bottom:10px;">' + (bodyParam.description || '') + '</div>';
+                   docs += '<h4 style="margin-top:0; margin-bottom:5px; font-size:0.9rem; color:var(--accent);">Request Body</h4>';
+                   docs += '<div style="font-size:0.8rem; color:#aaa; margin-bottom:5px;">' + (bodyParam.description || '') + '</div>';
                    if (bodyParam.schema) {
-                      docs += '<pre style="background:var(--panel); padding:10px; border-radius:4px; font-size:0.85rem; border:1px solid var(--border); overflow-x:auto;">' + JSON.stringify(bodyParam.schema, null, 2) + '</pre>';
+                      docs += '<pre style="background:var(--panel); padding:8px; border-radius:4px; font-size:0.75rem; border:1px solid var(--border); overflow:auto; max-height:40vh; margin-bottom:10px;">' + JSON.stringify(bodyParam.schema, null, 2) + '</pre>';
                    }
                 }
               }
               if (ep.op.responses) {
-                 docs += '<h4 style="margin-top:15px; color:var(--accent);">Responses</h4>';
+                 docs += '<h4 style="margin-top:10px; margin-bottom:5px; font-size:0.9rem; color:var(--accent);">Responses</h4>';
                  for (const [code, res] of Object.entries(ep.op.responses)) {
-                    docs += '<div style="margin-bottom:15px; border:1px solid var(--border); border-radius:4px;">';
-                    docs += '<div style="background:var(--panel); padding:8px 12px; font-weight:bold; border-bottom:1px solid var(--border); display:flex; justify-content:space-between;">' +
-                                   '<span style="color:' + (code.startsWith('2') ? 'var(--get)' : 'var(--delete)') + '">' + code + '</span>' +
-                                   '<span style="font-size:0.85rem; font-weight:normal; color:#888;">' + (res.description || '') + '</span>' +
-                                 '</div>';
+                    docs += '<details style="margin-bottom:5px; border:1px solid var(--border); border-radius:4px;" ' + (code.startsWith('2') ? 'open' : '') + '>';
+                    docs += '<summary style="background:var(--panel); padding:6px 10px; font-weight:bold; cursor:pointer; font-size:0.85rem; display:flex; align-items:center; user-select:none; outline:none;">' +
+                                   '<span style="color:' + (code.startsWith('2') ? 'var(--get)' : 'var(--delete)') + '; margin-right: 10px;">' + code + '</span>' +
+                                   '<span style="font-size:0.8rem; font-weight:normal; color:#888; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">' + (res.description || '') + '</span>' +
+                                 '</summary>';
                     
                     let schema = null;
                     if (res.content && res.content['application/json'] && res.content['application/json'].schema) {
@@ -674,15 +674,16 @@
                        schema = res.schema;
                     }
                     if (schema) {
-                       docs += '<div style="padding:10px;">' +
-                          '<div style="font-size:0.8rem; color:#888; margin-bottom:5px;">Schema:</div>' +
-                          '<pre style="margin:0; background:var(--bg); padding:10px; border-radius:4px; font-size:0.85rem; overflow-x:auto; color:var(--text);">' + JSON.stringify(schema, null, 2) + '</pre>' +
+                       docs += '<div style="padding:0; background:var(--bg); border-top:1px solid var(--border);">' +
+                          '<pre style="margin:0; padding:8px; font-size:0.75rem; overflow:auto; max-height:40vh; color:var(--text);">' + JSON.stringify(schema, null, 2) + '</pre>' +
                        '</div>';
+                    } else {
+                       docs += '<div style="padding:6px; font-size:0.8rem; color:#888; background:var(--bg); border-top:1px solid var(--border);">No schema defined.</div>';
                     }
-                    docs += '</div>';
+                    docs += '</details>';
                  }
               } else {
-                 docs += '<div>No response definitions found.</div>';
+                 docs += '<div style="font-size:0.85rem; color:#888;">No response definitions found.</div>';
               }
               return docs;
             })()}
