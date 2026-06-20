@@ -373,6 +373,77 @@
         html += `</div>`;
       }
 
+      // Compute statistics matrix
+      if (endpoints && endpoints.length > 0) {
+        const stats = { '_Total': { total: 0 } };
+        const methodCols = ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS', 'HEAD'];
+        methodCols.forEach(m => stats['_Total'][m] = 0);
+
+        endpoints.forEach(ep => {
+          const m = ep.method.toUpperCase();
+          const tag = ep.op && ep.op.tags && ep.op.tags.length > 0 ? ep.op.tags[0] : 'default';
+
+          if (!methodCols.includes(m)) {
+            methodCols.push(m);
+            stats['_Total'][m] = 0;
+            for (let t in stats) stats[t][m] = 0;
+          }
+
+          stats['_Total'].total++;
+          stats['_Total'][m]++;
+
+          if (!stats[tag]) {
+            stats[tag] = { total: 0 };
+            methodCols.forEach(mc => stats[tag][mc] = 0);
+          }
+          stats[tag].total++;
+          stats[tag][m]++;
+        });
+
+        // Filter out methods that have 0 usage across all APIs
+        const activeCols = methodCols.filter(m => stats['_Total'][m] > 0);
+
+        html += `<div style="margin-top: 40px;">
+          <h3 style="margin-top: 0; color: var(--primary); font-size: 1.2rem; margin-bottom: 15px;">Endpoints Statistics</h3>
+          <div style="overflow-x: auto; border: 1px solid var(--border); border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.05);">
+            <table style="width: 100%; border-collapse: collapse; text-align: center; font-size: 0.95rem; background: var(--panel);">
+              <thead>
+                <tr style="background: var(--bg); border-bottom: 2px solid var(--border);">
+                  <th style="padding: 12px 16px; text-align: left; color: var(--accent);">Group (Tag)</th>
+                  <th style="padding: 12px 16px; font-weight: bold;">Total</th>`;
+        
+        activeCols.forEach(m => {
+          const color = m === 'GET' ? '#007bff' : m === 'POST' ? '#28a745' : m === 'PUT' ? '#ffc107' : m === 'DELETE' ? '#dc3545' : 'inherit';
+          html += `<th style="padding: 12px 10px; color: ${color};">${m}</th>`;
+        });
+        html += `</tr></thead><tbody>`;
+
+        // Render Total Row
+        html += `<tr style="border-bottom: 2px solid var(--border); font-weight: bold; background: var(--bg);">
+          <td style="padding: 12px 16px; text-align: left; color: var(--primary);">All APIs</td>
+          <td style="padding: 12px 16px; font-size: 1.1rem;">${stats['_Total'].total}</td>`;
+        activeCols.forEach(m => {
+          const c = stats['_Total'][m];
+          html += `<td style="padding: 12px 10px; opacity: ${c > 0 ? 1 : 0.2};">${c}</td>`;
+        });
+        html += `</tr>`;
+
+        // Render Tag Rows
+        for (const tag in stats) {
+          if (tag === '_Total') continue;
+          html += `<tr style="border-bottom: 1px solid var(--border); transition: background 0.2s;" onmouseover="this.style.background='var(--bg)'" onmouseout="this.style.background='transparent'">
+            <td style="padding: 12px 16px; text-align: left;">${tag}</td>
+            <td style="padding: 12px 16px; font-weight: bold;">${stats[tag].total}</td>`;
+          activeCols.forEach(m => {
+            const c = stats[tag][m];
+            html += `<td style="padding: 12px 10px; opacity: ${c > 0 ? 0.9 : 0.15};">${c > 0 ? c : '-'}</td>`;
+          });
+          html += `</tr>`;
+        }
+
+        html += `</tbody></table></div></div>`;
+      }
+
       html += `</div>`;
       main.innerHTML = html;
     }
