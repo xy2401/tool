@@ -36,10 +36,9 @@
     }
     body { margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: var(--bg); color: var(--text); height: 100vh; display: flex; flex-direction: column; overflow: hidden; transition: background 0.3s, color 0.3s; }
     
-    .navbar { padding: 8px 20px; background: var(--panel); border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; }
-    
+    /* Switcher */
     .page-switcher { display: flex; background: var(--bg); border-radius: 8px; padding: 4px; gap: 4px; align-items: center; border: 1px solid var(--border); }
-    .switcher-btn { padding: 6px 20px; border-radius: 6px; text-decoration: none; color: var(--text); font-size: 0.9rem; font-weight: bold; transition: 0.2s; opacity: 0.7; }
+    .switcher-btn { padding: 6px 12px; border-radius: 6px; text-decoration: none; color: var(--text); font-size: 0.85rem; font-weight: bold; transition: 0.2s; opacity: 0.7; flex: 1; text-align: center; }
     .switcher-btn:hover { background: var(--border); opacity: 1; }
     .switcher-btn.active { background: var(--panel); opacity: 1; box-shadow: 0 1px 3px rgba(0,0,0,0.3); border: 1px solid var(--border); pointer-events: none; }
     
@@ -110,20 +109,13 @@
 </head>
 <body>
 
-  <div class="navbar">
-    <div class="page-switcher">
-      <a href="./edit.html" class="switcher-btn" title="Edit and preview OpenAPI configurations">✏️ Editor Mode</a>
-      <a href="./fetchman.html" class="switcher-btn active" title="Test APIs like Postman">⚡ Fetch Mode</a>
-    </div>
-    <div style="display: flex; gap: 15px; align-items: center;">
-      <button onclick="toggleTheme()" style="background:transparent; border:1px solid var(--border);">🌗 Theme</button>
-      <button onclick="openSettings()" style="background:transparent; border:1px solid var(--border);">⚙️ Settings</button>
-    </div>
-  </div>
-
   <div class="main">
     <div class="sidebar">
       <div class="sidebar-header">
+        <div class="page-switcher" style="margin-bottom: 8px;">
+          <a href="./edit.html" class="switcher-btn" title="Edit and preview OpenAPI configurations">✏️ Editor</a>
+          <a href="./fetchman.html" class="switcher-btn active" title="Test APIs like Postman">⚡ Fetch</a>
+        </div>
         <select id="spec-select">
           <option value="">-- Select API Spec --</option>
           <optgroup label="Defaults" id="optgroup-defaults"></optgroup>
@@ -139,8 +131,14 @@
       </div>
     </div>
 
-    <div class="content" id="main-content">
-      <div class="empty-state">Select an endpoint from the sidebar to begin</div>
+    <div class="content">
+      <div style="padding: 10px 15px; border-bottom: 1px solid var(--border); display: flex; justify-content: flex-end; gap: 15px; align-items: center; background: var(--panel);">
+        <button onclick="toggleTheme()" style="background:transparent; border:1px solid var(--border);">🌗 Theme</button>
+        <button onclick="openSettings()" style="background:transparent; border:1px solid var(--border);">⚙️ Settings</button>
+      </div>
+      <div id="main-content" style="flex: 1; display: flex; flex-direction: column; overflow: hidden;">
+        <div class="empty-state">Select an endpoint from the sidebar to begin</div>
+      </div>
     </div>
   </div>
 
