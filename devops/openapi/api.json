@@ -1,5 +1,9 @@
 [
   {
+    "url": "./data/empty.yaml",
+    "name": "Empty Template"
+  },
+  {
     "url": "./data/swagger.json",
     "name": "Swagger API"
   },
