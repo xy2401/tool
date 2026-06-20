@@ -176,10 +176,7 @@
     let swaggerUi;
     let isCollapsed = false;
     
-    const defaultFiles = [
-      { name: 'swagger.json', path: './data/swagger.json' },
-      { name: 'api.github.com.yaml', path: './data/api.github.com.yaml' }
-    ];
+    let defaultFiles = [];
 
     function showStatus(text, isError = false) {
       const el = document.getElementById('status-text');
@@ -220,6 +217,14 @@
     }
 
     async function init() {
+      try {
+        const res = await fetch('./api.json');
+        const apiData = await res.json();
+        defaultFiles = apiData.map(item => ({ name: item.name, path: item.url }));
+      } catch(e) {
+        console.error("Failed to load api.json", e);
+      }
+
       // 1. Init CodeMirror
       editor = CodeMirror(document.getElementById('editor-pane'), {
         mode: 'javascript',
