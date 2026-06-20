@@ -83,13 +83,19 @@
     .tab.active { color: var(--text); }
     .tab.active::after { content: ''; position: absolute; bottom: -1px; left: 0; right: 0; height: 2px; background: var(--accent); }
 
-    .tab-content { display: none; flex-direction: column; gap: 10px; flex: 1;}
+    .tab-content { display: none; flex-direction: column; gap: 10px; flex: 1; overflow-y: auto; padding-right: 5px; }
     .tab-content.active { display: flex; }
 
-    .kv-row { display: flex; gap: 10px; align-items: center; }
-    .kv-row input { flex: 1; font-family: Consolas, monospace; }
-    .kv-row .kv-key { font-weight: bold; background: var(--panel); width: 200px; padding: 8px; border: 1px solid var(--border); border-radius: 4px;}
-    .kv-row .kv-type { font-size: 0.75rem; color: #888; width: 60px; text-align: center; }
+    .kv-row { display: flex; gap: 10px; align-items: flex-start; margin-bottom: 8px; }
+    .kv-row input { flex: 1; font-family: Consolas, monospace; padding: 6px; margin-top: 2px;}
+    .kv-row .kv-key-container { display: flex; flex-direction: column; width: 200px; }
+    .kv-row .kv-key { font-weight: bold; background: var(--panel); padding: 8px; border: 1px solid var(--border); border-radius: 4px; box-sizing: border-box; }
+    .kv-row .kv-desc { font-size: 0.75rem; color: #aaa; margin-top: 4px; line-height: 1.3; }
+    .kv-row .kv-type { font-size: 0.75rem; color: #888; width: 60px; text-align: center; margin-top: 10px;}
+
+    .copy-actions { display: flex; gap: 5px; }
+    .copy-actions button { padding: 0 10px; font-size: 0.8rem; border: 1px solid var(--border); background: var(--panel); color: var(--text); border-radius: 4px; font-weight: bold; cursor: pointer; }
+    .copy-actions button:hover { background: var(--border); }
 
     .response-area { flex: 1; display: flex; flex-direction: column; background: var(--panel); min-height: 200px;}
     .res-header { padding: 10px 15px; border-bottom: 1px solid var(--border); display: flex; align-items: center; gap: 20px; font-size: 0.9rem; color: #ccc;}
@@ -560,16 +566,23 @@
       let html = `
         <div class="request-area">
           <div style="margin-bottom:10px; font-weight:bold; font-size:1.2rem;">${ep.op.summary || 'No Summary'}</div>
+          ${ep.op.description ? `<div style="margin-bottom:15px; font-size:0.95rem; color:#bbb; line-height:1.4;">${ep.op.description}</div>` : ''}
           <div class="req-bar">
             <div class="req-method method-${ep.method}" style="color:var(--text); border-color:var(--${ep.method});">${ep.method}</div>
             <input type="text" class="req-url" id="req-url" value="${baseUrl}${ep.path}">
             <button class="primary btn-send" onclick="sendRequest()">SEND</button>
+            <div class="copy-actions">
+              <button id="btn-copy-curl" onclick="copyCode('curl')" title="Copy as cURL">cURL</button>
+              <button id="btn-copy-fetch" onclick="copyCode('fetch')" title="Copy as Fetch">Fetch</button>
+              <button id="btn-copy-powershell" onclick="copyCode('powershell')" title="Copy as PowerShell">PS</button>
+            </div>
           </div>
 
           <div class="tabs">
             <div class="tab active" onclick="switchTab('tab-params')">Params</div>
             <div class="tab" onclick="switchTab('tab-headers')">Headers</div>
             ${hasBody ? `<div class="tab" onclick="switchTab('tab-body')">Body</div>` : ''}
+            <div class="tab" onclick="switchTab('tab-docs')">Docs</div>
           </div>
 
           <div class="tab-content active" id="tab-params">
@@ -577,8 +590,11 @@
             ${pathParams.length===0 ? '<div style="font-size:0.85rem; color:#555;">None</div>' : ''}
             ${pathParams.map(p => `
               <div class="kv-row">
-                <div class="kv-key" title="${p.description||''}">${p.name} <span style="color:red">*</span></div>
-                <div class="kv-type">${p.type||'string'}</div>
+                <div class="kv-key-container">
+                  <div class="kv-key">${p.name} <span style="color:red">*</span></div>
+                  ${p.description ? `<div class="kv-desc">${p.description}</div>` : ''}
+                </div>
+                <div class="kv-type">${p.schema?.type || p.type || 'string'}</div>
                 <input type="text" id="path-${p.name}" placeholder="Value..." required>
               </div>
             `).join('')}
@@ -587,8 +603,11 @@
             ${queryParams.length===0 ? '<div style="font-size:0.85rem; color:#555;">None</div>' : ''}
             ${queryParams.map(p => `
               <div class="kv-row">
-                <div class="kv-key" title="${p.description||''}">${p.name} ${p.required ? '<span style="color:red">*</span>':''}</div>
-                <div class="kv-type">${p.type||'string'}</div>
+                <div class="kv-key-container">
+                  <div class="kv-key">${p.name} ${p.required ? '<span style="color:red">*</span>':''}</div>
+                  ${p.description ? `<div class="kv-desc">${p.description}</div>` : ''}
+                </div>
+                <div class="kv-type">${p.schema?.type || p.type || 'string'}</div>
                 <input type="text" id="query-${p.name}" placeholder="Value...">
               </div>
             `).join('')}
@@ -596,14 +615,17 @@
 
           <div class="tab-content" id="tab-headers">
              <div class="kv-row">
-                <div class="kv-key">Authorization</div>
+                <div class="kv-key-container"><div class="kv-key">Authorization</div></div>
                 <div class="kv-type">global</div>
                 <input type="text" value="[From Settings]" disabled style="color:#888;">
               </div>
              ${headerParams.map(p => `
               <div class="kv-row">
-                <div class="kv-key" title="${p.description||''}">${p.name}</div>
-                <div class="kv-type">${p.type||'string'}</div>
+                <div class="kv-key-container">
+                  <div class="kv-key">${p.name}</div>
+                  ${p.description ? `<div class="kv-desc">${p.description}</div>` : ''}
+                </div>
+                <div class="kv-type">${p.schema?.type || p.type || 'string'}</div>
                 <input type="text" id="header-${p.name}" placeholder="Value...">
               </div>
             `).join('')}
@@ -615,6 +637,56 @@
              <div id="req-body-editor" style="border:1px solid var(--border); flex:1; overflow:hidden;"></div>
           </div>
           ` : ''}
+
+          <div class="tab-content" id="tab-docs" style="padding-right:10px;">
+            ${(function(){
+              let docs = '';
+              if (ep.op.requestBody) {
+                docs += '<h4 style="margin-top:0; color:var(--accent);">Request Body</h4>';
+                docs += '<div style="font-size:0.9rem; color:#aaa; margin-bottom:10px;">' + (ep.op.requestBody.description || '') + '</div>';
+                const content = ep.op.requestBody.content;
+                if (content && content['application/json'] && content['application/json'].schema) {
+                   docs += '<pre style="background:var(--panel); padding:10px; border-radius:4px; font-size:0.85rem; border:1px solid var(--border); overflow-x:auto;">' + JSON.stringify(content['application/json'].schema, null, 2) + '</pre>';
+                }
+              } else {
+                const bodyParam = params.find(p => p.in === 'body');
+                if (bodyParam) {
+                   docs += '<h4 style="margin-top:0; color:var(--accent);">Request Body</h4>';
+                   docs += '<div style="font-size:0.9rem; color:#aaa; margin-bottom:10px;">' + (bodyParam.description || '') + '</div>';
+                   if (bodyParam.schema) {
+                      docs += '<pre style="background:var(--panel); padding:10px; border-radius:4px; font-size:0.85rem; border:1px solid var(--border); overflow-x:auto;">' + JSON.stringify(bodyParam.schema, null, 2) + '</pre>';
+                   }
+                }
+              }
+              if (ep.op.responses) {
+                 docs += '<h4 style="margin-top:15px; color:var(--accent);">Responses</h4>';
+                 for (const [code, res] of Object.entries(ep.op.responses)) {
+                    docs += '<div style="margin-bottom:15px; border:1px solid var(--border); border-radius:4px;">';
+                    docs += '<div style="background:var(--panel); padding:8px 12px; font-weight:bold; border-bottom:1px solid var(--border); display:flex; justify-content:space-between;">' +
+                                   '<span style="color:' + (code.startsWith('2') ? 'var(--get)' : 'var(--delete)') + '">' + code + '</span>' +
+                                   '<span style="font-size:0.85rem; font-weight:normal; color:#888;">' + (res.description || '') + '</span>' +
+                                 '</div>';
+                    
+                    let schema = null;
+                    if (res.content && res.content['application/json'] && res.content['application/json'].schema) {
+                       schema = res.content['application/json'].schema;
+                    } else if (res.schema) {
+                       schema = res.schema;
+                    }
+                    if (schema) {
+                       docs += '<div style="padding:10px;">' +
+                          '<div style="font-size:0.8rem; color:#888; margin-bottom:5px;">Schema:</div>' +
+                          '<pre style="margin:0; background:var(--bg); padding:10px; border-radius:4px; font-size:0.85rem; overflow-x:auto; color:var(--text);">' + JSON.stringify(schema, null, 2) + '</pre>' +
+                       '</div>';
+                    }
+                    docs += '</div>';
+                 }
+              } else {
+                 docs += '<div>No response definitions found.</div>';
+              }
+              return docs;
+            })()}
+          </div>
 
         </div>
 
@@ -653,8 +725,8 @@
       });
     }
 
-    async function sendRequest() {
-      if (!activeEndpoint) return;
+    function buildRequestData() {
+      if (!activeEndpoint) return null;
       const ep = activeEndpoint;
       
       let url = document.getElementById('req-url').value;
@@ -663,13 +735,11 @@
       const pathParams = params.filter(p => p.in === 'path');
       const headerParams = params.filter(p => p.in === 'header');
 
-      // Replace path params
       pathParams.forEach(p => {
         const val = document.getElementById(`path-${p.name}`).value;
         url = url.replace(`{${p.name}}`, encodeURIComponent(val));
       });
 
-      // Append query params
       const q = new URLSearchParams();
       queryParams.forEach(p => {
         const val = document.getElementById(`query-${p.name}`).value;
@@ -678,7 +748,6 @@
       const qStr = q.toString();
       if (qStr) url += (url.includes('?') ? '&' : '?') + qStr;
 
-      // Build Headers
       const headers = {
         'Accept': 'application/json'
       };
@@ -693,21 +762,79 @@
         if (val) headers[p.name] = val;
       });
 
-      // Build Fetch options
-      const options = {
-        method: ep.method.toUpperCase(),
-        headers: headers
-      };
-      
+      let body = null;
       if (['post', 'put', 'patch'].includes(ep.method) && reqBodyEditor) {
-        options.body = reqBodyEditor.getValue();
+        body = reqBodyEditor.getValue();
       }
 
-      // Apply CORS Proxy
       if (appSettings.proxyUrl) {
         url = appSettings.proxyUrl + url;
       }
 
+      return {
+        url,
+        method: ep.method.toUpperCase(),
+        headers,
+        body
+      };
+    }
+
+    function copyCode(type) {
+      const reqData = buildRequestData();
+      if (!reqData) return;
+      
+      let code = '';
+      if (type === 'curl') {
+        code = `curl -X ${reqData.method} "${reqData.url}"`;
+        for (const [k, v] of Object.entries(reqData.headers)) {
+          code += ` \\\n  -H "${k}: ${v}"`;
+        }
+        if (reqData.body) {
+          const safeBody = reqData.body.replace(/'/g, "'\\''");
+          code += ` \\\n  -d '${safeBody}'`;
+        }
+      } else if (type === 'fetch') {
+        let headersStr = JSON.stringify(reqData.headers, null, 2).replace(/\n/g, '\n  ');
+        let bodyStr = '';
+        if (reqData.body) {
+           const safeBody = reqData.body.replace(/`/g, '\\`').replace(/\\/g, '\\\\');
+           bodyStr = `,\n  body: \`${safeBody}\``;
+        }
+        code = `fetch("${reqData.url}", {\n  method: "${reqData.method}",\n  headers: ${headersStr}${bodyStr}\n})\n.then(response => response.json())\n.then(data => console.log(data))\n.catch(error => console.error('Error:', error));`;
+      } else if (type === 'powershell') {
+        code = `Invoke-RestMethod -Uri "${reqData.url}" -Method ${reqData.method}`;
+        if (Object.keys(reqData.headers).length > 0) {
+           code += ` -Headers @{`;
+           const hProps = Object.entries(reqData.headers).map(([k,v]) => `'${k}'='${v}'`).join('; ');
+           code += hProps + `}`;
+        }
+        if (reqData.body) {
+           const safeBody = reqData.body.replace(/'/g, "''");
+           code += ` -Body '${safeBody}'`;
+        }
+      }
+
+      navigator.clipboard.writeText(code).then(() => {
+        const btn = document.getElementById(`btn-copy-${type}`);
+        if(btn) {
+           const orig = btn.innerText;
+           btn.innerText = 'Copied!';
+           setTimeout(() => btn.innerText = orig, 1500);
+        }
+      });
+    }
+
+    async function sendRequest() {
+      const reqData = buildRequestData();
+      if (!reqData) return;
+
+      const options = {
+        method: reqData.method,
+        headers: reqData.headers
+      };
+      if (reqData.body) options.body = reqData.body;
+
+      const url = reqData.url;
       const startTime = performance.now();
       document.getElementById('res-status').innerText = 'Loading...';
       document.getElementById('res-status').className = 'res-status';
