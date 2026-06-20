@@ -99,6 +99,7 @@
         <input type="text" id="save-name" class="input-text" placeholder="Config name..." style="width: 140px;">
         <button id="save-btn" class="btn">Save</button>
         <button id="format-btn" class="btn">Format</button>
+        <button id="delete-btn" class="btn" style="color: #dc3545; display: none;" title="Delete current saved config">Delete</button>
       </div>
       <div id="editor-pane">
         <div class="floating-tools">
@@ -280,6 +281,8 @@
         if (!val) return;
         
         localStorage.setItem('openapi-last-selected', val);
+        const delBtn = document.getElementById('delete-btn');
+        delBtn.style.display = val.startsWith('saved:') ? 'inline-block' : 'none';
         
         if (val.startsWith('default:')) {
           const index = parseInt(val.split(':')[1]);
@@ -357,9 +360,9 @@
 
       // 5. Save Config Handler
       document.getElementById('save-btn').onclick = async () => {
-        let name = document.getElementById('save-name').value.trim();
+        const name = document.getElementById('save-name').value.trim();
         if (!name) {
-          showStatus("Please enter a config name", true);
+          alert('Please enter a config name.');
           return;
         }
         const content = editor.getValue();
@@ -368,9 +371,39 @@
         try {
           await dbSet('openapi-custom-configs', JSON.stringify(savedConfigs));
           await refreshDropdown();
-          showStatus(`Config '${name}' saved!`);
+          
+          // Auto select the newly saved config
+          const select = document.getElementById('file-select');
+          select.value = `saved:${name}`;
+          document.getElementById('delete-btn').style.display = 'inline-block';
+          localStorage.setItem('openapi-last-selected', `saved:${name}`);
+          
+          showStatus(`Saved!`);
         } catch(e) {
           showStatus("Save failed: Storage Quota Exceeded!", true);
+        }
+      };
+
+      // 5.5 Delete Config Handler
+      document.getElementById('delete-btn').onclick = async () => {
+        const select = document.getElementById('file-select');
+        const val = select.value;
+        if (!val.startsWith('saved:')) return;
+        
+        const name = val.substring(6);
+        if (!confirm(`Are you sure you want to delete '${name}'?`)) return;
+
+        const savedConfigs = await getSavedConfigs();
+        delete savedConfigs[name];
+        try {
+          await dbSet('openapi-custom-configs', JSON.stringify(savedConfigs));
+          await refreshDropdown();
+          localStorage.removeItem('openapi-last-selected');
+          select.value = "default:0";
+          select.onchange({target: select});
+          showStatus("Deleted!");
+        } catch(e) {
+          showStatus("Delete failed", true);
         }
       };
 
@@ -409,6 +442,9 @@
       } else {
         select.value = "default:0";
       }
+      
+      const delBtn = document.getElementById('delete-btn');
+      delBtn.style.display = select.value.startsWith('saved:') ? 'inline-block' : 'none';
 
       // Pre-fetch original text and set save-name to handle active workspace correctly
       if (select.value.startsWith('default:')) {
