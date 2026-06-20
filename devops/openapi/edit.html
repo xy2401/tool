@@ -196,7 +196,11 @@
       editor.on('change', () => {
         clearTimeout(timeout);
         timeout = setTimeout(() => {
-          localStorage.setItem('openapi-edit-content', editor.getValue());
+          try {
+            localStorage.setItem('openapi-edit-content', editor.getValue());
+          } catch(e) {
+            showStatus("Storage quota exceeded!", true);
+          }
           renderSwagger();
         }, 800);
       });
@@ -205,9 +209,11 @@
       refreshDropdown();
       
       const select = document.getElementById('file-select');
-      select.onchange = async () => {
-        const val = select.value;
+      select.onchange = async (e) => {
+        const val = e.target.value;
         if (!val) return;
+        
+        localStorage.setItem('openapi-last-selected', val);
         
         if (val.startsWith('default:')) {
           const index = parseInt(val.split(':')[1]);
@@ -290,9 +296,13 @@
         const content = editor.getValue();
         const savedConfigs = getSavedConfigs();
         savedConfigs[name] = content;
-        localStorage.setItem('openapi-custom-configs', JSON.stringify(savedConfigs));
-        refreshDropdown();
-        showStatus(`Config '${name}' saved!`);
+        try {
+          localStorage.setItem('openapi-custom-configs', JSON.stringify(savedConfigs));
+          refreshDropdown();
+          showStatus(`Config '${name}' saved!`);
+        } catch(e) {
+          showStatus("Save failed: Storage Quota Exceeded!", true);
+        }
       };
 
       // 6. Format Button Handler
@@ -324,14 +334,18 @@
       };
 
       // 9. Initial Load from LocalStorage or default
+      const lastSelected = localStorage.getItem('openapi-last-selected');
+      if (lastSelected) {
+        select.value = lastSelected;
+      }
+
       const saved = localStorage.getItem('openapi-edit-content');
       if (saved) {
         setEditorContent(saved, saved.trim().startsWith('{') ? 'data.json' : 'data.yaml');
-        showStatus("Loaded from local storage");
+        showStatus("Loaded from active workspace");
       } else {
-        // Automatically load first default file
-        select.value = "default:0";
-        select.onchange();
+        if (!lastSelected) select.value = "default:0";
+        select.onchange({target: select});
       }
     }
 
