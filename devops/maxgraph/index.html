@@ -199,6 +199,46 @@
             padding: 16px 24px; border-top: 1px solid var(--border-color);
             display: flex; justify-content: flex-end; gap: 12px;
         }
+        /* 侧边栏和中央 Tab 样式 */
+        .sidebar-tabs, .center-tabs {
+            display: flex; gap: 4px; padding: 8px 16px; background: rgba(0,0,0,0.2);
+            border-bottom: 1px solid var(--border-color);
+        }
+        .sidebar-tab, .center-tab {
+            padding: 6px 12px; font-size: 0.85rem; cursor: pointer; border-radius: 6px;
+            color: #94a3b8; transition: all 0.2s; user-select: none;
+        }
+        .sidebar-tab:hover, .center-tab:hover { background: rgba(255,255,255,0.05); color: #e2e8f0; }
+        .sidebar-tab.active, .center-tab.active {
+            background: rgba(59, 130, 246, 0.2); color: #60a5fa; border: 1px solid rgba(59, 130, 246, 0.3);
+        }
+        .sidebar-content { flex: 1; padding: 16px; overflow-y: auto; display: flex; flex-direction: column; gap: 12px; }
+        
+        .main-center { flex: 1; display: flex; flex-direction: column; min-width: 0; background-color: #0f172a; }
+        .demo-wrapper {
+            flex: 1; position: relative; display: flex; flex-direction: column;
+            background-color: #1e293b; overflow: hidden;
+        }
+        #demo-container { flex: 1; overflow: auto; width: 100%; height: 100%; }
+        .demo-toolbar {
+            position: absolute; top: 16px; right: 16px; z-index: 100;
+        }
+
+        /* 树状菜单样式 */
+        .tree-view { padding: 8px; gap: 4px; }
+        .tree-category { margin-bottom: 4px; }
+        .tree-category-title {
+            padding: 6px 8px; cursor: pointer; border-radius: 4px; font-size: 0.85rem; font-weight: 600;
+            color: #cbd5e1; display: flex; align-items: center; gap: 6px; transition: background 0.2s;
+        }
+        .tree-category-title:hover { background: rgba(255,255,255,0.05); }
+        .tree-category-items { padding-left: 20px; margin-top: 4px; display: flex; flex-direction: column; gap: 2px; }
+        .tree-item {
+            padding: 6px 8px; cursor: pointer; border-radius: 4px; font-size: 0.8rem; color: #94a3b8;
+            display: flex; align-items: center; gap: 6px; transition: all 0.2s;
+        }
+        .tree-item:hover { background: rgba(139, 92, 246, 0.1); color: #c4b5fd; }
+        .tree-item.active { background: rgba(139, 92, 246, 0.2); color: #a78bfa; font-weight: 600; border-left: 2px solid #a78bfa; }
     </style>
 </head>
 <body>
@@ -214,13 +254,10 @@
                     <option value="flowchart">模板：标准业务流程图</option>
                     <option value="network">模板：云网络拓扑图</option>
                 </select>
-                <select class="glass-select" v-model="selectedOfficialStory" @change="loadOfficialStory" style="background: rgba(139, 92, 246, 0.1); color: #c4b5fd; border-color: rgba(139, 92, 246, 0.3);">
-                    <option value="">🔥 官方 Storybook Demos...</option>
-                    <optgroup v-for="(stories, category) in officialStoriesGrouped" :key="category" :label="category">
-                        <option v-for="story in stories" :key="story.id" :value="story.id">
-                            {{ story.name || story.exportName }}
-                        </option>
-                    </optgroup>
+                <select class="glass-select" v-model="selectedTemplate" @change="loadTemplate">
+                    <option value="">内置真实案例模板...</option>
+                    <option value="flowchart">模板：标准业务流程图</option>
+                    <option value="network">模板：云网络拓扑图</option>
                 </select>
                 <div style="width: 1px; background: #334155; margin: 0 8px; height: 20px;"></div>
                 <button class="glass-btn" @click="zoomIn">放大</button>
@@ -233,40 +270,82 @@
         </header>
         
         <div class="main-content">
-            <!-- 左侧：丰富的控件面板 -->
-            <aside class="sidebar-left">
-                <h3 class="panel-title">基础图形 (拖拽)</h3>
-                <div class="palette-item" ref="dragRect" data-shape="rectangle">
-                    <div class="shape-icon icon-rect"></div> 矩形
-                </div>
-                <div class="palette-item" ref="dragRounded" data-shape="rectangle">
-                    <div class="shape-icon icon-rounded"></div> 圆角矩形
-                </div>
-                <div class="palette-item" ref="dragCircle" data-shape="ellipse">
-                    <div class="shape-icon icon-circle"></div> 圆形 / 状态
-                </div>
-                <div class="palette-item" ref="dragRhombus" data-shape="rhombus">
-                    <div class="shape-icon icon-rhombus"></div> 菱形 / 判断
-                </div>
-                <div class="palette-item" ref="dragHexagon" data-shape="hexagon">
-                    <div class="shape-icon icon-hexagon"></div> 六边形
+            <!-- 左侧：控件面板 & 官方 Demo 树 -->
+            <aside class="sidebar-left" style="padding: 0;">
+                <div class="sidebar-tabs">
+                    <div class="sidebar-tab" :class="{active: leftTab === 'palette'}" @click="leftTab = 'palette'">🎨 控件</div>
+                    <div class="sidebar-tab" :class="{active: leftTab === 'demos'}" @click="leftTab = 'demos'">📚 官方 Demo</div>
                 </div>
                 
-                <h3 class="panel-title" style="margin-top: 15px;">高级图形</h3>
-                <div class="palette-item" ref="dragCylinder" data-shape="cylinder">
-                    <div class="shape-icon icon-cylinder"></div> 数据库 (Cylinder)
+                <!-- 拖拽控件库 -->
+                <div v-show="leftTab === 'palette'" class="sidebar-content">
+                    <h3 class="panel-title">基础图形 (拖拽)</h3>
+                    <div class="palette-item" ref="dragRect" data-shape="rectangle">
+                        <div class="shape-icon icon-rect"></div> 矩形
+                    </div>
+                    <div class="palette-item" ref="dragRounded" data-shape="rectangle">
+                        <div class="shape-icon icon-rounded"></div> 圆角矩形
+                    </div>
+                    <div class="palette-item" ref="dragCircle" data-shape="ellipse">
+                        <div class="shape-icon icon-circle"></div> 圆形 / 状态
+                    </div>
+                    <div class="palette-item" ref="dragRhombus" data-shape="rhombus">
+                        <div class="shape-icon icon-rhombus"></div> 菱形 / 判断
+                    </div>
+                    <div class="palette-item" ref="dragHexagon" data-shape="hexagon">
+                        <div class="shape-icon icon-hexagon"></div> 六边形
+                    </div>
+                    
+                    <h3 class="panel-title" style="margin-top: 15px;">高级图形</h3>
+                    <div class="palette-item" ref="dragCylinder" data-shape="cylinder">
+                        <div class="shape-icon icon-cylinder"></div> 数据库 (Cylinder)
+                    </div>
+                    <div class="palette-item" ref="dragCloud" data-shape="cloud">
+                        <div class="shape-icon icon-cloud"></div> 云网络 (Cloud)
+                    </div>
+                    <div class="palette-item" ref="dragActor" data-shape="actor">
+                        <div class="shape-icon icon-actor"></div> 角色 (Actor)
+                    </div>
                 </div>
-                <div class="palette-item" ref="dragCloud" data-shape="cloud">
-                    <div class="shape-icon icon-cloud"></div> 云网络 (Cloud)
-                </div>
-                <div class="palette-item" ref="dragActor" data-shape="actor">
-                    <div class="shape-icon icon-actor"></div> 角色 (Actor)
+
+                <!-- 官方 Demo 树状目录 -->
+                <div v-show="leftTab === 'demos'" class="sidebar-content tree-view">
+                    <div class="tree-category" v-for="(stories, category) in officialStoriesGrouped" :key="category">
+                        <div class="tree-category-title" @click="toggleCategory(category)">
+                            <span>{{ expandedCategories[category] ? '📂' : '📁' }}</span> {{ category }}
+                        </div>
+                        <div class="tree-category-items" v-show="expandedCategories[category]">
+                            <div class="tree-item" 
+                                v-for="story in stories" 
+                                :key="story.id" 
+                                :class="{active: selectedOfficialStory === story.id}"
+                                @click="selectOfficialStory(story)">
+                                📄 {{ story.name || story.exportName }}
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </aside>
             
-            <!-- 中间：核心画布 -->
-            <main class="canvas-wrapper">
-                <div id="graph-container"></div>
+            <!-- 中间：核心区域 (Tabs + 画布 + Demo容器) -->
+            <main class="main-center">
+                <div class="center-tabs">
+                    <div class="center-tab" :class="{active: centerTab === 'editor'}" @click="centerTab = 'editor'">✏️ 我的工作台</div>
+                    <div class="center-tab" :class="{active: centerTab === 'demo'}" @click="centerTab = 'demo'" v-if="hasRenderedDemo">👁️ 官方演示区</div>
+                </div>
+                
+                <!-- 我的画布 -->
+                <div class="canvas-wrapper" v-show="centerTab === 'editor'">
+                    <div id="graph-container"></div>
+                </div>
+
+                <!-- 官方 Demo 画布隔离区 -->
+                <div class="demo-wrapper" v-show="centerTab === 'demo'">
+                    <div id="demo-container"></div>
+                    <div class="demo-toolbar" v-if="demoSourceUrl">
+                        <a :href="demoSourceUrl" target="_blank" class="glass-btn primary" style="text-decoration: none;">👨‍💻 查看 Github 源码</a>
+                    </div>
+                </div>
             </main>
             
             <!-- 右侧：属性面板与鹰眼图 -->
@@ -335,6 +414,12 @@
                 const selectedOfficialStory = ref('');
                 const officialStoriesGrouped = ref({});
 
+                const leftTab = ref('palette'); // 'palette' | 'demos'
+                const centerTab = ref('editor'); // 'editor' | 'demo'
+                const expandedCategories = ref({});
+                const hasRenderedDemo = ref(false);
+                const demoSourceUrl = ref('');
+
                 // Fetch stories.json
                 const fetchStories = async () => {
                     try {
@@ -349,47 +434,65 @@
                             }
                         });
                         officialStoriesGrouped.value = grouped;
+                        // Default expand first category
+                        const firstCat = Object.keys(grouped)[0];
+                        if (firstCat) expandedCategories.value[firstCat] = true;
                     } catch (e) {
                         console.error('Failed to load stories.json', e);
                     }
                 };
 
-                const loadOfficialStory = () => {
-                    if (!selectedOfficialStory.value) return;
-                    const storyId = selectedOfficialStory.value;
+                const toggleCategory = (cat) => {
+                    expandedCategories.value[cat] = !expandedCategories.value[cat];
+                };
+
+                const selectOfficialStory = (story) => {
+                    selectedOfficialStory.value = story.id;
+                    
+                    // Generate Github URL for source code viewing
+                    const rawImport = story.importPath; // e.g. "./stories/HelloWorld.stories.ts"
+                    if (rawImport) {
+                        const gitPath = rawImport.replace('./', '');
+                        demoSourceUrl.value = `https://github.com/maxGraph/maxGraph/tree/main/packages/core/src/${gitPath}`;
+                    } else {
+                        demoSourceUrl.value = '';
+                    }
+
+                    loadOfficialStory(story.id);
+                };
+
+                const loadOfficialStory = (storyId) => {
                     const storyModule = window.MaxGraphStories?.[storyId];
                     if (!storyModule) {
                         alert('该官方 Demo 加载失败或未找到。');
                         return;
                     }
 
-                    // Many stories export Default, others export specific names. Let's just grab the first function exported
                     const renderFn = storyModule.Default || Object.values(storyModule).find(fn => typeof fn === 'function');
                     if (typeof renderFn !== 'function') {
                         alert('该官方 Demo 没有渲染函数。');
                         return;
                     }
 
-                    // The official demos usually create their own container and return it.
-                    // Let's clear our graph-container and run it.
-                    const containerWrapper = document.querySelector('.canvas-wrapper');
-                    containerWrapper.innerHTML = ''; // Wipe out our editor UI
+                    // Switch tabs
+                    hasRenderedDemo.value = true;
+                    centerTab.value = 'demo';
+
+                    const demoContainer = document.getElementById('demo-container');
+                    demoContainer.innerHTML = ''; // Wipe out previous demo
                     
                     try {
-                        // Some stories expect args
                         const args = storyModule.default?.args || {};
                         const result = renderFn(args);
                         
                         if (result instanceof HTMLElement) {
-                            containerWrapper.appendChild(result);
+                            demoContainer.appendChild(result);
                         } else {
-                            // If it didn't return an element, it might have attached to document.body, or we need to provide a container
-                            // Fallback: recreate our container and pass it in if it supports that
+                            // Fallback container
                             const newContainer = document.createElement('div');
-                            newContainer.id = 'graph-container';
                             newContainer.style.width = '100%';
                             newContainer.style.height = '100%';
-                            containerWrapper.appendChild(newContainer);
+                            demoContainer.appendChild(newContainer);
                             try {
                                 renderFn({ ...args, container: newContainer });
                             } catch(e2) {
@@ -605,7 +708,8 @@
                 return {
                     dragRect, dragRounded, dragCircle, dragRhombus, dragHexagon, dragCylinder, dragCloud, dragActor,
                     selectedCell, cellValue, updateLabel, selectedTemplate, loadTemplate,
-                    selectedOfficialStory, officialStoriesGrouped, loadOfficialStory,
+                    leftTab, centerTab, expandedCategories, toggleCategory, hasRenderedDemo, demoSourceUrl,
+                    selectedOfficialStory, officialStoriesGrouped, selectOfficialStory,
                     zoomIn, zoomOut, zoomActual, clearGraph,
                     showModal, modalMode, xmlContent, openImportModal, exportXml, confirmImport, closeModal, copyXml
                 }
