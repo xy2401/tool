@@ -37,6 +37,10 @@
       flex-wrap: wrap;
     }
     .editor-toolbar { border-right: 2px solid #ddd; }
+    .swagger-toolbar { justify-content: space-between; }
+    .swagger-toolbar-left { display: flex; align-items: center; gap: 15px; }
+    .swagger-toolbar-right { display: flex; align-items: center; gap: 15px; }
+    
     .toolbar h3 { margin: 0; font-size: 16px; color: #333; }
     .btn, .input-text {
       padding: 6px 12px; border: 1px solid #ccc; background: white; border-radius: 4px; font-size: 14px;
@@ -44,6 +48,7 @@
     .btn { cursor: pointer; }
     .btn:hover { background: #f0f0f0; }
     .input-text { outline: none; }
+    .input-text:focus { border-color: #888; }
     select { padding: 6px; border-radius: 4px; border: 1px solid #ccc; font-size: 14px; }
     
     .editor-section {
@@ -91,8 +96,13 @@
     <!-- Right Side: Swagger UI -->
     <div class="swagger-section">
       <div class="toolbar swagger-toolbar">
-        <h3>Swagger Preview</h3>
-        <button id="toggle-collapse-btn" class="btn">Collapse All</button>
+        <div class="swagger-toolbar-left">
+          <h3>Swagger Preview</h3>
+          <button id="toggle-collapse-btn" class="btn">Collapse All</button>
+        </div>
+        <div class="swagger-toolbar-right">
+          <input type="text" id="advanced-filter" class="input-text" placeholder="Smart Search (URL, Tag, Name)..." style="width: 250px;">
+        </div>
       </div>
       <div id="swagger-ui-container">
         <div id="swagger-ui"></div>
@@ -252,7 +262,16 @@
         renderSwagger();
       };
 
-      // 8. Initial Load from LocalStorage or default
+      // 8. Smart Search Filter Handler
+      let filterTimeout;
+      document.getElementById('advanced-filter').oninput = () => {
+        clearTimeout(filterTimeout);
+        filterTimeout = setTimeout(() => {
+          renderSwagger();
+        }, 400);
+      };
+
+      // 9. Initial Load from LocalStorage or default
       const saved = localStorage.getItem('openapi-edit-content');
       if (saved) {
         setEditorContent(saved, saved.trim().startsWith('{') ? 'data.json' : 'data.yaml');
@@ -274,6 +293,47 @@
       renderSwagger();
     }
 
+    function filterSpec(originalSpec, query) {
+      if (!query) return originalSpec;
+      
+      const spec = JSON.parse(JSON.stringify(originalSpec)); // deep clone
+      const queryLower = query.toLowerCase();
+
+      if (spec.paths) {
+        const filteredPaths = {};
+        for (const [pathKey, methods] of Object.entries(spec.paths)) {
+          const filteredMethods = {};
+          let pathMatches = pathKey.toLowerCase().includes(queryLower);
+          let hasMatchingMethod = false;
+
+          for (const [methodKey, operation] of Object.entries(methods)) {
+            // Keep path-level parameters/servers attached if the path itself is kept
+            if (methodKey === 'parameters' || methodKey === 'servers') {
+              filteredMethods[methodKey] = operation;
+              continue;
+            }
+
+            let opMatches = pathMatches || methodKey.toLowerCase().includes(queryLower);
+            if (operation.summary && operation.summary.toLowerCase().includes(queryLower)) opMatches = true;
+            if (operation.description && operation.description.toLowerCase().includes(queryLower)) opMatches = true;
+            if (operation.operationId && operation.operationId.toLowerCase().includes(queryLower)) opMatches = true;
+            if (operation.tags && operation.tags.some(t => t.toLowerCase().includes(queryLower))) opMatches = true;
+
+            if (opMatches) {
+              filteredMethods[methodKey] = operation;
+              hasMatchingMethod = true;
+            }
+          }
+
+          if (hasMatchingMethod) {
+            filteredPaths[pathKey] = filteredMethods;
+          }
+        }
+        spec.paths = filteredPaths;
+      }
+      return spec;
+    }
+
     function renderSwagger() {
       const content = editor.getValue();
       if (!content.trim()) return;
@@ -291,11 +351,20 @@
         return;
       }
 
+      // Apply Smart Filter
+      const filterQuery = document.getElementById('advanced-filter').value.trim();
+      if (filterQuery) {
+        spec = filterSpec(spec, filterQuery);
+      }
+
       swaggerUi = SwaggerUIBundle({
         spec: spec,
         dom_id: '#swagger-ui',
-        docExpansion: isCollapsed ? "none" : "list",
-        filter: true, // Enables native tag filtering
+        docExpansion: (isCollapsed || filterQuery) ? "none" : "list", // if filtering, might still keep collapsed or open? actually "list" is good for filter so you can see results. 
+        // Let's force expand if filtering, or just respect isCollapsed.
+        // wait, let's just make it 'list' if filtering so users can see matches immediately.
+        // Actually, let's just do:
+        docExpansion: filterQuery ? "list" : (isCollapsed ? "none" : "list"),
         deepLinking: true,
         presets: [
           SwaggerUIBundle.presets.apis,
