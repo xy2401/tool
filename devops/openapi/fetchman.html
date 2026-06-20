@@ -22,7 +22,19 @@
       --put: #8be9fd;
       --delete: #ff5555;
     }
-    body { margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: var(--bg); color: var(--text); height: 100vh; display: flex; flex-direction: column; overflow: hidden; }
+    body.light-theme {
+      --bg: #f8f9fa;
+      --panel: #ffffff;
+      --text: #212529;
+      --border: #dee2e6;
+      --primary: #6c757d;
+      --accent: #0d6efd;
+      --get: #198754;
+      --post: #fd7e14;
+      --put: #0dcaf0;
+      --delete: #dc3545;
+    }
+    body { margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: var(--bg); color: var(--text); height: 100vh; display: flex; flex-direction: column; overflow: hidden; transition: background 0.3s, color 0.3s; }
     
     .navbar { padding: 10px 20px; background: var(--panel); border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; }
     .navbar h2 { margin: 0; font-size: 1.2rem; color: var(--accent); }
@@ -99,6 +111,7 @@
   <div class="navbar">
     <h2>Fetchman ⚡</h2>
     <div style="display: flex; gap: 15px; align-items: center;">
+      <button onclick="toggleTheme()" style="background:transparent; border:1px solid var(--border);">🌗 Theme</button>
       <button onclick="openSettings()" style="background:transparent; border:1px solid var(--border);">⚙️ Settings</button>
       <a href="./edit.html">← Back to Editor</a>
     </div>
@@ -162,12 +175,31 @@
 
     let appSettings = {
       proxyUrl: '',
-      authHeader: ''
+      authHeader: '',
+      theme: 'dark'
     };
 
     function loadSettings() {
       const s = localStorage.getItem('fetchman-settings');
       if (s) appSettings = Object.assign(appSettings, JSON.parse(s));
+      applyTheme();
+    }
+
+    function toggleTheme() {
+      appSettings.theme = appSettings.theme === 'light' ? 'dark' : 'light';
+      saveSettings();
+      applyTheme();
+    }
+
+    function applyTheme() {
+      if (appSettings.theme === 'light') {
+        document.body.classList.add('light-theme');
+      } else {
+        document.body.classList.remove('light-theme');
+      }
+      const cmTheme = appSettings.theme === 'light' ? 'default' : 'darcula';
+      if (reqBodyEditor) reqBodyEditor.setOption('theme', cmTheme);
+      if (resBodyEditor) resBodyEditor.setOption('theme', cmTheme);
     }
 
     function saveSettings() {
@@ -379,11 +411,13 @@
 
       main.innerHTML = html;
 
+      const cmTheme = appSettings.theme === 'light' ? 'default' : 'darcula';
+
       // Initialize editors
       if (hasBody) {
         reqBodyEditor = CodeMirror(document.getElementById('req-body-editor'), {
           mode: 'application/json',
-          theme: 'darcula',
+          theme: cmTheme,
           lineNumbers: true,
           value: "{\n  \n}"
         });
@@ -391,7 +425,7 @@
 
       resBodyEditor = CodeMirror(document.getElementById('res-body-editor'), {
         mode: 'application/json',
-        theme: 'darcula',
+        theme: cmTheme,
         lineNumbers: true,
         readOnly: true,
         value: "// Response will appear here..."
