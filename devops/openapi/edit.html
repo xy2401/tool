@@ -27,10 +27,15 @@
     .main {
       display: flex; flex: 1; overflow: hidden; width: 100%;
     }
-    .toolbar {
-      padding: 12px;
+    .global-toolbar {
+      display: flex;
+      width: 100%;
       background: #f8f9fa;
       border-bottom: 1px solid #ddd;
+    }
+    .toolbar {
+      flex: 1;
+      padding: 12px;
       display: flex;
       align-items: center;
       gap: 15px;
@@ -80,27 +85,41 @@
 </head>
 <body>
 
+  <div class="global-toolbar">
+    <!-- Left Side: Editor Toolbar -->
+    <div class="toolbar editor-toolbar">
+      <div class="page-switcher">
+        <a href="./edit.html" class="switcher-btn active" title="Edit and preview OpenAPI configurations">✏️ Editor</a>
+        <a href="./fetchman.html" class="switcher-btn" title="Test APIs like Postman">⚡ Fetch</a>
+      </div>
+      
+      <select id="file-select" style="width: 160px; text-overflow: ellipsis;">
+        <option value="">-- Load config --</option>
+        <optgroup label="Defaults" id="optgroup-defaults"></optgroup>
+        <optgroup label="Saved Configs" id="optgroup-saved"></optgroup>
+      </select>
+
+      <input type="text" id="save-name" class="input-text" placeholder="Config name..." style="width: 140px;">
+      <button id="save-btn" class="btn">Save</button>
+      <button id="format-btn" class="btn">Format</button>
+      <button id="delete-btn" class="btn" style="color: #dc3545; display: none;" title="Delete current saved config">Delete</button>
+    </div>
+
+    <!-- Right Side: Swagger Toolbar -->
+    <div class="toolbar swagger-toolbar">
+      <div class="swagger-toolbar-left">
+        <h3>Swagger Preview</h3>
+        <button id="toggle-collapse-btn" class="btn">Collapse All</button>
+      </div>
+      <div class="swagger-toolbar-right">
+        <input type="text" id="advanced-filter" class="input-text" placeholder="Smart Search (URL, Tag, Name)..." style="width: 250px;">
+      </div>
+    </div>
+  </div>
+
   <div class="main">
-    
     <!-- Left Side: Editor -->
     <div class="editor-section">
-      <div class="toolbar editor-toolbar">
-        <div class="page-switcher">
-          <a href="./edit.html" class="switcher-btn active" title="Edit and preview OpenAPI configurations">✏️ Editor</a>
-          <a href="./fetchman.html" class="switcher-btn" title="Test APIs like Postman">⚡ Fetch</a>
-        </div>
-        
-        <select id="file-select" style="width: 160px; text-overflow: ellipsis;">
-          <option value="">-- Load config --</option>
-          <optgroup label="Defaults" id="optgroup-defaults"></optgroup>
-          <optgroup label="Saved Configs" id="optgroup-saved"></optgroup>
-        </select>
-
-        <input type="text" id="save-name" class="input-text" placeholder="Config name..." style="width: 140px;">
-        <button id="save-btn" class="btn">Save</button>
-        <button id="format-btn" class="btn">Format</button>
-        <button id="delete-btn" class="btn" style="color: #dc3545; display: none;" title="Delete current saved config">Delete</button>
-      </div>
       <div id="editor-pane">
         <div class="floating-tools">
           <span id="status-text" style="font-size: 13px; color: #555; margin-right: 4px; background: rgba(255,255,255,0.8); padding: 2px 6px; border-radius: 4px; display: none;"></span>
@@ -109,6 +128,7 @@
           </button>
           <button class="float-btn" id="float-download" title="Download File">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+          </button>
           <button class="float-btn" id="float-upload" title="Upload File">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>
           </button>
@@ -119,21 +139,11 @@
 
     <!-- Right Side: Swagger UI -->
     <div class="swagger-section">
-      <div class="toolbar swagger-toolbar">
-        <div class="swagger-toolbar-left">
-          <h3>Swagger Preview</h3>
-          <button id="toggle-collapse-btn" class="btn">Collapse All</button>
-        </div>
-        <div class="swagger-toolbar-right">
-          <input type="text" id="advanced-filter" class="input-text" placeholder="Smart Search (URL, Tag, Name)..." style="width: 250px;">
-        </div>
-      </div>
       <div id="swagger-ui-container">
         <div id="swagger-ui"></div>
       </div>
     </div>
-
-  </div>
+  </div></div>
 
   <script>
     // --- IndexedDB Storage Wrapper ---
