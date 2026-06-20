@@ -24,6 +24,9 @@
       font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
       display: flex; flex-direction: column;
     }
+    .main {
+      display: flex; flex: 1; overflow: hidden; width: 100%;
+    }
     .toolbar {
       padding: 12px;
       background: #f8f9fa;
@@ -33,6 +36,7 @@
       gap: 15px;
       flex-wrap: wrap;
     }
+    .editor-toolbar { border-right: 2px solid #ddd; }
     .toolbar h3 { margin: 0; font-size: 16px; color: #333; }
     .btn, .input-text {
       padding: 6px 12px; border: 1px solid #ccc; background: white; border-radius: 4px; font-size: 14px;
@@ -41,50 +45,60 @@
     .btn:hover { background: #f0f0f0; }
     .input-text { outline: none; }
     select { padding: 6px; border-radius: 4px; border: 1px solid #ccc; font-size: 14px; }
-    .main {
-      display: flex; flex: 1; overflow: hidden;
-    }
+    
     .editor-section {
-      flex: 1; display: flex; flex-direction: column; border-right: 2px solid #ddd;
+      flex: 1; display: flex; flex-direction: column; border-right: 2px solid #ddd; overflow: hidden;
     }
     #editor-pane { flex: 1; overflow: hidden; display: flex; flex-direction: column; }
     .CodeMirror { flex: 1; font-size: 14px; font-family: Consolas, "Courier New", monospace; }
+    
     .swagger-section {
-      flex: 1; overflow-y: auto; background: #fafafa;
+      flex: 1; display: flex; flex-direction: column; overflow: hidden; background: #fafafa;
     }
+    #swagger-ui-container { flex: 1; overflow-y: auto; }
     .status { font-size: 12px; color: #666; margin-left: auto; }
   </style>
 </head>
 <body>
 
-  <div class="toolbar">
-    <h3>OpenAPI Editor</h3>
-    
-    <select id="file-select">
-      <option value="">-- Load config --</option>
-      <optgroup label="Defaults" id="optgroup-defaults"></optgroup>
-      <optgroup label="Saved Configs" id="optgroup-saved"></optgroup>
-    </select>
-
-    <label class="btn">
-      Upload File
-      <input type="file" id="upload-btn" accept=".json,.yaml,.yml" style="display:none">
-    </label>
-
-    <input type="text" id="save-name" class="input-text" placeholder="Config name..." style="width: 140px;">
-    <button id="save-btn" class="btn">Save Config</button>
-
-    <button id="format-btn" class="btn">Format JSON</button>
-    <button id="toggle-collapse-btn" class="btn">Collapse All</button>
-
-    <div class="status" id="status-text">Ready</div>
-  </div>
-
   <div class="main">
-    <div class="editor-section" id="editor-pane"></div>
-    <div class="swagger-section">
-      <div id="swagger-ui"></div>
+    
+    <!-- Left Side: Editor -->
+    <div class="editor-section">
+      <div class="toolbar editor-toolbar">
+        <h3>Editor</h3>
+        
+        <select id="file-select">
+          <option value="">-- Load config --</option>
+          <optgroup label="Defaults" id="optgroup-defaults"></optgroup>
+          <optgroup label="Saved Configs" id="optgroup-saved"></optgroup>
+        </select>
+
+        <label class="btn">
+          Upload File
+          <input type="file" id="upload-btn" accept=".json,.yaml,.yml" style="display:none">
+        </label>
+
+        <input type="text" id="save-name" class="input-text" placeholder="Config name..." style="width: 140px;">
+        <button id="save-btn" class="btn">Save</button>
+        <button id="format-btn" class="btn">Format</button>
+
+        <div class="status" id="status-text">Ready</div>
+      </div>
+      <div id="editor-pane"></div>
     </div>
+
+    <!-- Right Side: Swagger UI -->
+    <div class="swagger-section">
+      <div class="toolbar swagger-toolbar">
+        <h3>Swagger Preview</h3>
+        <button id="toggle-collapse-btn" class="btn">Collapse All</button>
+      </div>
+      <div id="swagger-ui-container">
+        <div id="swagger-ui"></div>
+      </div>
+    </div>
+
   </div>
 
   <script>
@@ -238,7 +252,7 @@
         renderSwagger();
       };
 
-      // 7. Initial Load from LocalStorage or default
+      // 8. Initial Load from LocalStorage or default
       const saved = localStorage.getItem('openapi-edit-content');
       if (saved) {
         setEditorContent(saved, saved.trim().startsWith('{') ? 'data.json' : 'data.yaml');
@@ -281,6 +295,7 @@
         spec: spec,
         dom_id: '#swagger-ui',
         docExpansion: isCollapsed ? "none" : "list",
+        filter: true, // Enables native tag filtering
         deepLinking: true,
         presets: [
           SwaggerUIBundle.presets.apis,
