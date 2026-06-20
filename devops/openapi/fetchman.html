@@ -125,7 +125,10 @@
           <optgroup label="Defaults" id="optgroup-defaults"></optgroup>
           <optgroup label="Saved Configs" id="optgroup-saved"></optgroup>
         </select>
-        <input type="text" id="search-input" placeholder="Search endpoints...">
+        <div style="display: flex; gap: 5px;">
+          <input type="text" id="search-input" placeholder="Search endpoints..." style="flex: 1;">
+          <button id="sidebar-collapse-btn" style="padding: 0 10px;" title="Toggle Collapse All">🔽</button>
+        </div>
       </div>
       <div class="sidebar-list" id="endpoint-list">
         <!-- Rendered endpoints go here -->
@@ -251,6 +254,24 @@
       };
 
       document.getElementById('search-input').oninput = renderSidebar;
+
+      let isAllCollapsed = false;
+      document.getElementById('sidebar-collapse-btn').onclick = () => {
+        isAllCollapsed = !isAllCollapsed;
+        document.getElementById('sidebar-collapse-btn').innerText = isAllCollapsed ? '▶️' : '🔽';
+        const headers = document.querySelectorAll('.tag-group');
+        const containers = document.querySelectorAll('.ep-group-container');
+        headers.forEach((h, i) => {
+          const tag = h.getAttribute('data-tag');
+          if (isAllCollapsed) {
+            containers[i].style.display = 'none';
+            h.innerHTML = `<span>▶ ${tag}</span>`;
+          } else {
+            containers[i].style.display = 'block';
+            h.innerHTML = `<span>▼ ${tag}</span>`;
+          }
+        });
+      };
     }
 
     function populateSpecSelect() {
@@ -297,8 +318,23 @@
       for (const tag in grouped) {
         const tDiv = document.createElement('div');
         tDiv.className = 'tag-group';
-        tDiv.innerText = tag;
+        tDiv.style.cursor = 'pointer';
+        tDiv.setAttribute('data-tag', tag);
+        tDiv.innerHTML = `<span>▼ ${tag}</span>`;
         list.appendChild(tDiv);
+
+        const groupContainer = document.createElement('div');
+        groupContainer.className = 'ep-group-container';
+
+        tDiv.onclick = () => {
+          if (groupContainer.style.display === 'none') {
+            groupContainer.style.display = 'block';
+            tDiv.innerHTML = `<span>▼ ${tag}</span>`;
+          } else {
+            groupContainer.style.display = 'none';
+            tDiv.innerHTML = `<span>▶ ${tag}</span>`;
+          }
+        };
 
         grouped[tag].forEach(ep => {
           const item = document.createElement('div');
@@ -310,8 +346,10 @@
             item.classList.add('active');
             openEndpoint(ep);
           };
-          list.appendChild(item);
+          groupContainer.appendChild(item);
         });
+
+        list.appendChild(groupContainer);
       }
     }
 
