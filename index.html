@@ -457,8 +457,10 @@
               <td>{{ dep.packageName }}</td>
               <td><code>{{ dep.currentVersion }}</code></td>
               <td><code>{{ dep.latestVersion }}</code></td>
-              <td :class="dep.currentVersion === dep.latestVersion ? 'status-ok' : 'status-warn'">
-                {{ dep.currentVersion === dep.latestVersion ? '✅ 最新' : '⚠️ 可更新' }}
+              <td :class="dep.status === 'none' || dep.status === 'error' ? '' : (dep.currentVersion === dep.latestVersion ? 'status-ok' : 'status-warn')">
+                <span v-if="dep.status === 'none'">✅ 纯原生</span>
+                <span v-else-if="dep.status === 'error'">❌ 无法读取</span>
+                <span v-else>{{ dep.currentVersion === dep.latestVersion ? '✅ 最新' : '⚠️ 可更新' }}</span>
               </td>
             </tr>
           </tbody>
@@ -698,15 +700,18 @@
                 const res = await fetch(href);
                 const text = await res.text();
                 
-                const moduleName = href === './index.html' ? '根工具箱' : href.split('/').slice(-2, -1)[0];
+                const moduleName = href;
                 const parser = new DOMParser();
                 const doc = parser.parseFromString(text, 'text/html');
+                
+                let foundAny = false;
                 
                 // 1. Script src
                 doc.querySelectorAll('script[src]').forEach(script => {
                   const src = script.getAttribute('src');
                   const match = src.match(urlRegex);
                   if (match) {
+                    foundAny = true;
                     results.push({ moduleName, packageName: match[1], currentVersion: match[2], latestVersion: '查询中...', status: 'loading' });
                   }
                 });
@@ -719,14 +724,21 @@
                       for (const val of Object.values(json.imports)) {
                         const match = val.match(urlRegex);
                         if (match) {
+                          foundAny = true;
                           results.push({ moduleName, packageName: match[1], currentVersion: match[2], latestVersion: '查询中...', status: 'loading' });
                         }
                       }
                     }
                   } catch(e) {}
                 });
+                
+                if (!foundAny) {
+                  results.push({ moduleName, packageName: '-', currentVersion: '-', latestVersion: '-', status: 'none' });
+                }
+                
               } catch(e) {
                 console.warn("Error fetching " + href, e);
+                results.push({ moduleName: href, packageName: '-', currentVersion: '-', latestVersion: '-', status: 'error' });
               }
             }
             
@@ -743,6 +755,7 @@
             this.depData = uniqueResults;
             
             const fetchPromises = uniqueResults.map(async (dep) => {
+               if (dep.status === 'none' || dep.status === 'error') return;
                try {
                  const res = await fetch(`https://data.jsdelivr.com/v1/package/npm/${dep.packageName}`);
                  const data = await res.json();
