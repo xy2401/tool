@@ -257,8 +257,9 @@
                 <button class="glass-btn" @click="zoomOut">缩小</button>
                 <button class="glass-btn" @click="zoomActual">1:1</button>
                 <div style="width: 1px; background: #334155; margin: 0 8px; height: 20px;"></div>
-                <button class="glass-btn success" @click="openImportModal">导入 XML</button>
-                <button class="glass-btn primary" @click="exportXml">导出 XML</button>
+                <input type="file" ref="fileInput" @change="handleFileImport" accept=".xml" style="display: none;" />
+                <button class="glass-btn success" @click="importXmlFile">📂 导入文件 (.xml)</button>
+                <button class="glass-btn primary" @click="exportXmlFile">💾 导出文件 (.xml)</button>
             </div>
         </header>
         
@@ -302,7 +303,7 @@
                                     :key="story.id" 
                                     :class="{active: selectedOfficialStory === story.id}"
                                     @click="selectOfficialStory(story)">
-                                    📄 {{ story.name || story.exportName }}
+                                    📄 {{ story.displayName }}
                                 </div>
                             </div>
                         </template>
@@ -312,7 +313,7 @@
                             <div class="tree-category-title" 
                                 :class="{active: selectedOfficialStory === stories[0].id}"
                                 @click="selectOfficialStory(stories[0])">
-                                <span>📄</span> {{ category }}
+                                <span>📄</span> {{ stories[0].displayName }}
                             </div>
                         </template>
                         
@@ -372,26 +373,19 @@
             </aside>
         </div>
 
-        <!-- XML 弹窗 -->
+        <!-- XML 弹窗 (仅用于源码查看) -->
         <div v-if="showModal" class="modal-overlay" @click.self="closeModal">
             <div class="modal-content">
                 <div class="modal-header">
-                    <h3 style="margin:0; font-size: 1rem;">
-                        <template v-if="modalMode === 'import'">导入 XML</template>
-                        <template v-else-if="modalMode === 'export'">导出 XML</template>
-                        <template v-else>Demo 源码 ({{ demoSourcePath }})</template>
-                    </h3>
+                    <h3 style="margin:0; font-size: 1rem;">Demo 源码 ({{ demoSourcePath }})</h3>
                     <button class="glass-btn" style="border:none; padding:4px;" @click="closeModal">✕</button>
                 </div>
                 <div class="modal-body">
-                    <textarea v-model="xmlContent" :readonly="modalMode === 'export' || modalMode === 'source'" 
-                              :placeholder="modalMode === 'import' ? '在此粘贴 XML 代码...' : ''"
-                              :style="modalMode === 'source' ? 'height: 500px; font-size: 0.8rem; font-family: Consolas, monospace;' : ''"></textarea>
+                    <textarea v-model="xmlContent" readonly style="height: 500px; font-size: 0.8rem; font-family: Consolas, monospace;"></textarea>
                 </div>
                 <div class="modal-footer">
-                    <button class="glass-btn" @click="closeModal">取消</button>
-                    <button class="glass-btn primary" v-if="modalMode === 'export' || modalMode === 'source'" @click="copyXml">复制到剪贴板</button>
-                    <button class="glass-btn success" v-if="modalMode === 'import'" @click="confirmImport">确认导入</button>
+                    <button class="glass-btn primary" @click="copyXml">复制到剪贴板</button>
+                    <button class="glass-btn" @click="closeModal">关闭</button>
                 </div>
             </div>
         </div>
@@ -408,6 +402,7 @@
         createApp({
             setup() {
                 let graph = null;
+                const fileInput = ref(null);
                 const selectedCell = ref(null);
                 const cellValue = ref('');
                 const selectedTemplate = ref('');
@@ -428,9 +423,24 @@
                         const grouped = {};
                         Object.values(data.entries).forEach(entry => {
                             if (entry.type === 'story' && entry.importPath.match(/\.(ts|js)$/) && !entry.importPath.includes('ImageBundle')) {
-                                const title = entry.title || 'Other';
-                                if (!grouped[title]) grouped[title] = [];
-                                grouped[title].push(entry);
+                                const fullTitle = entry.title || 'Other';
+                                const parts = fullTitle.split('/');
+                                const mainCategory = parts[0];
+                                const subCategory = parts[1] || '';
+                                
+                                // Set a clean display name
+                                let displayName = entry.name || entry.exportName;
+                                if (subCategory) {
+                                    if (displayName.toLowerCase() === 'default') {
+                                        displayName = subCategory;
+                                    } else {
+                                        displayName = `${subCategory} (${displayName})`;
+                                    }
+                                }
+                                entry.displayName = displayName;
+
+                                if (!grouped[mainCategory]) grouped[mainCategory] = [];
+                                grouped[mainCategory].push(entry);
                             }
                         });
                         officialStoriesGrouped.value = grouped;
@@ -552,11 +562,7 @@
                     }
                 };
 
-                // 模态框状态
-                const showModal = ref(false);
-                const modalMode = ref('export');
-                const xmlContent = ref('');
-
+                // 模态框状态 (移至文件底部)
                 const paletteCategories = ref([
                     {
                         id: 'general',
@@ -708,46 +714,50 @@
                     }
                 };
 
-                // XML 导入导出
-                const exportXml = () => {
-                    if (!graph) return;
-                    const serializer = new ModelXmlSerializer(graph.getDataModel());
-                    xmlContent.value = serializer.export();
-                    modalMode.value = 'export';
-                    showModal.value = true;
-                };
-
-                const openImportModal = () => {
-                    xmlContent.value = '';
-                    modalMode.value = 'import';
-                    showModal.value = true;
-                };
-
-                const confirmImport = () => {
-                    if (!graph || !xmlContent.value) return;
-                    try {
-                        const serializer = new ModelXmlSerializer(graph.getDataModel());
-                        graph.getDataModel().beginUpdate();
-                        try {
-                            graph.getDataModel().clear();
-                            serializer.import(xmlContent.value);
-                        } finally {
-                            graph.getDataModel().endUpdate();
-                        }
-                        closeModal();
-                        alert('✅ XML 导入成功！');
-                    } catch (e) {
-                        alert('❌ XML 导入失败: ' + e.message);
-                    }
-                };
-
+                // 模态框状态 (仅源码)
+                const showModal = ref(false);
+                const xmlContent = ref('');
                 const copyXml = () => {
                     navigator.clipboard.writeText(xmlContent.value).then(() => {
                         alert('已复制到剪贴板！');
                     });
                 };
-
                 const closeModal = () => showModal.value = false;
+
+                // XML 导入导出 (文件流)
+                const importXmlFile = () => fileInput.value.click();
+                const handleFileImport = (event) => {
+                    const file = event.target.files[0];
+                    if (!file) return;
+                    const reader = new FileReader();
+                    reader.onload = (e) => {
+                        const xml = e.target.result;
+                        const serializer = new ModelXmlSerializer(graph.getDataModel());
+                        graph.getDataModel().beginUpdate();
+                        try {
+                            graph.getDataModel().clear();
+                            serializer.import(xml);
+                        } catch (err) {
+                            alert('导入失败: ' + err.message);
+                        } finally {
+                            graph.getDataModel().endUpdate();
+                        }
+                        // Reset file input value so the same file can be imported again
+                        event.target.value = '';
+                    };
+                    reader.readAsText(file);
+                };
+
+                const exportXmlFile = () => {
+                    if (!graph) return;
+                    const serializer = new ModelXmlSerializer(graph.getDataModel());
+                    const xml = serializer.export();
+                    const blob = new Blob([xml], { type: 'text/xml' });
+                    const a = document.createElement('a');
+                    a.href = URL.createObjectURL(blob);
+                    a.download = 'maxgraph-diagram.xml';
+                    a.click();
+                };
 
                 // 内置模板加载
                 const loadTemplate = () => {
@@ -801,7 +811,8 @@
                     leftTab, centerTab, expandedCategories, toggleCategory, hasRenderedDemo, demoSourcePath, viewSourceCode, copyDemoToWorkspace,
                     selectedOfficialStory, officialStoriesGrouped, selectOfficialStory,
                     zoomIn, zoomOut, zoomActual, clearGraph,
-                    showModal, modalMode, xmlContent, openImportModal, exportXml, confirmImport, closeModal, copyXml
+                    showModal, xmlContent, closeModal, copyXml,
+                    fileInput, importXmlFile, handleFileImport, exportXmlFile
                 }
             }
         }).mount('#app');
