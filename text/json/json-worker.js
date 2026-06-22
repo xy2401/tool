@@ -21,9 +21,7 @@ const MB = 1024 * 1024;
 const MAX_NODES_NORMAL = 12000;
 const MAX_NODES_LARGE = 5000;
 const MAX_NODES_ULTRA = 1500;
-const MAX_PREVIEW_CHARS_NORMAL = 2 * MB;
-const MAX_PREVIEW_CHARS_LARGE = 900 * 1024;
-const MAX_PREVIEW_CHARS_ULTRA = 360 * 1024;
+const MAX_PREVIEW_CHARS = MB;
 
 function normalizeOptions(options) {
   return Object.assign({
@@ -131,6 +129,7 @@ async function parseText(text, options, sourceName) {
       jsonStats: info.stats,
       jsonPathsList: info.paths,
       jsonSchemaText: info.schemaText,
+      jsonSchemaObject: info.schemaObject,
       mode,
       sizeBytes,
       sourceName: sourceName || options.sourceName || '',
@@ -147,15 +146,7 @@ function getMode(sizeBytes) {
 }
 
 function getEffectiveOptions(options) {
-  const next = Object.assign({}, options);
-  if (next.mode === 'ultra') {
-    next.parseStringifiedJson = false;
-    next.scanStringJsonSubstrings = false;
-    next.generateStats = false;
-    next.generatePaths = false;
-    next.inferSchema = false;
-  }
-  return next;
+  return Object.assign({}, options);
 }
 
 function progress(status, percent, indeterminate) {
@@ -338,8 +329,8 @@ function buildTree(root, options, onProgress) {
   if (truncated) {
     warnings.push(`节点树已限制为 ${maxNodes} 个节点，避免界面渲染过载。`);
   }
-  if (options.mode === 'ultra') {
-    warnings.push('超大文本模式已关闭字符串深挖、统计、路径和 Schema。');
+  if (options.mode === 'ultra' && !options.parseStringifiedJson && !options.scanStringJsonSubstrings) {
+    warnings.push('超大文本模式默认关闭字符串深挖，可手动启用高级功能后重新提取。');
   }
   onProgress && onProgress(100);
   return { nodes, truncated, warnings };
@@ -408,11 +399,7 @@ function extractJSONSubstrings(str) {
 
 function formatPreview(val, options, isRoot) {
   const space = options.mode === 'normal' ? '    ' : '  ';
-  const limit = options.mode === 'ultra'
-    ? MAX_PREVIEW_CHARS_ULTRA
-    : options.mode === 'large'
-      ? MAX_PREVIEW_CHARS_LARGE
-      : MAX_PREVIEW_CHARS_NORMAL;
+  const limit = MAX_PREVIEW_CHARS;
 
   let text = '';
   try {
@@ -454,22 +441,36 @@ function buildNodeInfo(val, options, mode, sizeBytes, treeTruncated) {
 
   let paths = [];
   let schemaText = '';
+  let schemaObject = null;
+
+  const statsVisitLimit = mode === 'ultra' ? 80000 : mode === 'large' ? 120000 : 400000;
+  const pathsVisitLimit = mode === 'ultra' ? 30000 : mode === 'large' ? 60000 : 200000;
+  const schemaVisitLimit = mode === 'ultra' ? 20000 : mode === 'large' ? 40000 : 120000;
 
   if (options.generateStats) {
-    Object.assign(stats, calculateDepthAndKeys(val, mode === 'large' ? 120000 : 400000));
+    const calculated = calculateDepthAndKeys(val, statsVisitLimit);
+    stats.keyCount = calculated.keys;
+    stats.maxDepth = calculated.depth;
+    stats.stringCount = calculated.stringCount;
+    stats.numberCount = calculated.numberCount;
+    stats.booleanCount = calculated.booleanCount;
+    stats.nullCount = calculated.nullCount;
+    stats.objectCount = calculated.objectCount;
+    stats.arrayCount = calculated.arrayCount;
   } else {
     stats.skipped.push('统计');
   }
 
   if (options.generatePaths) {
-    paths = generateJSONPaths(val, mode === 'large' ? 60000 : 200000);
+    paths = generateJSONPaths(val, pathsVisitLimit);
   } else {
     stats.skipped.push('路径');
   }
 
   if (options.inferSchema) {
-    const schemaObj = inferSchema(val, mode === 'large' ? 40000 : 120000);
+    const schemaObj = inferSchema(val, schemaVisitLimit);
     const finalSchema = Object.assign({ $schema: 'http://json-schema.org/draft-07/schema#' }, schemaObj);
+    schemaObject = finalSchema;
     schemaText = JSON.stringify(finalSchema, null, 2);
   } else {
     stats.skipped.push('Schema');
@@ -479,7 +480,7 @@ function buildNodeInfo(val, options, mode, sizeBytes, treeTruncated) {
   if (treeTruncated) stats.skipped.push('完整节点树');
   if (mode === 'ultra') warnings.push('已进入超大文本模式。');
 
-  return { stats, paths, schemaText, warnings };
+  return { stats, paths, schemaText, schemaObject, warnings };
 }
 
 function calculateDepthAndKeys(obj, visitLimit) {

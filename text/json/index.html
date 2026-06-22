@@ -116,28 +116,16 @@
               {{ isParsing ? '解析中' : '提取 JSON' }}
             </button>
           </div>
-          <div class="advanced-row" :class="{ 'advanced-row-locked': isUltraLargeMode }" @dblclick.stop>
+          <div class="advanced-row" @dblclick.stop>
             <div class="advanced-status-line">
               <span class="advanced-title">高级功能</span>
               <label class="advanced-option">
-                <input type="checkbox" v-model="advancedOptions.parseStringifiedJson" :disabled="isUltraLargeMode">
+                <input type="checkbox" v-model="advancedOptions.parseStringifiedJson">
                 <span>字符串 JSON</span>
               </label>
               <label class="advanced-option">
-                <input type="checkbox" v-model="advancedOptions.scanStringJsonSubstrings" :disabled="isUltraLargeMode">
+                <input type="checkbox" v-model="advancedOptions.scanStringJsonSubstrings">
                 <span>嵌套扫描</span>
-              </label>
-              <label class="advanced-option">
-                <input type="checkbox" v-model="advancedOptions.generatePaths" :disabled="isUltraLargeMode">
-                <span>路径</span>
-              </label>
-              <label class="advanced-option">
-                <input type="checkbox" v-model="advancedOptions.inferSchema" :disabled="isUltraLargeMode">
-                <span>Schema</span>
-              </label>
-              <label class="advanced-option">
-                <input type="checkbox" v-model="advancedOptions.generateStats" :disabled="isUltraLargeMode">
-                <span>统计</span>
               </label>
               <span class="parse-status" v-text="parseProgressText"></span>
             </div>
@@ -155,15 +143,15 @@
           <div style="display: flex; gap: 0.35rem; align-items: center; text-transform: none;">
             <template v-if="selectedNode && selectedNodeProperties.length > 0">
               <span 
-                :class="['badge-secondary', { 'badge-active': allPropertiesSelected }]" 
-                style="cursor: pointer; user-select: none;"
+                :class="['badge-secondary', 'bulk-state-badge', `bulk-state-${propertyBulkMode}`]"
+                :title="'点击切换属性状态：' + bulkModeText(propertyBulkMode)"
                 @click="toggleAllProperties"
               >属性 ({{ selectedNodeProperties.length }})</span>
             </template>
             <span 
               v-if="nodes.length > 1"
-              :class="['badge-secondary', { 'badge-active': allNodesSelected }]" 
-              style="cursor: pointer; user-select: none;"
+              :class="['badge-secondary', 'bulk-state-badge', `bulk-state-${nodeBulkMode}`]"
+              :title="'点击切换节点状态：' + bulkModeText(nodeBulkMode)"
               @click="toggleAllNodes"
             >节点 ({{ nodes.length - 1 }})</span>
             <span v-else class="badge-secondary">节点 (0)</span>
@@ -207,7 +195,7 @@
             </div>
 
             <!-- Primitive Properties of selected node -->
-            <template v-if="selectedNodeId === node.id && selectedNodeProperties.length > 0">
+            <template v-if="propertyBulkMode !== 'hidden' && selectedNodeId === node.id && selectedNodeProperties.length > 0">
               <div 
                 v-for="prop in selectedNodeProperties" 
                 :key="prop.key"
@@ -255,6 +243,17 @@
                     </div>
                   </div>
                 </div>
+                <template v-if="breadcrumbChildOptions.length > 0">
+                  <span class="breadcrumb-separator">›</span>
+                  <select class="breadcrumb-child-select" @change="handleBreadcrumbChildSelect($event)" title="进入下级节点">
+                    <option value="">进入下级...</option>
+                    <option
+                      v-for="child in breadcrumbChildOptions"
+                      :key="child.nodeId"
+                      :value="child.nodeId"
+                    >{{ child.label }} · {{ child.type }}</option>
+                  </select>
+                </template>
               </div>
               <div class="section-title" v-else style="margin-bottom: 0;">
                 <span>

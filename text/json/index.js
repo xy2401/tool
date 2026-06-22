@@ -8,10 +8,7 @@
     const ULTRA_TEXT_BYTES = 10 * 1024 * 1024;
     const DEFAULT_ADVANCED_OPTIONS = {
       parseStringifiedJson: true,
-      scanStringJsonSubstrings: true,
-      generatePaths: true,
-      inferSchema: true,
-      generateStats: true
+      scanStringJsonSubstrings: true
     };
 
     createApp({
@@ -25,6 +22,8 @@
         const isTextareaDirty = ref(false);
         const excludedProperties = ref([]);
         const excludedNodes = ref([]);
+        const propertyBulkMode = ref('selected');
+        const nodeBulkMode = ref('selected');
         const wordWrap = ref(true);
         const editText = ref('');
         const toasts = ref([]);
@@ -92,10 +91,7 @@
             advancedOptions.value = {
               ...advancedOptions.value,
               parseStringifiedJson: false,
-              scanStringJsonSubstrings: false,
-              generatePaths: false,
-              inferSchema: false,
-              generateStats: false
+              scanStringJsonSubstrings: false
             };
           } else if (optionSnapshotBeforeUltra) {
             advancedOptions.value = { ...DEFAULT_ADVANCED_OPTIONS, ...optionSnapshotBeforeUltra };
@@ -105,15 +101,15 @@
 
         const getEffectiveAdvancedOptions = (sizeBytes) => {
           const mode = getModeBySize(sizeBytes || 0);
-          const options = { ...advancedOptions.value, mode, sizeBytes };
+          const options = {
+            ...advancedOptions.value,
+            generateStats: true,
+            generatePaths: true,
+            inferSchema: true,
+            mode,
+            sizeBytes
+          };
           options.includeRootRaw = sizeBytes <= LARGE_TEXT_BYTES;
-          if (mode === 'ultra') {
-            options.parseStringifiedJson = false;
-            options.scanStringJsonSubstrings = false;
-            options.generatePaths = false;
-            options.inferSchema = false;
-            options.generateStats = false;
-          }
           return options;
         };
 
@@ -142,6 +138,20 @@
             percent: 0,
             status: '空闲'
           };
+        };
+
+        const formatSchemaText = (schemaObj, fallbackText = '') => {
+          if (!schemaObj) return fallbackText || '';
+          try {
+            if (window.jsyaml) {
+              return window.jsyaml.dump(schemaObj, { indent: 2, lineWidth: -1 });
+            }
+          } catch (e) {}
+          try {
+            return JSON.stringify(schemaObj, null, 2);
+          } catch (e) {
+            return fallbackText || '';
+          }
         };
 
         const handleDragOver = () => {
@@ -376,12 +386,14 @@
             }
             jsonStats.value = payload.jsonStats || {};
             jsonPathsList.value = payload.jsonPathsList || [];
-            jsonSchemaText.value = payload.jsonSchemaText || '';
+            jsonSchemaText.value = formatSchemaText(payload.jsonSchemaObject, payload.jsonSchemaText || '');
             inputMode.value = payload.mode || inputMode.value;
             currentSourceName.value = payload.sourceName || sourceName || currentSourceName.value;
             isTextareaDirty.value = false;
             excludedProperties.value = [];
             excludedNodes.value = [];
+            propertyBulkMode.value = 'selected';
+            nodeBulkMode.value = 'selected';
             collapsedNodes.value = [];
             activeTab.value = 'preview';
             finishParseProgress('解析完成');
@@ -580,6 +592,9 @@
 
         const filteredNodes = computed(() => {
           return nodes.value.filter(node => {
+            if (nodeBulkMode.value === 'hidden' && node.id !== 'main') {
+              return false;
+            }
             // Hide descendants of collapsed nodes
             for (const collapsedId of collapsedNodes.value) {
               if (node.id !== collapsedId && node.id.startsWith(collapsedId + '.')) {
@@ -622,8 +637,6 @@ Null数量:    ${s.nullCount}${s.skipped && s.skipped.length ? `\n\n已跳过: $
           return `进度：${progress.status || '处理中'} ${Math.round(progress.percent || 0)}%${modeSuffix}`;
         });
 
-        const isUltraLargeMode = computed(() => inputMode.value === 'ultra');
-        const isLargeInputMode = computed(() => inputMode.value === 'large' || inputMode.value === 'ultra');
         const isPreviewReadonly = computed(() => activeTab.value !== 'preview' || isPreviewTruncated.value);
 
         const displayValue = computed(() => {
@@ -704,8 +717,40 @@ Null数量:    ${s.nullCount}${s.skipped && s.skipped.length ? `\n\n已跳过: $
           return segments;
         });
 
+        const breadcrumbChildOptions = computed(() => {
+          if (!selectedNode.value) return [];
+          const currentPath = selectedNode.value.path;
+          const nextDepth = currentPath.length + 1;
+          const parentIsArray = Array.isArray(selectedNode.value.val);
+
+          return nodes.value
+            .filter(node => {
+              if (node.path.length !== nextDepth) return false;
+              for (let i = 0; i < currentPath.length; i++) {
+                if (node.path[i] !== currentPath[i]) return false;
+              }
+              return true;
+            })
+            .map(node => {
+              const segment = node.path[node.path.length - 1];
+              return {
+                label: parentIsArray ? '[' + segment + ']' : segment,
+                nodeId: node.id,
+                type: node.type
+              };
+            });
+        });
+
         const hasChildren = (nodeId) => {
           return nodes.value.some(n => n.id !== nodeId && n.id.startsWith(nodeId + '.'));
+        };
+
+        const handleBreadcrumbChildSelect = (event) => {
+          const nodeId = event.target.value;
+          if (nodeId) {
+            selectNode(nodeId);
+            event.target.value = '';
+          }
         };
 
         const toggleCollapse = (nodeId) => {
@@ -760,6 +805,57 @@ Null数量:    ${s.nullCount}${s.skipped && s.skipped.length ? `\n\n已跳过: $
           return nodes.value.every(node => node.id === 'main' || !excludedNodes.value.includes(node.id));
         });
 
+        const bulkModeText = (mode) => {
+          if (mode === 'unselected') return '不选中';
+          if (mode === 'hidden') return '不显示';
+          return '选中';
+        };
+
+        const nextBulkMode = (mode) => {
+          if (mode === 'selected') return 'unselected';
+          if (mode === 'unselected') return 'hidden';
+          return 'selected';
+        };
+
+        const applyPropertyBulkMode = (mode) => {
+          if (!selectedNode.value) return;
+          propertyBulkMode.value = mode;
+          const keys = selectedNodeProperties.value.map(prop => prop.key);
+
+          if (mode === 'selected') {
+            keys.forEach(key => {
+              const index = excludedProperties.value.indexOf(key);
+              if (index !== -1) {
+                excludedProperties.value.splice(index, 1);
+              }
+            });
+          } else {
+            keys.forEach(key => {
+              if (!excludedProperties.value.includes(key)) {
+                excludedProperties.value.push(key);
+              }
+            });
+          }
+
+          applyFormatting();
+        };
+
+        const applyNodeBulkMode = (mode) => {
+          if (nodes.value.length <= 1) return;
+          nodeBulkMode.value = mode;
+          const nodeIds = nodes.value
+            .filter(node => node.id !== 'main')
+            .map(node => node.id);
+
+          if (mode === 'selected') {
+            excludedNodes.value = excludedNodes.value.filter(id => !nodeIds.includes(id));
+          } else {
+            excludedNodes.value = [...nodeIds];
+          }
+
+          applyFormatting();
+        };
+
         const toggleProperty = (key) => {
           const index = excludedProperties.value.indexOf(key);
           if (index === -1) {
@@ -767,47 +863,18 @@ Null数量:    ${s.nullCount}${s.skipped && s.skipped.length ? `\n\n已跳过: $
           } else {
             excludedProperties.value.splice(index, 1);
           }
+          if (propertyBulkMode.value !== 'hidden') {
+            propertyBulkMode.value = allPropertiesSelected.value ? 'selected' : 'unselected';
+          }
           applyFormatting();
         };
 
         const toggleAllProperties = () => {
-          if (!selectedNode.value) return;
-          if (allPropertiesSelected.value) {
-            selectedNodeProperties.value.forEach(prop => {
-              if (!excludedProperties.value.includes(prop.key)) {
-                excludedProperties.value.push(prop.key);
-              }
-            });
-          } else {
-            selectedNodeProperties.value.forEach(prop => {
-              const index = excludedProperties.value.indexOf(prop.key);
-              if (index !== -1) {
-                excludedProperties.value.splice(index, 1);
-              }
-            });
-          }
-          applyFormatting();
+          applyPropertyBulkMode(nextBulkMode(propertyBulkMode.value));
         };
 
         const toggleAllNodes = () => {
-          if (nodes.value.length <= 1) return;
-          if (allNodesSelected.value) {
-            nodes.value.forEach(node => {
-              if (node.id !== 'main' && !excludedNodes.value.includes(node.id)) {
-                excludedNodes.value.push(node.id);
-              }
-            });
-          } else {
-            nodes.value.forEach(node => {
-              if (node.id !== 'main') {
-                const index = excludedNodes.value.indexOf(node.id);
-                if (index !== -1) {
-                  excludedNodes.value.splice(index, 1);
-                }
-              }
-            });
-          }
-          applyFormatting();
+          applyNodeBulkMode(nextBulkMode(nodeBulkMode.value));
         };
 
         watch(excludedProperties, () => {
@@ -821,6 +888,9 @@ Null数量:    ${s.nullCount}${s.skipped && s.skipped.length ? `\n\n已跳过: $
           } else {
             excludedNodes.value.splice(index, 1);
           }
+          if (nodeBulkMode.value !== 'hidden') {
+            nodeBulkMode.value = allNodesSelected.value ? 'selected' : 'unselected';
+          }
           applyFormatting();
         };
 
@@ -829,24 +899,6 @@ Null数量:    ${s.nullCount}${s.skipped && s.skipped.length ? `\n\n已跳过: $
         }, { deep: true });
 
         watch(advancedOptions, () => {
-          if (isUltraLargeMode.value) {
-            const hasEnabledHighCostOption = advancedOptions.value.parseStringifiedJson ||
-              advancedOptions.value.scanStringJsonSubstrings ||
-              advancedOptions.value.generatePaths ||
-              advancedOptions.value.inferSchema ||
-              advancedOptions.value.generateStats;
-            if (hasEnabledHighCostOption) {
-              advancedOptions.value = {
-                ...advancedOptions.value,
-                parseStringifiedJson: false,
-                scanStringJsonSubstrings: false,
-                generatePaths: false,
-                inferSchema: false,
-                generateStats: false
-              };
-            }
-            return;
-          }
           if (selectedNode.value) {
             updateNodeInfo();
           }
@@ -1072,10 +1124,8 @@ Null数量:    ${s.nullCount}${s.skipped && s.skipped.length ? `\n\n已跳过: $
           }
         };
 
-        const getPreviewLimit = () => {
-          if (inputMode.value === 'ultra') return 360 * 1024;
-          if (inputMode.value === 'large') return 900 * 1024;
-          return 2 * 1024 * 1024;
+        const getPreviewRenderLimit = () => {
+          return 1024 * 1024;
         };
 
         const appendPreviewTruncationNote = (text, limit) => {
@@ -1173,7 +1223,7 @@ Null数量:    ${s.nullCount}${s.skipped && s.skipped.length ? `\n\n已跳过: $
           }
 
           const formatted = JSON.stringify(targetVal, replacer, space);
-          const limit = getPreviewLimit();
+          const limit = getPreviewRenderLimit();
           if (formatted && formatted.length > limit) {
             isPreviewTruncated.value = true;
             const previewText = appendPreviewTruncationNote(formatted, limit);
@@ -1218,36 +1268,15 @@ Null数量:    ${s.nullCount}${s.skipped && s.skipped.length ? `\n\n已跳过: $
           if (!selectedNode.value) return;
           const val = selectedNode.value.val;
 
-          if (inputMode.value === 'ultra') {
-            jsonStats.value = {
-              path: selectedNode.value.path.join('.') || 'Root',
-              type: getValueTypeLabel(val),
-              keyCount: '已跳过',
-              maxDepth: '已跳过',
-              estimatedSize: selectedNode.value.id === 'main' && parsedRoot.value ? formatSize(parsedRoot.value.rawLength || parsedRoot.value.raw.length) : '未估算',
-              stringCount: '已跳过',
-              numberCount: '已跳过',
-              booleanCount: '已跳过',
-              nullCount: '已跳过',
-              objectCount: '已跳过',
-              arrayCount: '已跳过',
-              skipped: ['超大文本模式已关闭统计、路径和 Schema']
-            };
-            jsonPathsList.value = [];
-            jsonSchemaText.value = '超大文本模式未生成 Schema。';
-            return;
-          }
-
-          const shouldReuseWorkerRootInfo = inputMode.value === 'large' && selectedNode.value.id === 'main' && jsonStats.value && jsonStats.value.mode;
+          const shouldReuseWorkerRootInfo = inputMode.value !== 'normal' && selectedNode.value.id === 'main' && jsonStats.value && jsonStats.value.mode;
           if (shouldReuseWorkerRootInfo) {
-            if (!advancedOptions.value.generatePaths) jsonPathsList.value = [];
-            if (!advancedOptions.value.inferSchema) jsonSchemaText.value = '当前高级功能未启用 Schema。';
             return;
           }
 
-          const stats = advancedOptions.value.generateStats
-            ? calculateDepthAndKeys(val, inputMode.value === 'large' ? 120000 : Infinity)
-            : { depth: '已跳过', keys: '已跳过', stringCount: '已跳过', numberCount: '已跳过', booleanCount: '已跳过', nullCount: '已跳过', objectCount: '已跳过', arrayCount: '已跳过' };
+          const statsVisitLimit = inputMode.value === 'ultra' ? 80000 : inputMode.value === 'large' ? 120000 : Infinity;
+          const pathsVisitLimit = inputMode.value === 'ultra' ? 30000 : inputMode.value === 'large' ? 60000 : Infinity;
+          const schemaVisitLimit = inputMode.value === 'ultra' ? 20000 : inputMode.value === 'large' ? 40000 : Infinity;
+          const stats = calculateDepthAndKeys(val, statsVisitLimit);
           
           let sizeStr = '0 B';
           try {
@@ -1275,29 +1304,15 @@ Null数量:    ${s.nullCount}${s.skipped && s.skipped.length ? `\n\n已跳过: $
           };
 
           const prefixPath = selectedNode.value.path.length > 0 ? selectedNode.value.path.join('.') : '$';
-          jsonPathsList.value = advancedOptions.value.generatePaths
-            ? generateJSONPaths(val, prefixPath, inputMode.value === 'large' ? 60000 : Infinity)
-            : [];
+          jsonPathsList.value = generateJSONPaths(val, prefixPath, pathsVisitLimit);
 
-          if (!advancedOptions.value.inferSchema) {
-            jsonSchemaText.value = '当前高级功能未启用 Schema。';
-          } else {
-            const schemaObj = inferSchema(val, inputMode.value === 'large' ? 40000 : Infinity);
-            const finalSchema = {
-              $schema: "http://json-schema.org/draft-07/schema#",
-              ...schemaObj
-            };
-            
-            try {
-              if (window.jsyaml) {
-                jsonSchemaText.value = window.jsyaml.dump(finalSchema, { indent: 2, lineWidth: -1 });
-              } else {
-                jsonSchemaText.value = JSON.stringify(finalSchema, null, 2);
-              }
-            } catch (e) {
-              jsonSchemaText.value = JSON.stringify(finalSchema, null, 2);
-            }
-          }
+          const schemaObj = inferSchema(val, schemaVisitLimit);
+          const finalSchema = {
+            $schema: "http://json-schema.org/draft-07/schema#",
+            ...schemaObj
+          };
+
+          jsonSchemaText.value = formatSchemaText(finalSchema);
         };
 
         // Handle Node Selection
@@ -1307,7 +1322,7 @@ Null数量:    ${s.nullCount}${s.skipped && s.skipped.length ? `\n\n已跳过: $
           isTextareaDirty.value = false; // Reset dirty state
           isPreviewTruncated.value = false;
           excludedProperties.value = []; // Reset excluded properties when switching nodes
-          excludedNodes.value = []; // Reset excluded nodes when switching nodes
+          propertyBulkMode.value = 'selected';
           applyFormatting();
         };
 
@@ -1493,6 +1508,8 @@ Null数量:    ${s.nullCount}${s.skipped && s.skipped.length ? `\n\n已跳过: $
             isTextareaDirty.value = false; // Reset dirty state after saving
             excludedProperties.value = []; // Reset excluded properties after saving
             excludedNodes.value = []; // Reset excluded nodes after saving
+            propertyBulkMode.value = 'selected';
+            nodeBulkMode.value = 'selected';
             applyFormatting();
             showToast('同步成功', '修改已顺利保存并反向合并更新了原始日志文本！', 'success');
           }
@@ -1568,6 +1585,8 @@ Null数量:    ${s.nullCount}${s.skipped && s.skipped.length ? `\n\n已跳过: $
             isPreviewTruncated.value = false;
             excludedProperties.value = []; // Reset excluded properties
             excludedNodes.value = []; // Reset excluded nodes
+            propertyBulkMode.value = 'selected';
+            nodeBulkMode.value = 'selected';
             showToast('已清空', '工作区和解析记录已成功复位。', 'info');
             event.target.value = '';
             return;
@@ -1870,6 +1889,9 @@ Null数量:    ${s.nullCount}${s.skipped && s.skipped.length ? `\n\n已跳过: $
           isDragging,
           isTextareaDirty,
           excludedProperties,
+          propertyBulkMode,
+          nodeBulkMode,
+          bulkModeText,
           selectedNodeProperties,
           toggleProperty,
           allPropertiesSelected,
@@ -1900,6 +1922,8 @@ Null数量:    ${s.nullCount}${s.skipped && s.skipped.length ? `\n\n已跳过: $
           lineNumbersText,
           syncLineNumberScroll,
           breadcrumbSegments,
+          breadcrumbChildOptions,
+          handleBreadcrumbChildSelect,
           collapsedNodes,
           hasChildren,
           toggleCollapse,
@@ -1914,8 +1938,6 @@ Null数量:    ${s.nullCount}${s.skipped && s.skipped.length ? `\n\n已跳过: $
           inputMode,
           isParsing,
           isPreviewTruncated,
-          isUltraLargeMode,
-          isLargeInputMode,
           isPreviewReadonly,
           currentSourceName,
           copySchema,
