@@ -318,6 +318,13 @@
       flex-shrink: 0;
     }
 
+    .advanced-row-locked .advanced-title::after {
+      content: "（已锁定）";
+      color: var(--text-muted);
+      font-weight: 500;
+      margin-left: 0.25rem;
+    }
+
     .advanced-option {
       display: inline-flex;
       align-items: center;
@@ -864,6 +871,13 @@
       border: 1px solid transparent;
       outline: none;
       user-select: none;
+    }
+
+    .btn:disabled {
+      cursor: not-allowed;
+      opacity: 0.55;
+      transform: none !important;
+      box-shadow: none !important;
     }
 
     .btn-sm {

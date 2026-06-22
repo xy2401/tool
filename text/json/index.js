@@ -4,6 +4,15 @@
     }
 
     const { createApp, ref, computed, watch, nextTick, onMounted, onUnmounted } = Vue;
+    const LARGE_TEXT_BYTES = 1024 * 1024;
+    const ULTRA_TEXT_BYTES = 10 * 1024 * 1024;
+    const DEFAULT_ADVANCED_OPTIONS = {
+      parseStringifiedJson: true,
+      scanStringJsonSubstrings: true,
+      generatePaths: true,
+      inferSchema: true,
+      generateStats: true
+    };
 
     createApp({
       setup() {
@@ -34,22 +43,106 @@
         const jsonStats = ref({});
         const jsonSchemaText = ref('');
         const jsonPathsList = ref([]);
-        const advancedOptions = ref({
-          parseStringifiedJson: true,
-          scanStringJsonSubstrings: true,
-          generatePaths: true,
-          inferSchema: true,
-          generateStats: true
-        });
+        const advancedOptions = ref({ ...DEFAULT_ADVANCED_OPTIONS });
         const parseProgress = ref({
           active: false,
           indeterminate: false,
           percent: 0,
           status: '空闲'
         });
+        const inputMode = ref('normal');
+        const currentSourceName = ref('');
+        const isParsing = ref(false);
+        const isPreviewTruncated = ref(false);
+        const sourceLoadedFromFile = ref(false);
         let toastIdCounter = 0;
         let skipHistoryRecord = false;
         let historyDebounceTimeout = null;
+        let autoExtractTimeout = null;
+        let parseWorker = null;
+        let parseRequestId = 0;
+        let selectedFileForWorker = null;
+        let optionSnapshotBeforeUltra = null;
+        let previewCache = new Map();
+
+        const estimateTextBytes = (text) => {
+          if (!text) return 0;
+          try {
+            return new Blob([text]).size;
+          } catch (e) {
+            return text.length * 2;
+          }
+        };
+
+        const getModeBySize = (sizeBytes) => {
+          if (sizeBytes > ULTRA_TEXT_BYTES) return 'ultra';
+          if (sizeBytes > LARGE_TEXT_BYTES) return 'large';
+          return 'normal';
+        };
+
+        const applyInputMode = (sizeBytes) => {
+          const nextMode = getModeBySize(sizeBytes || 0);
+          if (inputMode.value === nextMode) return;
+          inputMode.value = nextMode;
+
+          if (nextMode === 'ultra') {
+            if (!optionSnapshotBeforeUltra) {
+              optionSnapshotBeforeUltra = { ...advancedOptions.value };
+            }
+            advancedOptions.value = {
+              ...advancedOptions.value,
+              parseStringifiedJson: false,
+              scanStringJsonSubstrings: false,
+              generatePaths: false,
+              inferSchema: false,
+              generateStats: false
+            };
+          } else if (optionSnapshotBeforeUltra) {
+            advancedOptions.value = { ...DEFAULT_ADVANCED_OPTIONS, ...optionSnapshotBeforeUltra };
+            optionSnapshotBeforeUltra = null;
+          }
+        };
+
+        const getEffectiveAdvancedOptions = (sizeBytes) => {
+          const mode = getModeBySize(sizeBytes || 0);
+          const options = { ...advancedOptions.value, mode, sizeBytes };
+          options.includeRootRaw = sizeBytes <= LARGE_TEXT_BYTES;
+          if (mode === 'ultra') {
+            options.parseStringifiedJson = false;
+            options.scanStringJsonSubstrings = false;
+            options.generatePaths = false;
+            options.inferSchema = false;
+            options.generateStats = false;
+          }
+          return options;
+        };
+
+        const setParseProgress = (status, percent = 0, indeterminate = false) => {
+          parseProgress.value = {
+            active: true,
+            indeterminate,
+            percent: Math.max(0, Math.min(100, percent || 0)),
+            status
+          };
+        };
+
+        const finishParseProgress = (status = '完成') => {
+          parseProgress.value = {
+            active: true,
+            indeterminate: false,
+            percent: 100,
+            status
+          };
+        };
+
+        const resetParseProgress = () => {
+          parseProgress.value = {
+            active: false,
+            indeterminate: false,
+            percent: 0,
+            status: '空闲'
+          };
+        };
 
         const handleDragOver = () => {
           isDragging.value = true;
@@ -59,20 +152,34 @@
           isDragging.value = false;
         };
 
-        const handleDrop = (e) => {
+        const handleDrop = async (e) => {
           isDragging.value = false;
           const files = e.dataTransfer.files;
           if (files && files.length > 0) {
             const file = files[0];
-            const reader = new FileReader();
-            reader.onload = (event) => {
-              rawInput.value = event.target.result;
-              showToast('文件已载入', `成功读取文件：${file.name} (${(file.size / 1024).toFixed(1)} KB)`, 'success');
-            };
-            reader.onerror = () => {
-              showToast('载入失败', '读取文件时发生错误，请检查文件格式。', 'error');
-            };
-            reader.readAsText(file);
+            selectedFileForWorker = file;
+            currentSourceName.value = file.name || '';
+            sourceLoadedFromFile.value = true;
+            applyInputMode(file.size || 0);
+
+            if ((file.size || 0) <= LARGE_TEXT_BYTES) {
+              try {
+                skipHistoryRecord = true;
+                rawInput.value = await file.text();
+                showToast('文件已载入', `成功读取文件：${file.name} (${formatSize(file.size)})`, 'success');
+                nextTick(() => {
+                  skipHistoryRecord = false;
+                });
+              } catch (err) {
+                skipHistoryRecord = false;
+                showToast('载入失败', '读取文件时发生错误，请检查文件格式。', 'error');
+              }
+              return;
+            }
+
+            rawInput.value = '';
+            showToast('文件解析中', `已进入${inputMode.value === 'ultra' ? '超大文本' : '大文本'}模式：${file.name} (${formatSize(file.size)})`, 'info', 4500);
+            startWorkerParse({ file, silent: false, sourceName: file.name });
           }
         };
 
@@ -133,6 +240,10 @@
             showToast('保存失败', '当前工作区无数据，请输入或提取后再保存。', 'warning');
             return;
           }
+          if (estimateTextBytes(text) > LARGE_TEXT_BYTES) {
+            showToast('保存失败', '大文本不会写入浏览器本地保存区，请使用下载功能保存到文件。', 'warning');
+            return;
+          }
 
           const now = new Date();
           const timeStr = now.toLocaleDateString() + ' ' + now.toTimeString().split(' ')[0].substring(0, 5);
@@ -157,6 +268,7 @@
           if (skipHistoryRecord) return;
           if (!text || !text.trim()) return;
           const trimmed = text.trim();
+          if (estimateTextBytes(trimmed) > LARGE_TEXT_BYTES) return;
 
           // Do NOT save if the text is exactly the loaded demo text
           if (trimmed === loadedDemoText.value?.trim()) return;
@@ -193,17 +305,172 @@
           }, 1500);
         };
 
+        const stopParseWorker = () => {
+          if (parseWorker) {
+            parseWorker.terminate();
+            parseWorker = null;
+          }
+        };
+
+        const startWorkerParse = ({ text = '', file = null, silent = false, sourceName = '' } = {}) => {
+          stopParseWorker();
+          const requestId = ++parseRequestId;
+          const sizeBytes = file ? (file.size || 0) : estimateTextBytes(text);
+          applyInputMode(sizeBytes);
+          const options = getEffectiveAdvancedOptions(sizeBytes);
+
+          isParsing.value = true;
+          isPreviewTruncated.value = false;
+          previewCache = new Map();
+          setParseProgress(file ? '读取文件' : '定位主 JSON', 0, false);
+
+          try {
+            parseWorker = new Worker('./json-worker.js');
+          } catch (err) {
+            isParsing.value = false;
+            parseProgress.value = { active: true, indeterminate: false, percent: 0, status: 'Worker 启动失败' };
+            if (!silent) showToast('解析失败', '当前环境无法启动 Worker，无法进行大文本解析。', 'error');
+            return;
+          }
+
+          parseWorker.onmessage = (event) => {
+            if (requestId !== parseRequestId) return;
+            const message = event.data || {};
+            if (message.type === 'progress') {
+              parseProgress.value = {
+                active: true,
+                indeterminate: !!message.indeterminate,
+                percent: message.percent || 0,
+                status: message.status || '处理中'
+              };
+              return;
+            }
+
+            if (message.type === 'error') {
+              isParsing.value = false;
+              parseProgress.value = {
+                active: true,
+                indeterminate: false,
+                percent: 0,
+                status: '解析失败'
+              };
+              if (!silent) showToast('解析失败', message.message || '未检测到合法 JSON。', 'error');
+              stopParseWorker();
+              return;
+            }
+
+            if (message.type !== 'result') return;
+            const payload = message.payload || {};
+
+            isParsing.value = false;
+            parsedRoot.value = payload.parsedRoot || null;
+            nodes.value = Array.isArray(payload.nodes) ? payload.nodes : [];
+            selectedNodeId.value = payload.selectedNodeId || (nodes.value[0] ? nodes.value[0].id : '');
+            editText.value = payload.editText || '';
+            isPreviewTruncated.value = !!payload.isPreviewTruncated;
+            if (selectedNodeId.value && editText.value) {
+              previewCache.set(selectedNodeId.value, {
+                text: editText.value,
+                truncated: isPreviewTruncated.value
+              });
+            }
+            jsonStats.value = payload.jsonStats || {};
+            jsonPathsList.value = payload.jsonPathsList || [];
+            jsonSchemaText.value = payload.jsonSchemaText || '';
+            inputMode.value = payload.mode || inputMode.value;
+            currentSourceName.value = payload.sourceName || sourceName || currentSourceName.value;
+            isTextareaDirty.value = false;
+            excludedProperties.value = [];
+            excludedNodes.value = [];
+            collapsedNodes.value = [];
+            activeTab.value = 'preview';
+            finishParseProgress('解析完成');
+            stopParseWorker();
+
+            const modeLabel = inputMode.value === 'ultra' ? '超大文本模式' : inputMode.value === 'large' ? '大文本模式' : '普通模式';
+            if (!silent) {
+              const warningText = payload.warnings && payload.warnings.length ? ` ${payload.warnings[0]}` : '';
+              showToast('提取成功', `已完成解析（${modeLabel}），生成 ${nodes.value.length} 个节点。${warningText}`, 'success', 4500);
+              if (!file && text && inputMode.value === 'normal') {
+                if (historyDebounceTimeout) clearTimeout(historyDebounceTimeout);
+                addToHistory(text);
+              }
+            } else if (!file && text && inputMode.value === 'normal') {
+              debouncedAddToHistory(text);
+            }
+          };
+
+          parseWorker.onerror = (error) => {
+            if (requestId !== parseRequestId) return;
+            isParsing.value = false;
+            parseProgress.value = {
+              active: true,
+              indeterminate: false,
+              percent: 0,
+              status: '解析失败'
+            };
+            if (!silent) showToast('解析失败', error.message || 'Worker 执行失败。', 'error');
+            stopParseWorker();
+          };
+
+          if (file) {
+            parseWorker.postMessage({ type: 'parse-file', file, options, sourceName });
+          } else {
+            parseWorker.postMessage({ type: 'parse-text', text, options, sourceName });
+          }
+        };
+
         // Auto-extract JSON when rawInput text changes
         watch(rawInput, (newVal) => {
           if (isSyncing.value) return;
+          if (sourceLoadedFromFile.value && selectedFileForWorker && !newVal) return;
+          if (autoExtractTimeout) clearTimeout(autoExtractTimeout);
+          if (parseWorker) {
+            stopParseWorker();
+            isParsing.value = false;
+          }
 
           // If raw text changes and no longer matches the loaded demo text, reset it
           if (newVal !== loadedDemoText.value) {
             loadedDemoText.value = '';
           }
 
-          // Silently trigger extraction so it does not spam toasts on keypresses
-          extractRootJSON(true);
+          const sizeBytes = estimateTextBytes(newVal || '');
+          applyInputMode(sizeBytes);
+          sourceLoadedFromFile.value = false;
+          selectedFileForWorker = null;
+          currentSourceName.value = '';
+
+          if (!newVal || !newVal.trim()) {
+            parsedRoot.value = null;
+            nodes.value = [];
+            selectedNodeId.value = '';
+            editText.value = '';
+            jsonStats.value = {};
+            jsonPathsList.value = [];
+            jsonSchemaText.value = '';
+            isPreviewTruncated.value = false;
+            resetParseProgress();
+            return;
+          }
+
+          if (sizeBytes > LARGE_TEXT_BYTES) {
+            parsedRoot.value = null;
+            nodes.value = [];
+            selectedNodeId.value = '';
+            editText.value = '';
+            jsonStats.value = {};
+            jsonPathsList.value = [];
+            jsonSchemaText.value = '';
+            isPreviewTruncated.value = false;
+            previewCache = new Map();
+            setParseProgress(inputMode.value === 'ultra' ? '超大文本，等待手动提取' : '大文本，等待手动提取', 0, false);
+            return;
+          }
+
+          autoExtractTimeout = setTimeout(() => {
+            extractRootJSON(true);
+          }, 350);
         });
 
         // Auto-reformat when formatting options change
@@ -294,6 +561,8 @@
         onUnmounted(() => {
           window.removeEventListener('keydown', handleKeyDown);
           if (historyDebounceTimeout) clearTimeout(historyDebounceTimeout);
+          if (autoExtractTimeout) clearTimeout(autoExtractTimeout);
+          stopParseWorker();
 
           if (systemThemeMedia) {
             if (systemThemeMedia.removeEventListener) {
@@ -337,7 +606,7 @@
 字符串数量:   ${s.stringCount}
 数字数量:     ${s.numberCount}
 布尔值数量:   ${s.booleanCount}
-Null数量:    ${s.nullCount}`;
+Null数量:    ${s.nullCount}${s.skipped && s.skipped.length ? `\n\n已跳过: ${s.skipped.join('、')}` : ''}`;
         });
 
         const pathsText = computed(() => {
@@ -347,10 +616,15 @@ Null数量:    ${s.nullCount}`;
 
         const parseProgressText = computed(() => {
           const progress = parseProgress.value;
-          if (!progress.active) return '进度：空闲';
+          const modeSuffix = inputMode.value === 'ultra' ? ' · 超大文本模式' : inputMode.value === 'large' ? ' · 大文本模式' : '';
+          if (!progress.active) return `进度：空闲${modeSuffix}`;
           if (progress.indeterminate) return `进度：${progress.status || '处理中'}`;
-          return `进度：${progress.status || '处理中'} ${Math.round(progress.percent || 0)}%`;
+          return `进度：${progress.status || '处理中'} ${Math.round(progress.percent || 0)}%${modeSuffix}`;
         });
+
+        const isUltraLargeMode = computed(() => inputMode.value === 'ultra');
+        const isLargeInputMode = computed(() => inputMode.value === 'large' || inputMode.value === 'ultra');
+        const isPreviewReadonly = computed(() => activeTab.value !== 'preview' || isPreviewTruncated.value);
 
         const displayValue = computed(() => {
           if (activeTab.value === 'preview') return editText.value;
@@ -369,6 +643,7 @@ Null数量:    ${s.nullCount}`;
 
         const lineNumbersText = computed(() => {
           const text = displayValue.value || '';
+          if (text.length > 1024 * 1024) return '1';
           const count = text.split('\n').length;
           let result = '';
           for (let i = 1; i <= count; i++) {
@@ -553,6 +828,30 @@ Null数量:    ${s.nullCount}`;
           applyFormatting();
         }, { deep: true });
 
+        watch(advancedOptions, () => {
+          if (isUltraLargeMode.value) {
+            const hasEnabledHighCostOption = advancedOptions.value.parseStringifiedJson ||
+              advancedOptions.value.scanStringJsonSubstrings ||
+              advancedOptions.value.generatePaths ||
+              advancedOptions.value.inferSchema ||
+              advancedOptions.value.generateStats;
+            if (hasEnabledHighCostOption) {
+              advancedOptions.value = {
+                ...advancedOptions.value,
+                parseStringifiedJson: false,
+                scanStringJsonSubstrings: false,
+                generatePaths: false,
+                inferSchema: false,
+                generateStats: false
+              };
+            }
+            return;
+          }
+          if (selectedNode.value) {
+            updateNodeInfo();
+          }
+        }, { deep: true });
+
         // Add Toast Notification
         const showToast = (title, message, type = 'info', duration = 3000) => {
           const id = toastIdCounter++;
@@ -626,82 +925,37 @@ Null数量:    ${s.nullCount}`;
           return null;
         };
 
-        // Extraction of the initial root JSON in a messy string (Only run once on main input)
+        // Extraction of the initial root JSON in a messy string.
         const extractRootJSON = (silent = false) => {
-          if (!rawInput.value) {
+          if (isParsing.value) {
+            stopParseWorker();
+            isParsing.value = false;
+          }
+
+          if (sourceLoadedFromFile.value && selectedFileForWorker && !rawInput.value.trim()) {
+            startWorkerParse({
+              file: selectedFileForWorker,
+              silent,
+              sourceName: selectedFileForWorker.name || currentSourceName.value
+            });
+            return;
+          }
+
+          const text = rawInput.value || '';
+          if (!text.trim()) {
             if (!silent) {
-              showToast('未输入数据', '请输入一些包含 JSON 数据的日志或文本。', 'error');
+              showToast('未输入数据', '请输入文本，或直接拖入 JSON/日志文件。', 'error');
             }
             return;
           }
 
-          const text = rawInput.value;
-          const opening = [];
-          const closing = [];
-
-          for (let i = 0; i < text.length; i++) {
-            const char = text.charAt(i);
-            if (char === '{' || char === '[') opening.push({ char, index: i });
-            if (char === '}' || char === ']') closing.push({ char, index: i });
-          }
-
-          let matchedRoot = null;
-
-          // Search from the longest substring combinations
-          for (let o = 0; o < opening.length; o++) {
-            const op = opening[o];
-            for (let c = closing.length - 1; c >= 0; c--) {
-              const cl = closing[c];
-              if (cl.index > op.index) {
-                // Bracket check matching
-                if ((op.char === '{' && cl.char === '}') || (op.char === '[' && cl.char === ']')) {
-                  const substring = text.substring(op.index, cl.index + 1);
-                  const parsed = tryParseJSONString(substring);
-                  if (parsed !== null) {
-                    matchedRoot = {
-                      raw: substring,
-                      obj: parsed,
-                      startIndex: op.index,
-                      endIndex: cl.index + 1
-                    };
-                    break; // Break inner loop, we found a match for this start index
-                  }
-                }
-              }
-            }
-            if (matchedRoot) break; // Break outer loop, we take the largest match found first
-          }
-
-          if (matchedRoot) {
-            parsedRoot.value = matchedRoot;
-            nodes.value = [];
-            
-            // Start recursive node extraction
-            extractJSONTree(matchedRoot.obj, ['main'], false);
-            
-            // Set selection
-            selectedNodeId.value = 'main';
-            editText.value = ''; // Clear current editText to force load from the new root value
-            isTextareaDirty.value = false; // Reset dirty state
-            excludedProperties.value = []; // Reset excluded properties
-            excludedNodes.value = []; // Reset excluded nodes
-            collapsedNodes.value = []; // Reset collapsed nodes
-            applyFormatting();
-            if (!silent) {
-              showToast('提取成功', '成功从文本中提取出主 JSON 结构，已生成节点树。', 'success');
-              if (historyDebounceTimeout) clearTimeout(historyDebounceTimeout);
-              addToHistory(text);
-            } else {
-              debouncedAddToHistory(text);
-            }
-          } else {
-            parsedRoot.value = null;
-            nodes.value = [];
-            selectedNodeId.value = '';
-            if (!silent) {
-              showToast('提取失败', '未在文本中检测到合法的 JSON 结构。请检查格式。', 'error');
-            }
-          }
+          const sizeBytes = estimateTextBytes(text);
+          applyInputMode(sizeBytes);
+          startWorkerParse({
+            text,
+            silent,
+            sourceName: currentSourceName.value
+          });
         };
 
         const extractJSONSubstrings = (str) => {
@@ -818,8 +1072,26 @@ Null数量:    ${s.nullCount}`;
           }
         };
 
+        const getPreviewLimit = () => {
+          if (inputMode.value === 'ultra') return 360 * 1024;
+          if (inputMode.value === 'large') return 900 * 1024;
+          return 2 * 1024 * 1024;
+        };
+
+        const appendPreviewTruncationNote = (text, limit) => {
+          return text.slice(0, limit) + `\n\n/* 预览已截断，仅显示前 ${formatSize(limit)}。为避免保存半截 JSON，此视图已只读。 */`;
+        };
+
         // Formatter implementation (JSON.stringify with selected parameters)
         const formatJSON = (val) => {
+          if (selectedNode.value && excludedProperties.value.length === 0 && excludedNodes.value.length === 0 && !isTextareaDirty.value) {
+            const cachedPreview = previewCache.get(selectedNode.value.id);
+            if (cachedPreview) {
+              isPreviewTruncated.value = !!cachedPreview.truncated;
+              return cachedPreview.text;
+            }
+          }
+
           let targetVal = val;
           const pathMap = new Map();
           
@@ -900,11 +1172,30 @@ Null数量:    ${s.nullCount}`;
             space = '';
           }
 
-          return JSON.stringify(targetVal, replacer, space);
+          const formatted = JSON.stringify(targetVal, replacer, space);
+          const limit = getPreviewLimit();
+          if (formatted && formatted.length > limit) {
+            isPreviewTruncated.value = true;
+            const previewText = appendPreviewTruncationNote(formatted, limit);
+            if (selectedNode.value) {
+              previewCache.set(selectedNode.value.id, { text: previewText, truncated: true });
+            }
+            return previewText;
+          }
+          isPreviewTruncated.value = false;
+          if (selectedNode.value && inputMode.value !== 'normal') {
+            previewCache.set(selectedNode.value.id, { text: formatted, truncated: false });
+          }
+          return formatted;
         };
 
         const applyFormatting = () => {
           if (!selectedNode.value) return;
+          if (isPreviewTruncated.value && previewCache.has(selectedNode.value.id)) {
+            editText.value = previewCache.get(selectedNode.value.id).text;
+            updateNodeInfo();
+            return;
+          }
 
           // If the user has edited the text AND no filter is active (no excludedProperties or excludedNodes), reformat the current edited text
           if (isTextareaDirty.value && excludedProperties.value.length === 0 && excludedNodes.value.length === 0 && editText.value && editText.value.trim()) {
@@ -926,7 +1217,37 @@ Null数量:    ${s.nullCount}`;
         const updateNodeInfo = () => {
           if (!selectedNode.value) return;
           const val = selectedNode.value.val;
-          const stats = calculateDepthAndKeys(val);
+
+          if (inputMode.value === 'ultra') {
+            jsonStats.value = {
+              path: selectedNode.value.path.join('.') || 'Root',
+              type: getValueTypeLabel(val),
+              keyCount: '已跳过',
+              maxDepth: '已跳过',
+              estimatedSize: selectedNode.value.id === 'main' && parsedRoot.value ? formatSize(parsedRoot.value.rawLength || parsedRoot.value.raw.length) : '未估算',
+              stringCount: '已跳过',
+              numberCount: '已跳过',
+              booleanCount: '已跳过',
+              nullCount: '已跳过',
+              objectCount: '已跳过',
+              arrayCount: '已跳过',
+              skipped: ['超大文本模式已关闭统计、路径和 Schema']
+            };
+            jsonPathsList.value = [];
+            jsonSchemaText.value = '超大文本模式未生成 Schema。';
+            return;
+          }
+
+          const shouldReuseWorkerRootInfo = inputMode.value === 'large' && selectedNode.value.id === 'main' && jsonStats.value && jsonStats.value.mode;
+          if (shouldReuseWorkerRootInfo) {
+            if (!advancedOptions.value.generatePaths) jsonPathsList.value = [];
+            if (!advancedOptions.value.inferSchema) jsonSchemaText.value = '当前高级功能未启用 Schema。';
+            return;
+          }
+
+          const stats = advancedOptions.value.generateStats
+            ? calculateDepthAndKeys(val, inputMode.value === 'large' ? 120000 : Infinity)
+            : { depth: '已跳过', keys: '已跳过', stringCount: '已跳过', numberCount: '已跳过', booleanCount: '已跳过', nullCount: '已跳过', objectCount: '已跳过', arrayCount: '已跳过' };
           
           let sizeStr = '0 B';
           try {
@@ -937,12 +1258,7 @@ Null数量:    ${s.nullCount}`;
             }
           } catch(e) {}
 
-          let typeDisplay = 'Null';
-          if (val !== null) {
-            if (Array.isArray(val)) typeDisplay = 'Array';
-            else typeDisplay = typeof val;
-            typeDisplay = typeDisplay.charAt(0).toUpperCase() + typeDisplay.slice(1);
-          }
+          let typeDisplay = getValueTypeLabel(val);
 
           jsonStats.value = {
             path: selectedNode.value.path.join('.') || 'Root',
@@ -959,22 +1275,28 @@ Null数量:    ${s.nullCount}`;
           };
 
           const prefixPath = selectedNode.value.path.length > 0 ? selectedNode.value.path.join('.') : '$';
-          jsonPathsList.value = generateJSONPaths(val, prefixPath);
+          jsonPathsList.value = advancedOptions.value.generatePaths
+            ? generateJSONPaths(val, prefixPath, inputMode.value === 'large' ? 60000 : Infinity)
+            : [];
 
-          const schemaObj = inferSchema(val);
-          const finalSchema = {
-            $schema: "http://json-schema.org/draft-07/schema#",
-            ...schemaObj
-          };
-          
-          try {
-            if (window.jsyaml) {
-              jsonSchemaText.value = window.jsyaml.dump(finalSchema, { indent: 2, lineWidth: -1 });
-            } else {
+          if (!advancedOptions.value.inferSchema) {
+            jsonSchemaText.value = '当前高级功能未启用 Schema。';
+          } else {
+            const schemaObj = inferSchema(val, inputMode.value === 'large' ? 40000 : Infinity);
+            const finalSchema = {
+              $schema: "http://json-schema.org/draft-07/schema#",
+              ...schemaObj
+            };
+            
+            try {
+              if (window.jsyaml) {
+                jsonSchemaText.value = window.jsyaml.dump(finalSchema, { indent: 2, lineWidth: -1 });
+              } else {
+                jsonSchemaText.value = JSON.stringify(finalSchema, null, 2);
+              }
+            } catch (e) {
               jsonSchemaText.value = JSON.stringify(finalSchema, null, 2);
             }
-          } catch (e) {
-            jsonSchemaText.value = JSON.stringify(finalSchema, null, 2);
           }
         };
 
@@ -983,15 +1305,18 @@ Null数量:    ${s.nullCount}`;
           selectedNodeId.value = nodeId;
           editText.value = ''; // Clear current editText to force load from selectedNode.value.val
           isTextareaDirty.value = false; // Reset dirty state
+          isPreviewTruncated.value = false;
           excludedProperties.value = []; // Reset excluded properties when switching nodes
           excludedNodes.value = []; // Reset excluded nodes when switching nodes
           applyFormatting();
-          updateNodeInfo();
         };
 
         // Copy JSON content to clipboard
         const copyFormattedJSON = async () => {
           if (!editText.value) return;
+          if (isPreviewTruncated.value) {
+            showToast('仅复制预览', '当前源码视图已截断，复制内容不是完整 JSON。', 'warning');
+          }
           try {
             await navigator.clipboard.writeText(editText.value);
             showToast('复制成功', '已复制当前节点格式化 JSON 至剪切板！', 'success');
@@ -1003,6 +1328,10 @@ Null数量:    ${s.nullCount}`;
         // Download current node JSON as a file
         const downloadNodeJSON = () => {
           if (!editText.value) return;
+          if (isPreviewTruncated.value) {
+            showToast('暂不下载', '当前节点预览已截断，请选择更小节点后再下载。', 'warning');
+            return;
+          }
           try {
             const blob = new Blob([editText.value], { type: 'application/json;charset=utf-8;' });
             const url = URL.createObjectURL(blob);
@@ -1056,6 +1385,16 @@ Null数量:    ${s.nullCount}`;
         // Save modifications to current node and bubble up to the root log string
         const saveNodeChanges = () => {
           if (!selectedNode.value) return;
+
+          if (isPreviewTruncated.value) {
+            showToast('无法保存', '当前源码视图是截断预览，不是完整 JSON。请选择更小节点后再编辑保存。', 'warning');
+            return;
+          }
+
+          if (sourceLoadedFromFile.value && selectedFileForWorker && !rawInput.value.trim()) {
+            showToast('无法回写', '大文件拖入模式未把完整原文放入输入框，暂不支持反向合并到原始日志。', 'warning');
+            return;
+          }
 
           if (excludedProperties.value.length > 0 || excludedNodes.value.length > 0) {
             showToast('无法保存', '当前隐藏了节点或属性，请先在左侧勾选所有节点与属性再保存，以防止数据丢失。', 'warning');
@@ -1180,6 +1519,10 @@ Null数量:    ${s.nullCount}`;
 
         const reorderKeys = () => {
           if (!selectedNode.value) return;
+          if (isPreviewTruncated.value) {
+            showToast('无法排序', '当前源码视图是截断预览，请选择更小节点后再排序。', 'warning');
+            return;
+          }
           
           let currentJsonText = editText.value;
           if (!currentJsonText || !currentJsonText.trim()) {
@@ -1206,12 +1549,23 @@ Null数量:    ${s.nullCount}`;
           if (!val) return;
           
           if (val === 'clear') {
+            stopParseWorker();
+            isParsing.value = false;
             rawInput.value = '';
             parsedRoot.value = null;
             nodes.value = [];
             selectedNodeId.value = '';
             editText.value = '';
+            currentSourceName.value = '';
+            selectedFileForWorker = null;
+            sourceLoadedFromFile.value = false;
+            inputMode.value = 'normal';
+            advancedOptions.value = { ...DEFAULT_ADVANCED_OPTIONS };
+            optionSnapshotBeforeUltra = null;
+            previewCache = new Map();
+            resetParseProgress();
             isTextareaDirty.value = false; // Reset dirty state
+            isPreviewTruncated.value = false;
             excludedProperties.value = []; // Reset excluded properties
             excludedNodes.value = []; // Reset excluded nodes
             showToast('已清空', '工作区和解析记录已成功复位。', 'info');
@@ -1249,6 +1603,8 @@ Null数量:    ${s.nullCount}`;
             const savedItem = savedItems.value[idx];
             if (savedItem) {
               skipHistoryRecord = true;
+              sourceLoadedFromFile.value = false;
+              selectedFileForWorker = null;
               rawInput.value = savedItem.text;
               parsedRoot.value = null;
               nodes.value = [];
@@ -1270,6 +1626,8 @@ Null数量:    ${s.nullCount}`;
             const historyItem = historyItems.value[idx];
             if (historyItem) {
               skipHistoryRecord = true;
+              sourceLoadedFromFile.value = false;
+              selectedFileForWorker = null;
               rawInput.value = historyItem.text;
               parsedRoot.value = null;
               nodes.value = [];
@@ -1300,6 +1658,8 @@ Null数量:    ${s.nullCount}`;
               if (response.ok) {
                 const text = await response.text();
                 skipHistoryRecord = true;
+                sourceLoadedFromFile.value = false;
+                selectedFileForWorker = null;
                 loadedDemoText.value = text;
                 rawInput.value = text;
                 parsedRoot.value = null;
@@ -1327,11 +1687,18 @@ Null数量:    ${s.nullCount}`;
           if (bytes === 0) return '0 B';
           const k = 1024;
           const sizes = ['B', 'KB', 'MB', 'GB'];
-          const i = Math.floor(Math.log(bytes) / Math.log(k));
+          const i = Math.min(sizes.length - 1, Math.floor(Math.log(bytes) / Math.log(k)));
           return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
         };
 
-        const calculateDepthAndKeys = (obj) => {
+        const getValueTypeLabel = (val) => {
+          if (val === null) return 'Null';
+          if (Array.isArray(val)) return 'Array';
+          const type = typeof val;
+          return type.charAt(0).toUpperCase() + type.slice(1);
+        };
+
+        const calculateDepthAndKeys = (obj, visitLimit = Infinity) => {
           let maxChildDepth = 0;
           let keys = 0;
           let stringCount = 0;
@@ -1340,12 +1707,17 @@ Null数量:    ${s.nullCount}`;
           let nullCount = 0;
           let objectCount = 0;
           let arrayCount = 0;
+          let visited = 0;
+          const stack = [{ node: obj, depth: 1 }];
 
-          const recurse = (node, currentDepth) => {
-            if (currentDepth > maxChildDepth) maxChildDepth = currentDepth;
+          while (stack.length > 0 && visited < visitLimit) {
+            const item = stack.pop();
+            const node = item.node;
+            visited++;
+            if (item.depth > maxChildDepth) maxChildDepth = item.depth;
             if (node === null) {
               nullCount++;
-              return;
+              continue;
             }
             const type = typeof node;
             if (type === 'string') {
@@ -1357,36 +1729,40 @@ Null数量:    ${s.nullCount}`;
             } else if (Array.isArray(node)) {
               arrayCount++;
               keys += node.length;
-              for (let i = 0; i < node.length; i++) {
-                recurse(node[i], currentDepth + 1);
+              for (let i = node.length - 1; i >= 0; i--) {
+                stack.push({ node: node[i], depth: item.depth + 1 });
               }
             } else if (type === 'object') {
               objectCount++;
               const objKeys = Object.keys(node);
               keys += objKeys.length;
-              for (let key of objKeys) {
-                recurse(node[key], currentDepth + 1);
+              for (let i = objKeys.length - 1; i >= 0; i--) {
+                stack.push({ node: node[objKeys[i]], depth: item.depth + 1 });
               }
             }
-          };
+          }
 
-          recurse(obj, 1);
           return { depth: maxChildDepth, keys, stringCount, numberCount, booleanCount, nullCount, objectCount, arrayCount };
         };
 
-        const generateJSONPaths = (obj, prefix = '$') => {
+        const generateJSONPaths = (obj, prefix = '$', visitLimit = Infinity) => {
           const pathCounts = {};
-          
-          const recurse = (node, currentPath) => {
-            if (!pathCounts[currentPath]) pathCounts[currentPath] = 0;
-            pathCounts[currentPath]++;
+          const stack = [{ node: obj, path: prefix }];
+          let visited = 0;
+
+          while (stack.length > 0 && visited < visitLimit) {
+            const item = stack.pop();
+            const node = item.node;
+            const currentPath = item.path;
+            visited++;
+            pathCounts[currentPath] = (pathCounts[currentPath] || 0) + 1;
             
             if (node !== null && typeof node === 'object') {
               if (Array.isArray(node)) {
-                for (let i = 0; i < node.length; i++) {
+                for (let i = node.length - 1; i >= 0; i--) {
                   let child = node[i];
                   if (child !== null && typeof child === 'object') {
-                    recurse(child, `${currentPath}[*]`);
+                    stack.push({ node: child, path: `${currentPath}[*]` });
                   } else {
                     let p = `${currentPath}[*]`;
                     if (!pathCounts[p]) pathCounts[p] = 0;
@@ -1394,64 +1770,67 @@ Null数量:    ${s.nullCount}`;
                   }
                 }
               } else {
-                for (let key in node) {
-                  if (Object.prototype.hasOwnProperty.call(node, key)) {
-                    let child = node[key];
-                    if (child !== null && typeof child === 'object') {
-                      let nextPath = /^[a-zA-Z_][a-zA-Z0-9_]*$/.test(key) ? `${currentPath}.${key}` : `${currentPath}['${key}']`;
-                      recurse(child, nextPath);
-                    }
+                const keys = Object.keys(node);
+                for (let i = keys.length - 1; i >= 0; i--) {
+                  const key = keys[i];
+                  let child = node[key];
+                  if (child !== null && typeof child === 'object') {
+                    let nextPath = /^[a-zA-Z_][a-zA-Z0-9_]*$/.test(key) ? `${currentPath}.${key}` : `${currentPath}['${key}']`;
+                    stack.push({ node: child, path: nextPath });
                   }
                 }
               }
             }
-          };
-          
-          if (obj !== null && typeof obj === 'object') {
-            recurse(obj, prefix);
           }
           
           return Object.keys(pathCounts).map(path => ({ path, count: pathCounts[path] }));
         };
 
-        const inferSchema = (obj) => {
-          const type = obj === null ? 'null' : Array.isArray(obj) ? 'array' : typeof obj;
-          const schema = { type };
+        const inferSchema = (obj, visitLimit = Infinity) => {
+          let visited = 0;
+          const recurse = (value) => {
+            visited++;
+            if (visited > visitLimit) return { type: 'unknown' };
+            const type = value === null ? 'null' : Array.isArray(value) ? 'array' : typeof value;
+            const schema = { type };
 
-          if (type === 'object') {
-            schema.properties = {};
-            const keys = Object.keys(obj);
-            if (keys.length > 0) {
-              schema.required = [];
-              for (const key of keys) {
-                schema.properties[key] = inferSchema(obj[key]);
-                schema.required.push(key);
-              }
-            }
-          } else if (type === 'array') {
-            if (obj.length > 0) {
-              const itemSchemas = obj.map(inferSchema);
-              const uniqueSchemas = [];
-              const seenTypes = new Set();
-              
-              for (const s of itemSchemas) {
-                const typeKey = s.type === 'object' ? 'object:' + Object.keys(s.properties || {}).sort().join(',') : s.type;
-                if (!seenTypes.has(typeKey)) {
-                  seenTypes.add(typeKey);
-                  uniqueSchemas.push(s);
+            if (type === 'object') {
+              schema.properties = {};
+              const keys = Object.keys(value);
+              if (keys.length > 0) {
+                schema.required = [];
+                for (const key of keys) {
+                  schema.properties[key] = recurse(value[key]);
+                  schema.required.push(key);
                 }
               }
+            } else if (type === 'array') {
+              if (value.length > 0) {
+                const sample = value.slice(0, inputMode.value === 'large' ? 120 : 300);
+                const itemSchemas = sample.map(recurse);
+                const uniqueSchemas = [];
+                const seenTypes = new Set();
+                
+                for (const s of itemSchemas) {
+                  const typeKey = s.type === 'object' ? 'object:' + Object.keys(s.properties || {}).sort().join(',') : JSON.stringify(s);
+                  if (!seenTypes.has(typeKey)) {
+                    seenTypes.add(typeKey);
+                    uniqueSchemas.push(s);
+                  }
+                }
 
-              if (uniqueSchemas.length === 1) {
-                schema.items = uniqueSchemas[0];
+                if (uniqueSchemas.length === 1) {
+                  schema.items = uniqueSchemas[0];
+                } else {
+                  schema.items = { anyOf: uniqueSchemas };
+                }
               } else {
-                schema.items = { anyOf: uniqueSchemas };
+                schema.items = {};
               }
-            } else {
-              schema.items = {};
             }
-          }
-          return schema;
+            return schema;
+          };
+          return recurse(obj);
         };
 
         const copySchema = () => {
@@ -1532,6 +1911,13 @@ Null数量:    ${s.nullCount}`;
           advancedOptions,
           parseProgress,
           parseProgressText,
+          inputMode,
+          isParsing,
+          isPreviewTruncated,
+          isUltraLargeMode,
+          isLargeInputMode,
+          isPreviewReadonly,
+          currentSourceName,
           copySchema,
           copyPaths,
           displayValue,

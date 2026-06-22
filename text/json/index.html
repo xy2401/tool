@@ -112,31 +112,31 @@
               <option value="clear-saved" v-if="savedItems.length > 0">清空保存数据</option>
               <option value="clear-history" v-if="historyItems.length > 0">清空历史记录</option>
             </select>
-            <button class="btn btn-primary" @click="extractRootJSON" id="extractBtn">
-              提取 JSON
+            <button class="btn btn-primary" @click="extractRootJSON" id="extractBtn" :disabled="isParsing">
+              {{ isParsing ? '解析中' : '提取 JSON' }}
             </button>
           </div>
-          <div class="advanced-row" @dblclick.stop>
+          <div class="advanced-row" :class="{ 'advanced-row-locked': isUltraLargeMode }" @dblclick.stop>
             <div class="advanced-status-line">
               <span class="advanced-title">高级功能</span>
               <label class="advanced-option">
-                <input type="checkbox" v-model="advancedOptions.parseStringifiedJson">
+                <input type="checkbox" v-model="advancedOptions.parseStringifiedJson" :disabled="isUltraLargeMode">
                 <span>字符串 JSON</span>
               </label>
               <label class="advanced-option">
-                <input type="checkbox" v-model="advancedOptions.scanStringJsonSubstrings">
+                <input type="checkbox" v-model="advancedOptions.scanStringJsonSubstrings" :disabled="isUltraLargeMode">
                 <span>嵌套扫描</span>
               </label>
               <label class="advanced-option">
-                <input type="checkbox" v-model="advancedOptions.generatePaths">
+                <input type="checkbox" v-model="advancedOptions.generatePaths" :disabled="isUltraLargeMode">
                 <span>路径</span>
               </label>
               <label class="advanced-option">
-                <input type="checkbox" v-model="advancedOptions.inferSchema">
+                <input type="checkbox" v-model="advancedOptions.inferSchema" :disabled="isUltraLargeMode">
                 <span>Schema</span>
               </label>
               <label class="advanced-option">
-                <input type="checkbox" v-model="advancedOptions.generateStats">
+                <input type="checkbox" v-model="advancedOptions.generateStats" :disabled="isUltraLargeMode">
                 <span>统计</span>
               </label>
               <span class="parse-status" v-text="parseProgressText"></span>
@@ -314,7 +314,7 @@
                   重排序
                 </button>
 
-                <button class="btn btn-sm btn-success" @click="saveNodeChanges" id="saveBtn">
+                <button class="btn btn-sm btn-success" @click="saveNodeChanges" id="saveBtn" :disabled="isPreviewTruncated">
                   保存并同步
                 </button>
               </div>
@@ -339,7 +339,7 @@
                   :value="displayValue"
                   @input="handleInput"
                   @scroll="syncLineNumberScroll"
-                  :readonly="activeTab !== 'preview'"
+                  :readonly="isPreviewReadonly"
                   :style="{ whiteSpace: wordWrap ? 'pre-wrap' : 'pre', wordBreak: wordWrap ? 'break-all' : 'normal', height: '100%', borderRadius: 0, borderTop: 'none', borderBottom: 'none', backgroundColor: activeTab !== 'preview' ? 'var(--bg-hover)' : 'var(--editor-bg)' }"
                   placeholder="选择左侧节点进行查看或编辑..."
                   id="nodeJSONTextarea"
