@@ -73,7 +73,7 @@
               class="editor-textarea" 
               rows="3" 
               v-model="rawInput" 
-              placeholder="在此输入、粘贴包含 JSON 的原始日志/文本&#10;直接将 JSON 文件拖入此处载入...&#10;（提示：双击卡片空白处或右上角图标切换全屏）"
+              placeholder="建议优先拖入文件识别，尤其是 1M 以上大文本，避免复制粘贴造成浏览器卡顿&#10;也可以在此输入或粘贴包含 JSON 的原始日志/文本&#10;（提示：双击卡片空白处或右上角图标切换全屏）"
               id="rawInputTextarea"
             ></textarea>
             <div class="textarea-actions-group">
@@ -115,6 +115,35 @@
             <button class="btn btn-primary" @click="extractRootJSON" id="extractBtn">
               提取 JSON
             </button>
+          </div>
+          <div class="advanced-row" @dblclick.stop>
+            <div class="advanced-status-line">
+              <span class="advanced-title">高级功能</span>
+              <label class="advanced-option">
+                <input type="checkbox" v-model="advancedOptions.parseStringifiedJson">
+                <span>字符串 JSON</span>
+              </label>
+              <label class="advanced-option">
+                <input type="checkbox" v-model="advancedOptions.scanStringJsonSubstrings">
+                <span>嵌套扫描</span>
+              </label>
+              <label class="advanced-option">
+                <input type="checkbox" v-model="advancedOptions.generatePaths">
+                <span>路径</span>
+              </label>
+              <label class="advanced-option">
+                <input type="checkbox" v-model="advancedOptions.inferSchema">
+                <span>Schema</span>
+              </label>
+              <label class="advanced-option">
+                <input type="checkbox" v-model="advancedOptions.generateStats">
+                <span>统计</span>
+              </label>
+              <span class="parse-status" v-text="parseProgressText"></span>
+            </div>
+            <div :class="['parse-progress-line', { active: parseProgress.active, indeterminate: parseProgress.indeterminate }]">
+              <div class="parse-progress-fill" :style="{ width: parseProgress.indeterminate ? '38%' : parseProgress.percent + '%' }"></div>
+            </div>
           </div>
         </div>
       </div>

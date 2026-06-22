@@ -34,6 +34,19 @@
         const jsonStats = ref({});
         const jsonSchemaText = ref('');
         const jsonPathsList = ref([]);
+        const advancedOptions = ref({
+          parseStringifiedJson: true,
+          scanStringJsonSubstrings: true,
+          generatePaths: true,
+          inferSchema: true,
+          generateStats: true
+        });
+        const parseProgress = ref({
+          active: false,
+          indeterminate: false,
+          percent: 0,
+          status: '空闲'
+        });
         let toastIdCounter = 0;
         let skipHistoryRecord = false;
         let historyDebounceTimeout = null;
@@ -330,6 +343,13 @@ Null数量:    ${s.nullCount}`;
         const pathsText = computed(() => {
           if (!jsonPathsList.value || jsonPathsList.value.length === 0) return '暂无路径';
           return jsonPathsList.value.map(item => `${item.path}  (数量: ${item.count})`).join('\n');
+        });
+
+        const parseProgressText = computed(() => {
+          const progress = parseProgress.value;
+          if (!progress.active) return '进度：空闲';
+          if (progress.indeterminate) return `进度：${progress.status || '处理中'}`;
+          return `进度：${progress.status || '处理中'} ${Math.round(progress.percent || 0)}%`;
         });
 
         const displayValue = computed(() => {
@@ -1509,6 +1529,9 @@ Null数量:    ${s.nullCount}`;
           jsonStats,
           jsonSchemaText,
           jsonPathsList,
+          advancedOptions,
+          parseProgress,
+          parseProgressText,
           copySchema,
           copyPaths,
           displayValue,

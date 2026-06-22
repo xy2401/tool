@@ -270,6 +270,7 @@
       display: flex;
       gap: 1rem;
       align-items: stretch;
+      flex-wrap: wrap;
       width: 100%;
     }
 
@@ -295,6 +296,97 @@
       padding-right: 1.8rem;
     }
 
+    .advanced-row {
+      flex: 0 0 100%;
+      min-width: 0;
+    }
+
+    .advanced-status-line {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      min-width: 0;
+      color: var(--text-muted);
+      font-size: 0.78rem;
+      line-height: 1.35;
+      white-space: nowrap;
+    }
+
+    .advanced-title {
+      color: var(--text-main);
+      font-weight: 650;
+      flex-shrink: 0;
+    }
+
+    .advanced-option {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.3rem;
+      flex-shrink: 0;
+      cursor: pointer;
+      user-select: none;
+    }
+
+    .advanced-option input {
+      width: 0.82rem;
+      height: 0.82rem;
+      accent-color: var(--accent-cyan);
+      cursor: pointer;
+    }
+
+    .advanced-option input:disabled,
+    .advanced-option input:disabled + span {
+      cursor: not-allowed;
+      opacity: 0.45;
+    }
+
+    .parse-status {
+      margin-left: auto;
+      min-width: 8.5rem;
+      overflow: hidden;
+      text-align: right;
+      text-overflow: ellipsis;
+      color: var(--text-muted);
+      font-family: var(--font-mono);
+      font-size: 0.74rem;
+    }
+
+    .parse-progress-line {
+      position: relative;
+      height: 2px;
+      margin-top: 0.42rem;
+      overflow: hidden;
+      border-radius: 999px;
+      background: var(--panel-border);
+    }
+
+    .parse-progress-fill {
+      position: absolute;
+      inset: 0 auto 0 0;
+      width: 0;
+      min-width: 0;
+      border-radius: inherit;
+      background: linear-gradient(90deg, var(--accent-cyan), var(--accent-emerald));
+      transition: width 0.18s ease;
+    }
+
+    .parse-progress-line:not(.active) .parse-progress-fill {
+      opacity: 0;
+    }
+
+    .parse-progress-line.indeterminate .parse-progress-fill {
+      animation: progressSweep 1.2s ease-in-out infinite;
+    }
+
+    @keyframes progressSweep {
+      0% {
+        transform: translateX(-115%);
+      }
+      100% {
+        transform: translateX(265%);
+      }
+    }
+
     #rawInputTextarea {
       flex: 1;
       min-height: 72px;
@@ -308,6 +400,18 @@
       }
       .vertical-btn-group {
         width: 100%;
+      }
+      .advanced-status-line {
+        align-items: flex-start;
+        flex-wrap: wrap;
+        gap: 0.5rem 0.75rem;
+        white-space: normal;
+      }
+      .parse-status {
+        flex-basis: 100%;
+        margin-left: 0;
+        min-width: 0;
+        text-align: left;
       }
     }
 
