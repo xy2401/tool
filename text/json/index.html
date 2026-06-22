@@ -73,7 +73,7 @@
               class="editor-textarea" 
               rows="3" 
               v-model="rawInput" 
-              placeholder="在此输入、粘贴包含 JSON 的原始日志/文本&#10;直接将 JSON 文件拖入此处载入...&#10;（提示：双击卡片空白处或右上角图标切换全屏）"
+              placeholder="建议优先拖入文件识别，尤其是 1M 以上大文本，避免复制粘贴造成浏览器卡顿&#10;也可以在此输入或粘贴包含 JSON 的原始日志/文本&#10;（提示：双击卡片空白处或右上角图标切换全屏）"
               id="rawInputTextarea"
             ></textarea>
             <div class="textarea-actions-group">
@@ -112,9 +112,26 @@
               <option value="clear-saved" v-if="savedItems.length > 0">清空保存数据</option>
               <option value="clear-history" v-if="historyItems.length > 0">清空历史记录</option>
             </select>
-            <button class="btn btn-primary" @click="extractRootJSON" id="extractBtn">
-              提取 JSON
+            <button class="btn btn-primary" @click="extractRootJSON" id="extractBtn" :disabled="isParsing">
+              {{ isParsing ? '解析中' : '提取 JSON' }}
             </button>
+          </div>
+          <div class="advanced-row" @dblclick.stop>
+            <div class="advanced-status-line">
+              <span class="advanced-title">高级功能</span>
+              <label class="advanced-option">
+                <input type="checkbox" v-model="advancedOptions.parseStringifiedJson">
+                <span>字符串 JSON</span>
+              </label>
+              <label class="advanced-option">
+                <input type="checkbox" v-model="advancedOptions.scanStringJsonSubstrings">
+                <span>嵌套扫描</span>
+              </label>
+              <span class="parse-status" v-text="parseProgressText"></span>
+            </div>
+            <div :class="['parse-progress-line', { active: parseProgress.active, indeterminate: parseProgress.indeterminate }]">
+              <div class="parse-progress-fill" :style="{ width: parseProgress.indeterminate ? '38%' : parseProgress.percent + '%' }"></div>
+            </div>
           </div>
         </div>
       </div>
@@ -126,15 +143,15 @@
           <div style="display: flex; gap: 0.35rem; align-items: center; text-transform: none;">
             <template v-if="selectedNode && selectedNodeProperties.length > 0">
               <span 
-                :class="['badge-secondary', { 'badge-active': allPropertiesSelected }]" 
-                style="cursor: pointer; user-select: none;"
+                :class="['badge-secondary', 'bulk-state-badge', `bulk-state-${propertyBulkMode}`]"
+                :title="'点击切换属性状态：' + bulkModeText(propertyBulkMode)"
                 @click="toggleAllProperties"
               >属性 ({{ selectedNodeProperties.length }})</span>
             </template>
             <span 
               v-if="nodes.length > 1"
-              :class="['badge-secondary', { 'badge-active': allNodesSelected }]" 
-              style="cursor: pointer; user-select: none;"
+              :class="['badge-secondary', 'bulk-state-badge', `bulk-state-${nodeBulkMode}`]"
+              :title="'点击切换节点状态：' + bulkModeText(nodeBulkMode)"
               @click="toggleAllNodes"
             >节点 ({{ nodes.length - 1 }})</span>
             <span v-else class="badge-secondary">节点 (0)</span>
@@ -178,7 +195,7 @@
             </div>
 
             <!-- Primitive Properties of selected node -->
-            <template v-if="selectedNodeId === node.id && selectedNodeProperties.length > 0">
+            <template v-if="propertyBulkMode !== 'hidden' && selectedNodeId === node.id && selectedNodeProperties.length > 0">
               <div 
                 v-for="prop in selectedNodeProperties" 
                 :key="prop.key"
@@ -226,6 +243,17 @@
                     </div>
                   </div>
                 </div>
+                <template v-if="breadcrumbChildOptions.length > 0">
+                  <span class="breadcrumb-separator">›</span>
+                  <select class="breadcrumb-child-select" @change="handleBreadcrumbChildSelect($event)" title="进入下级节点">
+                    <option value="">进入下级...</option>
+                    <option
+                      v-for="child in breadcrumbChildOptions"
+                      :key="child.nodeId"
+                      :value="child.nodeId"
+                    >{{ child.label }} · {{ child.type }}</option>
+                  </select>
+                </template>
               </div>
               <div class="section-title" v-else style="margin-bottom: 0;">
                 <span>
@@ -285,7 +313,7 @@
                   重排序
                 </button>
 
-                <button class="btn btn-sm btn-success" @click="saveNodeChanges" id="saveBtn">
+                <button class="btn btn-sm btn-success" @click="saveNodeChanges" id="saveBtn" :disabled="isPreviewTruncated">
                   保存并同步
                 </button>
               </div>
@@ -310,7 +338,7 @@
                   :value="displayValue"
                   @input="handleInput"
                   @scroll="syncLineNumberScroll"
-                  :readonly="activeTab !== 'preview'"
+                  :readonly="isPreviewReadonly"
                   :style="{ whiteSpace: wordWrap ? 'pre-wrap' : 'pre', wordBreak: wordWrap ? 'break-all' : 'normal', height: '100%', borderRadius: 0, borderTop: 'none', borderBottom: 'none', backgroundColor: activeTab !== 'preview' ? 'var(--bg-hover)' : 'var(--editor-bg)' }"
                   placeholder="选择左侧节点进行查看或编辑..."
                   id="nodeJSONTextarea"
