@@ -75,6 +75,12 @@ button:active {
   gap: 8px;
 }
 
+.header-actions {
+  justify-self: end;
+  display: flex;
+  gap: 6px;
+}
+
 .app-header h1 {
   margin: 0;
   font-size: 22px;
@@ -125,7 +131,6 @@ button:active {
 }
 
 .chat-button {
-  justify-self: end;
   width: 40px;
   min-width: 40px;
   padding: 0;

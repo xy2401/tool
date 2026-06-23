@@ -105,7 +105,10 @@
         toastText: "",
         toastVisible: false,
         toastHiding: false,
-        toastTimer: null
+        toastTimer: null,
+        screenshotUrl: "",
+        exportDateKeys: [],
+        isGeneratingScreenshot: false
       };
     },
 
@@ -318,7 +321,8 @@
           members: "新增人员",
           lists: "管理列表",
           member: "",
-          csv: ""
+          csv: "",
+          screenshot: "长按保存截图"
         }[this.modal] || "";
       },
 
@@ -726,6 +730,68 @@
             this.toastHiding = false;
           }, 300);
         }, 1500);
+      },
+
+      async generateScreenshot() {
+        const wrap = document.querySelector(".matrix-wrap");
+        const heads = wrap ? wrap.querySelectorAll(".date-head") : [];
+        let startIdx = 0;
+        
+        if (wrap) {
+          const scrollLeft = wrap.scrollLeft;
+          for (let i = 0; i < heads.length; i++) {
+            if (heads[i].offsetLeft + heads[i].offsetWidth > scrollLeft + 112) {
+              startIdx = i;
+              break;
+            }
+          }
+        }
+        
+        this.exportDateKeys = this.visibleDates
+          .slice(startIdx, startIdx + 7)
+          .map(d => d.key);
+          
+        this.screenshotUrl = "";
+        this.modal = "screenshot";
+        this.updateScreenshot();
+      },
+
+      async updateScreenshot() {
+        const zone = document.getElementById("screenshot-zone");
+        const header = document.getElementById("export-header");
+        if (!zone) return;
+        
+        if (this.isGeneratingScreenshot) return;
+        this.isGeneratingScreenshot = true;
+        this.showToast("正在生成截图...");
+        
+        if (header) header.style.display = 'block';
+        
+        // Wait for DOM to update
+        await new Promise(resolve => setTimeout(resolve, 100));
+        
+        try {
+          const dataUrl = await window.htmlToImage.toPng(zone, {
+            backgroundColor: '#fffdf8',
+            style: {
+              padding: '12px',
+              borderRadius: '8px',
+              border: '1px solid #dfe4d8'
+            },
+            pixelRatio: 2
+          });
+          
+          if (header) header.style.display = 'none';
+          
+          this.screenshotUrl = dataUrl;
+          this.showToast("✓ 生成成功");
+        } catch (error) {
+          if (header) header.style.display = 'none';
+          console.error('生成截图失败:', error);
+          this.showToast("截图生成失败");
+        } finally {
+          this.isGeneratingScreenshot = false;
+        }
       }
     }
   }).mount("#app");

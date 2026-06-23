@@ -4,7 +4,7 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
     <title>微信群接龙统计助手</title>
-    <link rel="stylesheet" href="./app.css?v=1.0.5" />
+    <link rel="stylesheet" href="./app.css?v=1.0.7" />
   </head>
   <body>
     <div id="app" v-cloak>
@@ -15,13 +15,21 @@
             <span class="title-chevron" aria-hidden="true"></span>
           </button>
           <button class="status-line" type="button" @click="toggleNoticePanel">{{ noticeStatusText }}</button>
-          <button class="chat-button" type="button" title="查看文案" @click="toggleNoticePanel">💬</button>
+          <div class="header-actions">
+            <button class="chat-button" type="button" title="查看文案" @click="toggleNoticePanel">💬</button>
+            <button class="chat-button share-button" type="button" title="生成截图" @click="generateScreenshot">📸</button>
+          </div>
         </div>
       </header>
 
       <main class="app-shell">
         <section class="matrix-wrap" aria-label="打卡矩阵">
-          <div class="matrix" :style="{ '--date-count': visibleDates.length }">
+          <div id="screenshot-zone" style="background: var(--panel); width: max-content; min-width: 100%;">
+            <div class="export-header" id="export-header" style="display: none; text-align: center; padding: 16px 12px 12px;">
+              <h2 style="margin: 0 0 6px; font-size: 20px; color: #21241f;">{{ activeList.name }}</h2>
+              <p style="margin: 0; font-size: 14px; color: #71786d;">统计范围：{{ noticeStatusText }}</p>
+            </div>
+            <div class="matrix" :style="{ '--date-count': modal === 'screenshot' ? exportDateKeys.length : visibleDates.length }">
             <div class="corner cell head name-cell" @click="openAddMembers">
               <span>成员</span>
               <small>({{ activeMembers.length }})</small>
@@ -31,6 +39,7 @@
               v-for="date in visibleDates"
               :key="'head-' + date.key"
               class="cell head date-head"
+              v-show="modal !== 'screenshot' || exportDateKeys.includes(date.key)"
               :class="{
                 today: date.key === todayKey,
                 selected: dateModes[date.key] && dateModes[date.key] !== 'none',
@@ -79,7 +88,7 @@
                 <span>{{ group.label }}</span>
                 <small>{{ group.count }}</small>
               </div>
-              <div class="group-fill" :style="{ gridColumn: '2 / span ' + visibleDates.length }"></div>
+              <div class="group-fill" :style="{ gridColumn: '2 / span ' + (modal === 'screenshot' ? exportDateKeys.length : visibleDates.length) }"></div>
 
               <template v-for="member in group.members" :key="member.id">
                 <div
@@ -95,6 +104,7 @@
                 <button
                   v-for="date in visibleDates"
                   :key="member.id + '-' + date.key"
+                  v-show="modal !== 'screenshot' || exportDateKeys.includes(date.key)"
                   class="cell mark"
                   :class="{ done: isDone(member.id, date.key), missing: !isDone(member.id, date.key), deleted: member.deleted }"
                   type="button"
@@ -102,6 +112,7 @@
                 >{{ isDone(member.id, date.key) ? '✓' : '-' }}</button>
               </template>
             </template>
+          </div>
           </div>
         </section>
 
@@ -259,6 +270,25 @@
               <button type="button" @click="closeModal">取消</button>
             </div>
           </template>
+
+          <template v-if="modal === 'screenshot'">
+            <div class="screenshot-config">
+              <h3 style="margin: 0 0 8px; font-size: 15px;">选择要导出的日期</h3>
+              <div class="export-dates" style="display: flex; gap: 8px; overflow-x: auto; padding-bottom: 8px; margin-bottom: 12px;">
+                <label v-for="date in visibleDates" :key="'exp-' + date.key" style="display: flex; flex-direction: column; align-items: center; gap: 4px; font-size: 13px; flex: 0 0 auto; cursor: pointer;">
+                  <input type="checkbox" :value="date.key" v-model="exportDateKeys" @change="updateScreenshot" style="width: 18px; height: 18px; margin: 0;" />
+                  <span>{{ date.dayLabel }}</span>
+                </label>
+              </div>
+            </div>
+            <div class="screenshot-preview" style="position: relative;">
+              <div v-if="isGeneratingScreenshot" style="position: absolute; inset: 0; background: rgba(255,255,255,0.7); display: grid; place-items: center; z-index: 10;">
+                <span style="font-weight: bold; color: var(--green);">重新生成中...</span>
+              </div>
+              <img v-if="screenshotUrl" :src="screenshotUrl" alt="长按保存图片" style="max-width: 100%; border-radius: 8px; border: 1px solid var(--line); box-shadow: var(--shadow); display: block;" />
+              <p v-if="screenshotUrl" class="hint" style="text-align: center; margin-top: 12px; font-weight: bold; color: var(--green);">👆 请长按上方图片保存到手机</p>
+            </div>
+          </template>
         </section>
       </div>
 
@@ -267,7 +297,8 @@
       </div>
     </div>
 
+    <script src="https://unpkg.com/html-to-image@1.11.11/dist/html-to-image.js"></script>
     <script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
-    <script src="./app.js?v=1.0.5"></script>
+    <script src="./app.js?v=1.0.7"></script>
   </body>
 </html>
