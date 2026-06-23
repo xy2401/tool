@@ -249,6 +249,55 @@
       background: #ffebe9;
     }
 
+    /* Dependency Checker Hidden Trigger & Modal */
+    .dep-trigger {
+      position: fixed;
+      bottom: 10px;
+      right: 10px;
+      font-size: 16px;
+      cursor: pointer;
+      opacity: 0.05;
+      transition: opacity 0.3s ease;
+      z-index: 1000;
+    }
+    .dep-trigger:hover {
+      opacity: 0.5;
+    }
+    
+    .dep-modal-overlay {
+      position: fixed;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(0,0,0,0.5);
+      z-index: 9999;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+    }
+    .dep-modal {
+      background: #fff;
+      padding: 24px;
+      border-radius: 12px;
+      width: 90%;
+      max-width: 800px;
+      max-height: 90vh;
+      overflow-y: auto;
+      box-shadow: 0 12px 40px rgba(0,0,0,0.2);
+    }
+    .dep-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 16px;
+      font-size: 0.9em;
+    }
+    .dep-table th, .dep-table td {
+      border: 1px solid #d0d7de;
+      padding: 8px 12px;
+      text-align: left;
+    }
+    .dep-table th { background: rgba(175, 184, 193, 0.2); }
+    .status-ok { color: #2da44e; font-weight: bold; }
+    .status-warn { color: #cf222e; font-weight: bold; }
+
     .frequent-empty {
       margin: 0;
       padding: 18px 20px;
@@ -355,6 +404,9 @@
       .error {
         color: #ff7b72;
       }
+      
+      .dep-modal { background: #0d1117; border: 1px solid #30363d; color: #e6edf3; }
+      .dep-table th, .dep-table td { border-color: #30363d; }
     }
 
     @media (max-width: 600px) {
@@ -375,6 +427,53 @@
     <p v-if="loading" class="status">正在加载 README.md...</p>
     <p v-else-if="error" class="status error">{{ error }}</p>
     <article v-else v-html="content"></article>
+
+    <!-- Dependency Trigger -->
+    <div class="dep-trigger" @click="openDepModal" title="依赖检查">⚙️</div>
+    
+    <!-- Dependency Modal -->
+    <div class="dep-modal-overlay" v-if="showDepModal" @click.self="showDepModal = false">
+      <div class="dep-modal">
+        <div style="display: flex; justify-content: space-between; align-items: center;">
+          <h2 style="margin: 0; padding: 0; border: none;">类库依赖分析</h2>
+          <button @click="showDepModal = false" style="cursor: pointer; background: transparent; border: none; font-size: 1.2rem; color: inherit;">✖</button>
+        </div>
+        
+        <p v-if="depLoading">正在扫描子模块并获取最新版本号，请稍候...</p>
+        
+        <table class="dep-table" v-if="!depLoading && depData.length > 0">
+          <thead>
+            <tr>
+              <th>模块</th>
+              <th>依赖包 (Package)</th>
+              <th>当前版本</th>
+              <th>最新版本</th>
+              <th>状态</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr v-for="(dep, idx) in depData" :key="idx">
+              <td>{{ dep.moduleName }}</td>
+              <td>{{ dep.packageName }}</td>
+              <td><code>{{ dep.currentVersion }}</code></td>
+              <td><code>{{ dep.latestVersion }}</code></td>
+              <td :class="dep.status === 'ok' || dep.status === 'dynamic' ? 'status-ok' : (dep.status === 'warn' ? 'status-warn' : '')">
+                <span v-if="dep.status === 'none'">✅ 纯原生</span>
+                <span v-else-if="dep.status === 'error'">❌ 无法读取</span>
+                <span v-else-if="dep.status === 'dynamic'">✅ 动态跟踪</span>
+                <span v-else-if="dep.status === 'ok'">✅ 最新</span>
+                <span v-else-if="dep.status === 'warn'">⚠️ 可更新</span>
+                <span v-else>查询中...</span>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+        
+        <div v-if="!depLoading" style="margin-top: 16px; text-align: right;">
+          <button @click="scanDependencies" style="padding: 6px 12px; cursor: pointer; border-radius: 6px; border: 1px solid #d0d7de; background: transparent; color: inherit;">重新扫描</button>
+        </div>
+      </div>
+    </div>
   </main>
 
   <script src="https://unpkg.com/vue@3.5.13/dist/vue.global.prod.js"></script>
@@ -388,7 +487,10 @@
         return {
           content: "",
           error: "",
-          loading: true
+          loading: true,
+          showDepModal: false,
+          depLoading: false,
+          depData: []
         };
       },
       async mounted() {
@@ -510,7 +612,7 @@
           return group;
         },
         renderFeatureNavigation() {
-          const headings = Array.from(this.$el.querySelectorAll("h2"));
+          const headings = Array.from(document.querySelectorAll("h2"));
           const start = headings.find(
             heading => heading.textContent.trim() === "功能导航"
           );
@@ -577,6 +679,121 @@
           }
 
           start.insertAdjacentElement("afterend", container);
+        },
+        async openDepModal() {
+          this.showDepModal = true;
+          if (this.depData.length === 0) {
+             await this.scanDependencies();
+          }
+        },
+        async scanDependencies() {
+          this.depLoading = true;
+          this.depData = [];
+          try {
+            // Include index.html itself and all links in the grid
+            const links = Array.from(document.querySelectorAll('.navigation-group__grid a.nav-card')).map(a => a.getAttribute('href'));
+            // Normalize and deduplicate local html links
+            const uniqueLinks = [...new Set(['./index.html', ...links])]
+              .filter(href => href && !href.startsWith('http') && !href.startsWith('mailto:'))
+              .map(href => href.endsWith('/') ? href + 'index.html' : href)
+              .filter(href => href.endsWith('.html'));
+            
+            const results = [];
+            const urlRegex = /(?:unpkg\.com|cdn\.jsdelivr\.net\/npm)\/((?:@[^/]+\/)?(?:[^@/]+))@([^/]+)/;
+            
+            for (const href of uniqueLinks) {
+              try {
+                const res = await fetch(href);
+                const text = await res.text();
+                
+                const moduleName = href;
+                const parser = new DOMParser();
+                const doc = parser.parseFromString(text, 'text/html');
+                
+                let foundAny = false;
+                
+                // 1. Script src
+                doc.querySelectorAll('script[src]').forEach(script => {
+                  const src = script.getAttribute('src');
+                  const match = src.match(urlRegex);
+                  if (match) {
+                    foundAny = true;
+                    results.push({ moduleName, packageName: match[1], currentVersion: match[2], latestVersion: '查询中...', status: 'loading' });
+                  }
+                });
+                
+                // 2. Import Maps
+                doc.querySelectorAll('script[type="importmap"]').forEach(script => {
+                  try {
+                    const json = JSON.parse(script.textContent);
+                    if (json.imports) {
+                      for (const val of Object.values(json.imports)) {
+                        const match = val.match(urlRegex);
+                        if (match) {
+                          foundAny = true;
+                          results.push({ moduleName, packageName: match[1], currentVersion: match[2], latestVersion: '查询中...', status: 'loading' });
+                        }
+                      }
+                    }
+                  } catch(e) {}
+                });
+                
+                if (!foundAny) {
+                  results.push({ moduleName, packageName: '-', currentVersion: '-', latestVersion: '-', status: 'none' });
+                }
+                
+              } catch(e) {
+                console.warn("Error fetching " + href, e);
+                results.push({ moduleName: href, packageName: '-', currentVersion: '-', latestVersion: '-', status: 'error' });
+              }
+            }
+            
+            const uniqueResults = [];
+            const seen = new Set();
+            for (const r of results) {
+              const key = r.moduleName + ':' + r.packageName;
+              if (!seen.has(key)) {
+                seen.add(key);
+                uniqueResults.push(r);
+              }
+            }
+            
+            this.depData = uniqueResults;
+            
+            const fetchPromises = uniqueResults.map(async (dep) => {
+               if (dep.status === 'none' || dep.status === 'error') return;
+               try {
+                 const res = await fetch(`https://data.jsdelivr.com/v1/package/npm/${dep.packageName}`);
+                 const data = await res.json();
+                 if (data && data.tags && data.tags.latest) {
+                    dep.latestVersion = data.tags.latest;
+                    const cv = dep.currentVersion.replace(/^[~^]/, '');
+                    const isMajorMatch = /^\d+$/.test(cv) && dep.latestVersion.startsWith(cv + '.');
+                    const isMinorMatch = /^\d+\.\d+$/.test(cv) && dep.latestVersion.startsWith(cv + '.');
+                    if (cv === dep.latestVersion) {
+                        dep.status = 'ok';
+                    } else if (isMajorMatch || isMinorMatch || cv === 'latest') {
+                        dep.status = 'dynamic';
+                    } else {
+                        dep.status = 'warn';
+                    }
+                 } else {
+                    dep.latestVersion = '未知';
+                    dep.status = 'error';
+                 }
+               } catch(e) {
+                 dep.latestVersion = '请求失败';
+                 dep.status = 'error';
+               }
+            });
+            
+            await Promise.allSettled(fetchPromises);
+            
+          } catch(e) {
+             console.error("Scan error", e);
+          } finally {
+            this.depLoading = false;
+          }
         }
       }
     }).mount("#app");

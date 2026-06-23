@@ -29,8 +29,55 @@ async function run() {
     const entries = storiesData.entries || {};
     const validEntries = Object.values(entries).filter(e => e.type === 'story' && e.importPath.match(/\.(ts|js)$/) && !e.importPath.includes('ImageBundle'));
 
-    let entryFileContent = `window.MaxGraphStories = {};\n\n`;
-    entryFileContent += `import { ModelXmlSerializer } from '@maxgraph/core';\n`;
+    let entryFileContent = `window.MaxGraphStories = {};\nwindow.MaxGraphCore = {};\n\n`;
+    entryFileContent += `import {
+  Cell,
+  cellArrayUtils,
+  CircleLayout,
+  Client,
+  CompactTreeLayout,
+  ConnectionHandler,
+  DragSource,
+  FastOrganicLayout,
+  Geometry,
+  gestureUtils,
+  getDefaultPlugins,
+  Graph,
+  GraphDataModel,
+  HierarchicalLayout,
+  ImageBox,
+  InternalEvent,
+  MaxToolbar,
+  ModelXmlSerializer,
+  Outline,
+  PanningHandler,
+  Point,
+  RubberBandHandler
+} from '@maxgraph/core';\n`;
+    entryFileContent += `Object.assign(window.MaxGraphCore, {
+  Cell,
+  cellArrayUtils,
+  CircleLayout,
+  Client,
+  CompactTreeLayout,
+  ConnectionHandler,
+  DragSource,
+  FastOrganicLayout,
+  Geometry,
+  gestureUtils,
+  getDefaultPlugins,
+  Graph,
+  GraphDataModel,
+  HierarchicalLayout,
+  ImageBox,
+  InternalEvent,
+  MaxToolbar,
+  ModelXmlSerializer,
+  Outline,
+  PanningHandler,
+  Point,
+  RubberBandHandler
+});\n`;
     entryFileContent += `window.MaxGraphStories.ModelXmlSerializer = ModelXmlSerializer;\n\n`;
 
     validEntries.forEach(entry => {

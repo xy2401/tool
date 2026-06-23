@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mermaid Live Editor</title>
+    
+    <script type="importmap">
+        {
+            "imports": {
+                "vue": "https://cdn.jsdelivr.net/npm/vue@3/dist/vue.esm-browser.js",
+                "mermaid": "https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs",
+                "svg-pan-zoom": "https://cdn.jsdelivr.net/npm/svg-pan-zoom@3.6.1/dist/svg-pan-zoom.min.js",
+                "mermaid-examples": "https://unpkg.com/@mermaid-js/examples@1.2.0/dist/mermaid-examples.core.mjs"
+            }
+        }
+    </script>
+    
+    <!-- SVG Pan Zoom & Pako -->
+    <script src="https://cdn.jsdelivr.net/npm/svg-pan-zoom@3.6.1/dist/svg-pan-zoom.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/pako@2.1.0/dist/pako.min.js"></script>
+    
+    <link rel="stylesheet" href="./style.css">
+</head>
+<body>
+    <div id="app" v-cloak>
+        <header>
+            <h1>
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color: #3b82f6;"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path><polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline><line x1="12" y1="22.08" x2="12" y2="12"></line></svg>
+                Mermaid Live Editor
+            </h1>
+            
+            <!-- Center Actions -->
+            <div class="sync-group">
+                <select class="glass-select" v-model="selectedLocalTemplate" @change="loadLocalTemplate" v-if="localDiagrams.length > 0">
+                    <option value="">加载本地保存...</option>
+                    <option v-for="local in localDiagrams" :key="'local-'+local.id" :value="'local:'+local.id">
+                        {{ local.title }}
+                    </option>
+                </select>
+                <input type="text" class="glass-input" v-model="currentContext.title" placeholder="图表名称" style="width: 160px; margin-left: 8px; margin-right: 8px;">
+                <button class="glass-btn primary" @click="saveLocal">💾 保存</button>
+                <button class="glass-btn" v-if="currentContext.isLocal" @click="deleteLocal" title="删除此本地保存" style="padding: 6px 10px; color: #ef4444; border-color: rgba(239,68,68,0.2); background: rgba(239,68,68,0.1);">🗑️</button>
+                <div class="divider"></div>
+                <label class="checkbox-label">
+                    <input type="checkbox" v-model="state.autoSync" @change="onAutoSyncChange"> Auto sync
+                </label>
+                <button class="glass-btn primary sync-btn" v-if="!state.autoSync" @click="triggerRender">🔄 Sync</button>
+            </div>
+
+            <!-- Right Actions -->
+            <div class="btn-group">
+                <select class="glass-select" v-model="selectedTemplate" @change="loadTemplate">
+                    <option value="">加载官方预设...</option>
+                    <optgroup v-for="group in diagramData" :key="group.id" :label="group.name">
+                        <option v-for="example in group.examples" :key="example.title" :value="'official:'+example.title">
+                            {{ example.title }}
+                        </option>
+                    </optgroup>
+                </select>
+                <div class="divider"></div>
+                <button class="glass-btn" @click="resetZoom" title="重置缩放">1:1</button>
+                <button class="glass-btn" @click="toggleTheme" title="切换暗色/亮色预览区">🌓 预览模式</button>
+                <div class="divider"></div>
+                <button class="glass-btn" @click="copyLink">🔗 复制链接</button>
+                <div class="dropdown">
+                    <button class="glass-btn success">📥 导出 ▾</button>
+                    <div class="dropdown-content">
+                        <a href="#" @click.prevent="downloadPng">下载 PNG</a>
+                        <a href="#" @click.prevent="downloadSvg">下载 SVG</a>
+                        <a href="#" @click.prevent="copyPng">复制图片到剪贴板</a>
+                        <a href="#" @click.prevent="copyMarkdown">复制 Markdown</a>
+                    </div>
+                </div>
+            </div>
+        </header>
+
+        <div class="main-content">
+            <!-- Left Panel: Monaco Editor (Tabs) -->
+            <div class="editor-panel">
+                <div class="panel-header tabs">
+                    <div class="tab" :class="{active: activeTab === 'code'}" @click="activeTab = 'code'">
+                        Code
+                    </div>
+                    <div class="tab" :class="{active: activeTab === 'config'}" @click="activeTab = 'config'">
+                        Config
+                    </div>
+                </div>
+                
+                <div class="editor-wrapper" v-show="activeTab === 'code'">
+                    <div id="code-editor-container" style="width: 100%; height: 100%;"></div>
+                </div>
+                <div class="editor-wrapper" v-show="activeTab === 'config'">
+                    <div id="config-editor-container" style="width: 100%; height: 100%;"></div>
+                </div>
+            </div>
+
+            <!-- Right Panel: Mermaid Preview -->
+            <div class="preview-panel" :class="{ 'dark-mode': isDarkTheme }">
+                <div class="panel-header">
+                    <span>实时预览</span>
+                    <span class="loading" :class="{ show: isRendering }">渲染中...</span>
+                </div>
+                <div class="preview-container" ref="previewContainer">
+                    <div id="mermaid-output"></div>
+                </div>
+                
+                <!-- Error Overlay -->
+                <div class="error-overlay" :class="{ show: errorMessage }">
+                    <div class="error-header">
+                        <span>⚠️ 语法错误</span>
+                        <button style="margin-left:auto; background:transparent; border:none; color:white; cursor:pointer;" @click="errorMessage = ''">✕</button>
+                    </div>
+                    <div>{{ errorMessage }}</div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Toast Notification -->
+        <div class="toast" :class="{ show: toastMessage }">{{ toastMessage }}</div>
+    </div>
+
+    <!-- Monaco Editor AMD Loader -->
+    <script src="https://cdn.jsdelivr.net/npm/monaco-editor@0.45.0/min/vs/loader.js"></script>
+    <script>
+        require.config({ paths: { 'vs': 'https://cdn.jsdelivr.net/npm/monaco-editor@0.45.0/min/vs' } });
+        window.MonacoEnvironment = { getWorkerUrl: () => proxy };
+        let proxy = URL.createObjectURL(new Blob([`
+            self.MonacoEnvironment = { baseUrl: 'https://cdn.jsdelivr.net/npm/monaco-editor@0.45.0/min/' };
+            importScripts('https://cdn.jsdelivr.net/npm/monaco-editor@0.45.0/min/vs/base/worker/workerMain.js');
+        `], { type: 'text/javascript' }));
+    </script>
+    
+    <!-- Main Logic -->
+    <script type="module" src="./app.js"></script>
+</body>
+</html>
