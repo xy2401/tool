@@ -513,8 +513,16 @@ footer .primary,
 }
 
 .deleted {
-  background: #e3e0dc !important;
-  color: #848078 !important;
+  background: #f1f8ff !important;
+  color: #5c85b5 !important;
+}
+
+.frozen-group {
+  color: #5c85b5;
+}
+
+.frozen-group::before {
+  background: #5c85b5;
 }
 
 .notice-card::before,
@@ -1062,6 +1070,12 @@ textarea {
   border-color: #efc8c8;
   background: #fff1f1;
   color: var(--red);
+}
+
+.freeze-action {
+  border-color: #bee3f8;
+  background: #ebf8ff;
+  color: #3182ce;
 }
 
 .list-manager {

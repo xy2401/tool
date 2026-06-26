@@ -122,6 +122,10 @@
         return this.activeList.members.filter((member) => !member.deleted);
       },
 
+      frozenMembersCount() {
+        return this.activeList.members.filter((member) => member.deleted).length;
+      },
+
       hasActiveMemberFilter() {
         return this.selectedDates.length > 0;
       },
@@ -204,7 +208,7 @@
         }));
 
         if (deleted.length) {
-          result.push({ key: "deleted", label: "删除", count: deleted.length, members: deleted });
+          result.push({ key: "deleted", label: "冻结", count: deleted.length, members: deleted });
         }
 
         return result;

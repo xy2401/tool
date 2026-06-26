@@ -33,6 +33,7 @@
             <div class="corner cell head name-cell" @click="openAddMembers">
               <span>成员</span>
               <small>({{ activeMembers.length }})</small>
+              <small v-if="frozenMembersCount > 0" style="color: #5c85b5;">冻结: {{ frozenMembersCount }}</small>
             </div>
 
             <div
@@ -84,7 +85,7 @@
             </div>
 
             <template v-for="group in groupedMembers" :key="group.key">
-              <div class="group-row name-cell">
+              <div class="group-row name-cell" :class="{ 'frozen-group': group.key === 'deleted' }">
                 <span>{{ group.label }}</span>
                 <small>{{ group.count }}</small>
               </div>
@@ -270,7 +271,8 @@
           <template v-if="modal === 'member'">
             <div class="member-menu-name">{{ selectedMember?.name }}</div>
             <div class="member-menu-actions">
-              <button v-if="selectedMember && !selectedMember.deleted" class="danger-action" type="button" @click="softDeleteSelectedMember">删除</button>
+              <button v-if="selectedMember && !selectedMember.deleted" class="freeze-action" type="button" @click="softDeleteSelectedMember">冻结</button>
+              <button v-if="selectedMember && !selectedMember.deleted" class="danger-action" type="button" @click="hardDeleteSelectedMember">彻底删除</button>
               <button v-if="selectedMember?.deleted" type="button" @click="restoreSelectedMember">恢复</button>
               <button v-if="selectedMember?.deleted" class="danger-action" type="button" @click="hardDeleteSelectedMember">彻底删除</button>
               <button type="button" @click="closeModal">取消</button>
