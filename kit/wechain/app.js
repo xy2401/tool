@@ -89,6 +89,7 @@
         selectedPendingNames: [],
         memberText: "",
         csvTargetListId: "",
+        editableCsvText: "",
         noticeSeed: 0,
         noticeSpark: false,
         showNoticePanel: false,
@@ -178,7 +179,7 @@
       groupedMembers() {
         const groups = new Map();
         const normal = [...this.filteredMembers];
-        const deleted = this.hasActiveMemberFilter ? [] : this.activeList.members.filter((member) => member.deleted);
+        const deleted = this.activeList.members.filter((member) => member.deleted);
 
         normal.sort((a, b) => collator.compare(a.name, b.name));
         deleted.sort((a, b) => collator.compare(a.name, b.name));
@@ -442,7 +443,7 @@
         });
         this.dateModes[this.pasteDate] = "all";
         this.resetNoticeSelection();
-        this.randomizeNotice(true);
+        this.randomizeNotice();
         this.pendingNames = names.filter((name) => !memberByName.has(name));
         this.selectedPendingNames = [...this.pendingNames];
         if (this.pendingNames.length) {
@@ -462,7 +463,7 @@
         });
         this.closeModal();
         this.resetNoticeSelection();
-        this.randomizeNotice(true);
+        this.randomizeNotice();
       },
 
       skipPendingMembers() {
@@ -536,6 +537,11 @@
         this.modal = "member";
       },
 
+      copyAllMembers() {
+        const names = this.activeMembers.map(m => m.name).join('\n');
+        this.copyText(names);
+      },
+
       clearAllMembers() {
         if (confirm("确定要彻底清空当前名单下的所有成员和打卡记录吗？此操作不可恢复！")) {
           this.activeList.members = [];
@@ -592,19 +598,97 @@
 
       openCsv(listId) {
         this.csvTargetListId = listId || this.activeList.id;
+        this.editableCsvText = this.csvText;
         this.modal = "csv";
       },
 
-      downloadCsv(listId) {
-        this.csvTargetListId = listId || this.activeList.id;
+      downloadCsv() {
         const sourceList = this.csvList;
-        const blob = new Blob([this.csvText], { type: "text/csv;charset=utf-8" });
+        const blob = new Blob([this.editableCsvText], { type: "text/csv;charset=utf-8" });
         const url = URL.createObjectURL(blob);
         const link = document.createElement("a");
         link.href = url;
         link.download = `${sourceList.name}-接龙统计.csv`;
         link.click();
         URL.revokeObjectURL(url);
+      },
+
+      copyCsv() {
+        this.copyText(this.editableCsvText);
+      },
+
+      overwriteCsv() {
+        if (!confirm("确定要使用当前内容覆盖此名单的数据吗？覆盖后原有打卡记录将被替换。")) return;
+        const text = this.editableCsvText.trim();
+        if (!text) {
+          this.showToast("内容为空");
+          return;
+        }
+
+        const lines = text.split("\n");
+        if (lines.length < 1) return;
+
+        const parseRow = (line) => {
+          const row = [];
+          let inQuotes = false;
+          let current = "";
+          for (let i = 0; i < line.length; i++) {
+            const char = line[i];
+            if (char === '"' && line[i + 1] === '"') {
+              current += '"';
+              i++;
+            } else if (char === '"') {
+              inQuotes = !inQuotes;
+            } else if (char === ',' && !inQuotes) {
+              row.push(current);
+              current = "";
+            } else {
+              current += char;
+            }
+          }
+          row.push(current);
+          return row;
+        };
+
+        const header = parseRow(lines[0]).map((h) => h.trim());
+        const dates = header.slice(1);
+        const targetList = this.csvList;
+        const existingMembers = new Map(targetList.members.map((m) => [m.name, m]));
+        
+        const newMembers = [];
+        const newMarks = {};
+        dates.forEach((d) => {
+          newMarks[d] = {};
+          if (!targetList.dateModes[d]) targetList.dateModes[d] = "all";
+        });
+
+        for (let i = 1; i < lines.length; i++) {
+          const line = lines[i].trim();
+          if (!line) continue;
+          const row = parseRow(line).map((c) => c.trim());
+          const name = row[0];
+          if (!name) continue;
+
+          let member = existingMembers.get(name);
+          if (!member) {
+            member = { id: makeId("member"), name, deleted: false };
+          } else {
+            member.deleted = false;
+          }
+          newMembers.push(member);
+
+          dates.forEach((date, idx) => {
+            if (row[idx + 1] === "1") {
+              newMarks[date][member.id] = true;
+            }
+          });
+        }
+
+        targetList.members = newMembers;
+        targetList.marks = { ...targetList.marks, ...newMarks };
+        
+        this.closeModal();
+        this.showToast("覆盖成功");
       },
 
       async copyText(text) {
@@ -797,10 +881,20 @@
   }).mount("#app");
 
   function parseCheckinText(text) {
+    let lines = text.split(/\r?\n/).map((line) => line.trim());
+    
+    const startIndex = lines.findIndex(line => 
+      /^1\s*[.、)\-]\s*\S/.test(line) || 
+      /^1\s+\S/.test(line) || 
+      /^1[.、)\-]\S/.test(line)
+    );
+    
+    if (startIndex > 0) {
+      lines = lines.slice(startIndex);
+    }
+
     return unique(
-      text
-        .split(/\r?\n/)
-        .map((line) => line.trim())
+      lines
         .filter((line) => line && !line.startsWith("#"))
         .map(cleanCheckinName)
         .filter(Boolean)
@@ -810,17 +904,29 @@
   function parseMembersText(text) {
     const atNames = [...text.matchAll(/@([^\s@]+)/g)].map((match) => match[1]);
     if (atNames.length) return unique(atNames);
+    
+    let lines = text.split(/[\n,，;；]+/).map((line) => line.trim());
+    
+    const startIndex = lines.findIndex(line => 
+      /^1\s*[.、)\-]\s*\S/.test(line) || 
+      /^1\s+\S/.test(line) || 
+      /^1[.、)\-]\S/.test(line)
+    );
+    
+    if (startIndex > 0) {
+      lines = lines.slice(startIndex);
+    }
+
     return unique(
-      text
-        .split(/[\n,，;；]+/)
-        .map((line) => line.trim())
+      lines
         .filter((line) => line && !line.startsWith("#"))
         .map(cleanCheckinName)
+        .filter(Boolean)
     );
   }
 
   function cleanCheckinName(line) {
-    return line.replace(/^\d+\s*[.、)\-]?\s*/, "").trim();
+    return line.replace(/^\d+\s*[.、)\-]\s*|^\d+\s+|^\d+[.、)\-]/, "").trim();
   }
 
   function getInitialGroup(name) {

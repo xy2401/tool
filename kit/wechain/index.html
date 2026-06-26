@@ -228,7 +228,8 @@
           <template v-if="modal === 'members'">
             <p class="hint">可以粘贴微信群 @ 人文本、一行一个名字，也可以直接粘贴接龙打卡文本。</p>
             <textarea v-model="memberText" placeholder="@小羊 @风里跑&#10;或：&#10;1. 小羊&#10;2. 风里跑&#10;3. 阿宁今天练腿"></textarea>
-            <div style="margin-top: 16px;" v-if="activeMembers.length > 0">
+            <div style="margin-top: 16px; display: flex; flex-direction: column; gap: 8px;" v-if="activeMembers.length > 0">
+              <button style="width: 100%;" type="button" @click="copyAllMembers">复制成员列表({{ activeMembers.length }}人)</button>
               <button class="danger-action" style="width: 100%;" type="button" @click="clearAllMembers">彻底清空所有成员</button>
             </div>
           </template>
@@ -251,14 +252,19 @@
                   <span class="list-count">{{ list.members.filter(member => !member.deleted).length }}人</span>
                 </div>
                 <button type="button" class="mini-btn" @click="openCsv(list.id)">CSV</button>
-                <button type="button" class="mini-btn" @click="downloadCsv(list.id)">下载</button>
                 <button type="button" class="mini-btn danger" @click="deleteList(list.id)">删除</button>
               </div>
             </div>
           </template>
 
           <template v-if="modal === 'csv'">
-            <textarea class="csv-viewer" readonly wrap="off" :value="csvText"></textarea>
+            <div style="display: flex; gap: 8px; margin-bottom: 8px;">
+              <button class="compact-action" type="button" @click="copyCsv">复制</button>
+              <button class="compact-action" type="button" @click="downloadCsv">下载</button>
+              <button class="compact-action danger-action" type="button" @click="editableCsvText = ''">清空</button>
+              <button class="compact-action primary" type="button" @click="overwriteCsv">覆盖</button>
+            </div>
+            <textarea class="csv-viewer" wrap="off" v-model="editableCsvText"></textarea>
           </template>
 
           <template v-if="modal === 'member'">
