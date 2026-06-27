@@ -11,13 +11,7 @@
 - [JSON 查看](./text/json/) - 从日志或不规则文本中深度提取 JSON，支持转义解构与局部回填。
 - [JSON 节点编辑](./text/json/editor.html) - 基于 Svelte-JSONEditor 的现代 JSON 对比与可视化树形编辑工具。
 
-### human
 
-- [JSON 查看](./human/json.html) - 从文本中提取、格式化并查看 JSON 数据。
-- [JSON Editor](./human/jsoneditor.html) - 可视化查看、编辑和提取 JSON 数据。
-- [Monaco Editor](./human/monaco.html) - 在线体验多语言代码编辑器。
-- [Monaco Diff](./human/monaco-diff.html) - 并排或行内比较两段代码。
-- [Monaco Playground](./human/monaco-playground.html) - 编辑并运行 JavaScript、HTML 和 CSS。
 
 ### kit
 
@@ -28,6 +22,14 @@
 - [GitHub Explorer](./devops/github/) - 基于 GitHub Search API 的高阶仓库搜索与定制化 Markdown/JSON 模板生成器。
 - [maxGraph 专业绘图工作台](./devops/maxgraph/) - 基于 `@maxgraph/core` 构建的浏览器端专业级绘图与拓扑工作台。
 - [Mermaid Live Editor](./devops/mermaid/) - 基于 Mermaid.js 的纯文本画图工作台，支持双栏实时预览与导出。
+
+### human
+
+- [JSON 查看](./human/json.html) - 从文本中提取、格式化并查看 JSON 数据。
+- [JSON Editor](./human/jsoneditor.html) - 可视化查看、编辑和提取 JSON 数据。
+- [Monaco Editor](./human/monaco.html) - 在线体验多语言代码编辑器。
+- [Monaco Diff](./human/monaco-diff.html) - 并排或行内比较两段代码。
+- [Monaco Playground](./human/monaco-playground.html) - 编辑并运行 JavaScript、HTML 和 CSS。
 
 ## 功能列表
 
