@@ -40,9 +40,9 @@ document.addEventListener('DOMContentLoaded', () => {
     
     // Default Templates
     const defaultTemplates = {
-        "Markdown List": "- [${name}](${html_url})\n  > ${description}\n  > ⭐ ${stargazers_count} | 📅 ${created_at} | 🕒 ${updated_at}\n",
-        "Markdown Table": "| Name | Description | Stars | Created | Updated |\n|---|---|---|---|---|\n>>>>>>>>>> ✂ >>>>>>>>>>\n| [${name}](${html_url}) | ${description} | ⭐ ${stargazers_count} | 📅 ${created_at} | 🕒 ${updated_at} |",
-        "CSV Format": "Name,URL,Stars,Language,Created,Updated\n>>>>>>>>>> ✂ >>>>>>>>>>\n${name},${html_url},${stargazers_count},${language},${created_at},${updated_at}"
+        "Markdown List": "- [${name}](${html_url})\n  > ${description}\n  > 📅 ${created_at} | 🕒 ${updated_at} | ⭐ ${stargazers_count}\n",
+        "Markdown Table": "| Name | Description | Created | Updated | Stars |\n|---|---|---|---|---|\n>>>>>>>>>> ✂ >>>>>>>>>>\n| [${name}](${html_url}) | ${description} | 📅 ${created_at} | 🕒 ${updated_at} | ⭐ ${stargazers_count} |",
+        "CSV Format": "Name,URL,Created,Updated,Stars,Language\n>>>>>>>>>> ✂ >>>>>>>>>>\n${name},${html_url},${created_at},${updated_at},${stargazers_count},${language}"
     };
 
     let userTemplates = {};
@@ -365,13 +365,13 @@ document.addEventListener('DOMContentLoaded', () => {
                     </div>
 
                     <div class="repo-meta" style="flex-wrap: wrap;">
+                        <span title="Created">📅 Created: ${createdDate}</span>
+                        <span title="Last Updated">🕒 Updated: ${date}</span>
                         <span title="Stars">⭐ ${repo.stargazers_count}</span>
                         <span title="Forks">🍴 ${repo.forks_count}</span>
                         <span title="Open Issues">🚨 ${repo.open_issues_count}</span>
                         ${langHtml}
                         ${licenseHtml}
-                        <span title="Created">📅 Created: ${createdDate}</span>
-                        <span title="Last Updated">🕒 Updated: ${date}</span>
                     </div>
                 </div>
             `;
