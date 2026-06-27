@@ -40,8 +40,8 @@ document.addEventListener('DOMContentLoaded', () => {
     
     // Default Templates
     const defaultTemplates = {
-        "Markdown List": "- [${name}](${html_url})\n  > ${description}\n  > 📅 ${created_at} | 🕒 ${updated_at} | ⭐ ${stargazers_count}\n",
-        "Markdown Table": "| Name | Description | Created | Updated | Stars |\n|---|---|---|---|---|\n>>>>>>>>>> ✂ >>>>>>>>>>\n| [${name}](${html_url}) | ${description} | 📅 ${created_at} | 🕒 ${updated_at} | ⭐ ${stargazers_count} |",
+        "Markdown List": "- [${name}](${html_url})\n  > 📅 ${created_at} | 🕒 ${updated_at} | ⭐ ${stargazers_count}  \n  > ${description}\n",
+        "Markdown Table": "| Name | Created | Updated | Stars | Description |\n|---|---|---|---|---|\n>>>>>>>>>> ✂ >>>>>>>>>>\n| [${name}](${html_url}) | 📅 ${created_at} | 🕒 ${updated_at} | ⭐ ${stargazers_count} | ${description} |",
         "CSV Format": "Name,URL,Created,Updated,Stars,Language\n>>>>>>>>>> ✂ >>>>>>>>>>\n${name},${html_url},${created_at},${updated_at},${stargazers_count},${language}"
     };
 
