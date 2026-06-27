@@ -127,6 +127,10 @@
                 <input type="checkbox" v-model="advancedOptions.scanStringJsonSubstrings">
                 <span>嵌套扫描</span>
               </label>
+              <label class="advanced-option">
+                <input type="checkbox" v-model="advancedOptions.mergeLines">
+                <span>多行合并</span>
+              </label>
               <span class="parse-status" v-text="parseProgressText"></span>
             </div>
             <div :class="['parse-progress-line', { active: parseProgress.active, indeterminate: parseProgress.indeterminate }]">

@@ -27,6 +27,7 @@ function normalizeOptions(options) {
   return Object.assign({
     parseStringifiedJson: true,
     scanStringJsonSubstrings: true,
+    mergeLines: false,
     generateStats: true,
     generatePaths: true,
     inferSchema: true,
@@ -87,6 +88,11 @@ async function parseText(text, options, sourceName) {
   const sizeBytes = options.sizeBytes || estimateBytes(text);
   const mode = getMode(sizeBytes);
   const effectiveOptions = getEffectiveOptions(Object.assign({}, options, { mode, sizeBytes }));
+
+  if (effectiveOptions.mergeLines) {
+    progress('合并多行', 25);
+    text = text.replace(/\r?\n/g, '');
+  }
 
   progress('定位主 JSON', 26);
   const parsedMatch = findAndParseRootJSON(text, (percent) => {

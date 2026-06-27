@@ -8,7 +8,8 @@
     const ULTRA_TEXT_BYTES = 10 * 1024 * 1024;
     const DEFAULT_ADVANCED_OPTIONS = {
       parseStringifiedJson: true,
-      scanStringJsonSubstrings: true
+      scanStringJsonSubstrings: true,
+      mergeLines: false
     };
 
     createApp({
