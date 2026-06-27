@@ -400,7 +400,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (btn) {
             const input = btn.parentElement.querySelector('.clone-url-input');
             if (input && input.value) {
-                navigator.clipboard.writeText(input.value).then(() => {
+                copyToClipboard(input.value, () => {
                     const copyIcon = btn.querySelector('.copy-icon');
                     const checkIcon = btn.querySelector('.check-icon');
                     copyIcon.style.display = 'none';
@@ -593,7 +593,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     btnCopy.addEventListener('click', () => {
         if (!outputPreview.value) return;
-        navigator.clipboard.writeText(outputPreview.value).then(() => {
+        copyToClipboard(outputPreview.value, () => {
             const originalText = btnCopy.textContent;
             btnCopy.textContent = 'Copied!';
             setTimeout(() => {
@@ -610,6 +610,33 @@ document.addEventListener('DOMContentLoaded', () => {
              .replace(/>/g, "&gt;")
              .replace(/"/g, "&quot;")
              .replace(/'/g, "&#039;");
+    }
+
+    function copyToClipboard(text, successCallback) {
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+            navigator.clipboard.writeText(text).then(successCallback).catch(err => {
+                console.error('Failed to copy text: ', err);
+            });
+        } else {
+            // Fallback for non-secure contexts (e.g., HTTP IP address instead of localhost)
+            const textArea = document.createElement("textarea");
+            textArea.value = text;
+            textArea.style.position = "fixed";
+            textArea.style.top = "0";
+            textArea.style.left = "0";
+            document.body.appendChild(textArea);
+            textArea.focus();
+            textArea.select();
+            try {
+                const successful = document.execCommand('copy');
+                if (successful && successCallback) {
+                    successCallback();
+                }
+            } catch (err) {
+                console.error('Fallback: Oops, unable to copy', err);
+            }
+            document.body.removeChild(textArea);
+        }
     }
 
     // Init
