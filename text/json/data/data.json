@@ -28,5 +28,10 @@
     "key": "aliyun-log",
     "name": "阿里云 SLS 嵌套日志 (Spring Boot)",
     "path": "./data/aliyun-log.json"
+  },
+  {
+    "key": "truncated-log",
+    "name": "长文本截断的多行日志 (Log)",
+    "path": "./data/truncated-log.txt"
   }
 ]
