@@ -40,9 +40,9 @@ document.addEventListener('DOMContentLoaded', () => {
     
     // Default Templates
     const defaultTemplates = {
-        "Markdown List": "- [${name}](${html_url})\n  > ${description}\n  > ⭐ ${stargazers_count} | 🕒 ${updated_at}\n",
-        "Markdown Table": "| Name | Description | Stars |\n|---|---|---|\n>>>>>>>>>> ✂ >>>>>>>>>>\n| [${name}](${html_url}) | ${description} | ⭐ ${stargazers_count} |",
-        "CSV Format": "Name,URL,Stars,Language\n>>>>>>>>>> ✂ >>>>>>>>>>\n${name},${html_url},${stargazers_count},${language}"
+        "Markdown List": "- [${name}](${html_url})\n  > ${description}\n  > ⭐ ${stargazers_count} | 📅 ${created_at} | 🕒 ${updated_at}\n",
+        "Markdown Table": "| Name | Description | Stars | Created | Updated |\n|---|---|---|---|---|\n>>>>>>>>>> ✂ >>>>>>>>>>\n| [${name}](${html_url}) | ${description} | ⭐ ${stargazers_count} | 📅 ${created_at} | 🕒 ${updated_at} |",
+        "CSV Format": "Name,URL,Stars,Language,Created,Updated\n>>>>>>>>>> ✂ >>>>>>>>>>\n${name},${html_url},${stargazers_count},${language},${created_at},${updated_at}"
     };
 
     let userTemplates = {};
@@ -332,6 +332,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         const html = displayedRepos.map(repo => {
             const date = new Date(repo.pushed_at || repo.updated_at).toISOString().split('T')[0];
+            const createdDate = repo.created_at ? new Date(repo.created_at).toISOString().split('T')[0] : '';
             const licenseHtml = repo.license ? `<span title="License">⚖️ ${repo.license.spdx_id || repo.license.name}</span>` : '';
             const langHtml = repo.language ? `<span>📦 ${repo.language}</span>` : '';
             const topicsHtml = (repo.topics && repo.topics.length > 0) 
@@ -369,6 +370,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         <span title="Open Issues">🚨 ${repo.open_issues_count}</span>
                         ${langHtml}
                         ${licenseHtml}
+                        <span title="Created">📅 Created: ${createdDate}</span>
                         <span title="Last Updated">🕒 Updated: ${date}</span>
                     </div>
                 </div>
@@ -441,6 +443,11 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (rightSort === 'updated_desc') {
                     const d1 = new Date(b.pushed_at || b.updated_at).getTime() || 0;
                     const d2 = new Date(a.pushed_at || a.updated_at).getTime() || 0;
+                    return d1 - d2;
+                }
+                if (rightSort === 'created_desc') {
+                    const d1 = new Date(b.created_at).getTime() || 0;
+                    const d2 = new Date(a.created_at).getTime() || 0;
                     return d1 - d2;
                 }
                 if (rightSort === 'name_asc') return (a.full_name || '').localeCompare(b.full_name || '');
@@ -527,7 +534,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 const values = keys.map(k => {
                     let val = repo[k];
                     // Retain date formatting backward compatibility
-                    if ((k === 'updated_at' || k === 'pushed_at') && val) {
+                    if ((k === 'updated_at' || k === 'pushed_at' || k === 'created_at') && val) {
                         return new Date(val).toISOString().split('T')[0];
                     }
                     if (val === null || val === undefined) return '';
