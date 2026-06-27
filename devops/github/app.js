@@ -246,7 +246,8 @@ document.addEventListener('DOMContentLoaded', () => {
         try {
             const perPage = selectPerPage.value;
             const sort = selectSort.value;
-            let url = `https://api.github.com/search/repositories?q=${encodeURIComponent(query)}&sort=${sort}&order=desc&per_page=${perPage}&page=${page}`;
+            const order = document.getElementById('selectOrder').value;
+            let url = `https://api.github.com/search/repositories?q=${encodeURIComponent(query)}&sort=${sort}&order=${order}&per_page=${perPage}&page=${page}`;
             const response = await fetch(url, { headers });
             
             if (!response.ok) {
@@ -321,6 +322,10 @@ document.addEventListener('DOMContentLoaded', () => {
     
     selectSort.addEventListener('change', () => {
         fetchRepos(1); // API driven sort requires refetch
+    });
+
+    document.getElementById('selectOrder').addEventListener('change', () => {
+        fetchRepos(1);
     });
 
     // Render Data
@@ -436,22 +441,25 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         
         const rightSort = document.getElementById('selectRightSort').value;
+        const rightOrder = document.getElementById('selectRightOrder').value;
         if (rightSort !== 'none') {
             source.sort((a, b) => {
-                if (rightSort === 'stars_desc') return (b.stargazers_count || 0) - (a.stargazers_count || 0);
-                if (rightSort === 'forks_desc') return (b.forks_count || 0) - (a.forks_count || 0);
-                if (rightSort === 'updated_desc') {
-                    const d1 = new Date(b.pushed_at || b.updated_at).getTime() || 0;
-                    const d2 = new Date(a.pushed_at || a.updated_at).getTime() || 0;
-                    return d1 - d2;
+                let diff = 0;
+                if (rightSort === 'stars') diff = (a.stargazers_count || 0) - (b.stargazers_count || 0);
+                if (rightSort === 'forks') diff = (a.forks_count || 0) - (b.forks_count || 0);
+                if (rightSort === 'updated') {
+                    const d1 = new Date(a.pushed_at || a.updated_at).getTime() || 0;
+                    const d2 = new Date(b.pushed_at || b.updated_at).getTime() || 0;
+                    diff = d1 - d2;
                 }
-                if (rightSort === 'created_desc') {
-                    const d1 = new Date(b.created_at).getTime() || 0;
-                    const d2 = new Date(a.created_at).getTime() || 0;
-                    return d1 - d2;
+                if (rightSort === 'created') {
+                    const d1 = new Date(a.created_at).getTime() || 0;
+                    const d2 = new Date(b.created_at).getTime() || 0;
+                    diff = d1 - d2;
                 }
-                if (rightSort === 'name_asc') return (a.full_name || '').localeCompare(b.full_name || '');
-                return 0;
+                if (rightSort === 'name') diff = (a.full_name || '').localeCompare(b.full_name || '');
+                
+                return rightOrder === 'desc' ? -diff : diff;
             });
         }
         
@@ -462,6 +470,7 @@ document.addEventListener('DOMContentLoaded', () => {
     
     document.getElementById('inputRightFilter').addEventListener('input', updateRightSide);
     document.getElementById('selectRightSort').addEventListener('change', updateRightSide);
+    document.getElementById('selectRightOrder').addEventListener('change', updateRightSide);
     
     document.getElementById('chkAccumulate').addEventListener('change', (e) => {
         if (!e.target.checked) {

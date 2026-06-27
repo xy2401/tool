@@ -111,9 +111,13 @@
                 <div style="display: flex; align-items: center; gap: 6px;">
                     <span style="font-size: 0.8rem; color: var(--text-secondary);">Sort:</span>
                     <select id="selectSort" style="padding: 2px 6px; height: 26px; font-size: 0.8rem;">
-                        <option value="updated">Latest</option>
+                        <option value="updated">Updated</option>
                         <option value="stars">Stars</option>
                         <option value="forks">Forks</option>
+                    </select>
+                    <select id="selectOrder" style="padding: 2px 6px; height: 26px; font-size: 0.8rem;">
+                        <option value="asc">↑ Asc</option>
+                        <option value="desc">↓ Desc</option>
                     </select>
                 </div>
                 <div style="display: flex; align-items: center; gap: 6px;">
@@ -156,11 +160,15 @@
                         <span style="color: var(--text-secondary);">Sort:</span>
                         <select id="selectRightSort" style="padding: 2px 6px; height: 26px; font-size: 0.8rem;">
                             <option value="none">Default</option>
-                            <option value="stars_desc">⭐ Stars ↓</option>
-                            <option value="forks_desc">🍴 Forks ↓</option>
-                            <option value="updated_desc">🕒 Updated ↓</option>
-                            <option value="created_desc">📅 Created ↓</option>
-                            <option value="name_asc">Name A-Z</option>
+                            <option value="stars">⭐ Stars</option>
+                            <option value="forks">🍴 Forks</option>
+                            <option value="updated">🕒 Updated</option>
+                            <option value="created">📅 Created</option>
+                            <option value="name">Name</option>
+                        </select>
+                        <select id="selectRightOrder" style="padding: 2px 6px; height: 26px; font-size: 0.8rem;">
+                            <option value="asc">↑ Asc</option>
+                            <option value="desc">↓ Desc</option>
                         </select>
                     </div>
                     <div style="display: flex; align-items: center; gap: 6px;">
