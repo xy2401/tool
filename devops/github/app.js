@@ -41,8 +41,8 @@ document.addEventListener('DOMContentLoaded', () => {
     // Default Templates
     const defaultTemplates = {
         "Markdown List": "- [${name}](${html_url})\n  > ${description}\n  > ⭐ ${stargazers_count} | 🕒 ${updated_at}\n",
-        "Markdown Table": "| Name | Description | Stars |\n|---|---|---|\n| [${name}](${html_url}) | ${description} | ⭐ ${stargazers_count} |",
-        "CSV Format": "Name,URL,Stars,Language\n${name},${html_url},${stargazers_count},${language}"
+        "Markdown Table": "| Name | Description | Stars |\n|---|---|---|\n>>>>>>>>>> ✂ >>>>>>>>>>\n| [${name}](${html_url}) | ${description} | ⭐ ${stargazers_count} |",
+        "CSV Format": "Name,URL,Stars,Language\n>>>>>>>>>> ✂ >>>>>>>>>>\n${name},${html_url},${stargazers_count},${language}"
     };
 
     let userTemplates = {};
@@ -481,24 +481,26 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
 
-        // Magical Header Extraction: Lines before the first '${' are considered static header
+        // Header Extraction: Lines before a line starting with at least 10 '>' are considered static header
         const lines = fullTemplate.split('\n');
         let headerLines = [];
         let itemLines = [];
-        let foundTemplate = false;
+        let foundSeparator = false;
 
         for (let line of lines) {
-            if (!foundTemplate && line.includes('${')) {
-                foundTemplate = true;
+            if (!foundSeparator && line.trim().match(/^>{10,}/)) {
+                foundSeparator = true;
+                continue; // Skip the separator line itself
             }
-            if (foundTemplate) {
+            if (foundSeparator) {
                 itemLines.push(line);
             } else {
                 headerLines.push(line);
             }
         }
 
-        if (!foundTemplate) {
+        // If no separator is found, treat the entire template as the item template (no header)
+        if (!foundSeparator) {
             itemLines = headerLines;
             headerLines = [];
         }
