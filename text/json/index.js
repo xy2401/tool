@@ -1601,6 +1601,48 @@ Null数量:    ${s.nullCount}${s.skipped && s.skipped.length ? `\n\n已跳过: $
             return;
           }
 
+          if (val === 'generate-100m') {
+            event.target.value = '';
+            showToast('生成中', '正在动态生成 100M 多层次 JSON 数据，请稍候...', 'info');
+            setTimeout(() => {
+              try {
+                const generateNested = (depth) => {
+                  if (depth <= 0) return "value_" + Math.random();
+                  return {
+                    id: Math.random().toString(36).substring(2),
+                    level: depth,
+                    timestamp: Date.now(),
+                    metadata: { type: "test", active: true },
+                    tags: ["dynamic", "test", "performance"],
+                    children: [
+                      { sub: generateNested(depth - 1) },
+                      { sub: generateNested(depth - 1) }
+                    ]
+                  };
+                };
+                const itemStr = JSON.stringify(generateNested(7));
+                const itemSizeBytes = new Blob([itemStr]).size;
+                const targetSize = 100 * 1024 * 1024; // 100MB
+                const count = Math.ceil(targetSize / itemSizeBytes);
+                
+                const arrayStr = '[' + new Array(count).fill(itemStr).join(',') + ']';
+                const file = new File([arrayStr], "dynamic-100m.json", { type: "application/json" });
+                
+                selectedFileForWorker = file;
+                currentSourceName.value = file.name;
+                sourceLoadedFromFile.value = true;
+                applyInputMode(file.size);
+                rawInput.value = ''; 
+                
+                showToast('生成完毕', `100M 数据生成完毕，开始解析...`, 'success', 3000);
+                startWorkerParse({ file, silent: false, sourceName: file.name });
+              } catch (e) {
+                showToast('生成失败', '生成 100M 数据时发生错误：' + e.message, 'error');
+              }
+            }, 50);
+            return;
+          }
+
           if (val === 'save-current') {
             saveCurrentData();
             event.target.value = '';

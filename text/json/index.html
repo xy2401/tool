@@ -107,6 +107,7 @@
               <option disabled v-if="historyItems.length > 0">── 历史数据 ──</option>
               <option v-for="(item, idx) in historyItems" :key="'hist-' + idx" :value="'hist-' + idx" v-text="item.name"></option>
               <option disabled>── 操作 ──</option>
+              <option value="generate-100m">动态生成 100M 嵌套 JSON (性能测试)</option>
               <option value="save-current">保存当前数据</option>
               <option value="clear">清空当前数据</option>
               <option value="clear-saved" v-if="savedItems.length > 0">清空保存数据</option>
