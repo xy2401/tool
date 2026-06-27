@@ -552,13 +552,14 @@ document.addEventListener('DOMContentLoaded', () => {
                 copyName = `${currentTemplateKey} (副本 ${counter})`;
                 counter++;
             }
+            userTemplates[copyName] = inputTemplate.value;
             currentTemplateKey = copyName;
             inputTemplateName.value = currentTemplateKey;
             btnDeleteTemplate.style.visibility = 'visible';
             renderTemplatePresets();
+        } else {
+            userTemplates[currentTemplateKey] = inputTemplate.value;
         }
-        
-        userTemplates[currentTemplateKey] = inputTemplate.value;
         
         clearTimeout(templateSaveTimeout);
         templateSaveTimeout = setTimeout(() => {
