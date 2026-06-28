@@ -660,6 +660,20 @@ Null数量:    ${s.nullCount}${s.skipped && s.skipped.length ? `\n\n已跳过: $
           const text = displayValue.value || '';
           if (!text) return '1';
           
+          let skipped = 0;
+          let markerStartLine = -1;
+          const match = text.match(/\/\* 预览已截断，仅显示前 .*?。隐藏了 (\d+) 行。 .*?\*\//);
+          if (match) {
+            skipped = parseInt(match[1], 10);
+            let linesBeforeMarker = 1;
+            let nIdx = text.indexOf('\n');
+            while (nIdx !== -1 && nIdx < match.index) {
+              linesBeforeMarker++;
+              nIdx = text.indexOf('\n', nIdx + 1);
+            }
+            markerStartLine = linesBeforeMarker;
+          }
+
           let count = 1;
           let idx = text.indexOf('\n');
           while (idx !== -1) {
@@ -667,11 +681,21 @@ Null数量:    ${s.nullCount}${s.skipped && s.skipped.length ? `\n\n已跳过: $
             idx = text.indexOf('\n', idx + 1);
           }
           
-          if (count === 1) return '1';
+          if (count === 1 && skipped === 0) return '1';
           
           const nums = new Array(count);
+          let currentNum = 1;
           for (let i = 0; i < count; i++) {
-            nums[i] = i + 1;
+            const lineIdx = i + 1;
+            if (markerStartLine !== -1 && lineIdx >= markerStartLine - 1 && lineIdx <= markerStartLine + 1) {
+              nums[i] = '·';
+              if (lineIdx === markerStartLine + 1) {
+                currentNum += skipped;
+              }
+            } else {
+              nums[i] = currentNum;
+              currentNum++;
+            }
           }
           return nums.join('\n');
         });
@@ -1139,7 +1163,33 @@ Null数量:    ${s.nullCount}${s.skipped && s.skipped.length ? `\n\n已跳过: $
         };
 
         const appendPreviewTruncationNote = (text, limit) => {
-          return text.slice(0, limit) + `\n\n/* 预览已截断，仅显示前 ${formatSize(limit)}。为避免保存半截 JSON，此视图已只读。 */`;
+          let topPart = text.slice(0, limit);
+          let totalLines = 1;
+          let idx = text.indexOf('\n');
+          while (idx !== -1) { totalLines++; idx = text.indexOf('\n', idx + 1); }
+          
+          let topLines = 1;
+          idx = topPart.indexOf('\n');
+          while (idx !== -1) { topLines++; idx = topPart.indexOf('\n', idx + 1); }
+          
+          let tailIdx = text.length - 1;
+          let tailNewlines = 0;
+          while (tailIdx >= limit && tailNewlines < 10) {
+            if (text[tailIdx] === '\n') tailNewlines++;
+            if (tailNewlines === 10) break;
+            tailIdx--;
+          }
+          let bottomPart = tailIdx < limit ? text.slice(limit) : text.slice(tailIdx + 1);
+          if (bottomPart.length > 10000) bottomPart = bottomPart.slice(-10000);
+          
+          let bottomLines = 1;
+          idx = bottomPart.indexOf('\n');
+          while (idx !== -1) { bottomLines++; idx = bottomPart.indexOf('\n', idx + 1); }
+          
+          let skippedLines = totalLines - topLines - bottomLines;
+          if (skippedLines < 0) skippedLines = 0;
+          
+          return topPart + `\n\n/* 预览已截断，仅显示前 ${formatSize(limit)}。隐藏了 ${skippedLines} 行。为避免保存半截 JSON，此视图已只读。 */\n\n` + bottomPart;
         };
 
         // Formatter implementation (JSON.stringify with selected parameters)

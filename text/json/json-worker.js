@@ -417,11 +417,41 @@ function formatPreview(val, options, isRoot) {
 
   if (limit > 0 && text.length > limit) {
     return {
-      text: text.slice(0, limit) + `\n\n/* 预览已截断，仅显示前 ${formatSize(limit)}。可下载或选择更小节点查看完整内容。 */`,
+      text: buildTruncatedPreview(text, limit, formatSize),
       truncated: true
     };
   }
   return { text, truncated: false };
+}
+
+function buildTruncatedPreview(text, limit, formatSizeFn) {
+  let topPart = text.slice(0, limit);
+  let totalLines = 1;
+  let idx = text.indexOf('\n');
+  while (idx !== -1) { totalLines++; idx = text.indexOf('\n', idx + 1); }
+  
+  let topLines = 1;
+  idx = topPart.indexOf('\n');
+  while (idx !== -1) { topLines++; idx = topPart.indexOf('\n', idx + 1); }
+  
+  let tailIdx = text.length - 1;
+  let tailNewlines = 0;
+  while (tailIdx >= limit && tailNewlines < 10) {
+    if (text[tailIdx] === '\n') tailNewlines++;
+    if (tailNewlines === 10) break;
+    tailIdx--;
+  }
+  let bottomPart = tailIdx < limit ? text.slice(limit) : text.slice(tailIdx + 1);
+  if (bottomPart.length > 10000) bottomPart = bottomPart.slice(-10000);
+  
+  let bottomLines = 1;
+  idx = bottomPart.indexOf('\n');
+  while (idx !== -1) { bottomLines++; idx = bottomPart.indexOf('\n', idx + 1); }
+  
+  let skippedLines = totalLines - topLines - bottomLines;
+  if (skippedLines < 0) skippedLines = 0;
+  
+  return topPart + `\n\n/* 预览已截断，仅显示前 ${formatSizeFn(limit)}。隐藏了 ${skippedLines} 行。可下载或选择更小节点查看完整内容。 */\n\n` + bottomPart;
 }
 
 function buildNodeInfo(val, options, mode, sizeBytes, treeTruncated) {
