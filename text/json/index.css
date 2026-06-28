@@ -441,7 +441,9 @@
     .node-list-container {
       flex: 1;
       overflow-y: auto;
+      overflow-x: auto;
       padding-right: 0.25rem;
+      padding-bottom: 0.5rem;
     }
 
     /* Custom Scrollbar */
@@ -473,6 +475,7 @@
       margin-bottom: 0;
       border: 1px solid transparent;
       user-select: none;
+      min-width: max-content;
     }
 
     .node-item:hover {
@@ -619,6 +622,7 @@
       padding: 0.15rem 0.25rem;
       border-radius: 0.2rem;
       user-select: none;
+      min-width: max-content;
     }
 
     .property-item:hover {
