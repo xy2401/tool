@@ -464,13 +464,13 @@
     .node-item {
       display: flex;
       align-items: center;
-      padding: 0.65rem 0.85rem;
-      border-radius: 0.55rem;
+      padding: 0.15rem 0.25rem;
+      border-radius: 0.2rem;
       cursor: pointer;
       font-family: var(--font-sans);
-      font-size: 0.9rem;
+      font-size: 0.85rem;
       transition: all var(--transition-fast);
-      margin-bottom: 0.35rem;
+      margin-bottom: 0;
       border: 1px solid transparent;
       user-select: none;
     }
@@ -519,7 +519,6 @@
     .indent-guide {
       width: 1.25rem;
       align-self: stretch;
-      min-height: 1.5rem;
       border-left: 1px solid var(--panel-border);
       flex-shrink: 0;
       opacity: 0.7;
@@ -609,16 +608,16 @@
     }
 
     .property-item {
-      font-size: 0.82rem;
+      font-size: 0.8rem;
       opacity: 0.85;
-      margin-bottom: 0.25rem;
+      margin-bottom: 0;
       cursor: pointer;
       color: var(--text-muted);
       border: 1px dashed transparent;
       display: flex;
       align-items: center;
-      padding: 0.45rem 0.65rem;
-      border-radius: 0.45rem;
+      padding: 0.15rem 0.25rem;
+      border-radius: 0.2rem;
       user-select: none;
     }
 
