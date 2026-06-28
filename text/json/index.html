@@ -143,7 +143,8 @@
 
       <!-- Sidebar Node Tree Navigation -->
       <aside class="sidebar glass-card">
-        <div class="sidebar-header">
+        <div class="sidebar-top-section">
+          <div class="sidebar-header">
           <span>数据层级</span>
           <div style="display: flex; gap: 0.35rem; align-items: center; text-transform: none;">
             <span 
@@ -170,6 +171,33 @@
               @click="toggleAllNodes"
             >节点 ({{ nodes.length - 1 }})</span>
             <span v-else class="badge-secondary">节点 (0)</span>
+          </div>
+        </div>
+        
+        <!-- Search Bar -->
+        <div class="search-bar-row" v-if="nodes.length > 0">
+          <div class="search-input-wrapper">
+            <input 
+              type="text" 
+              v-model="searchQuery" 
+              @keydown.enter.exact="nextMatch" 
+              @keydown.shift.enter="prevMatch" 
+              placeholder="搜索局部值 (Enter找下一个)..." 
+              class="input-field input-sm search-input" 
+            />
+            <span class="search-clear-btn" v-if="searchQuery" @click="clearSearch" title="清空搜索">×</span>
+          </div>
+          <span class="search-count" v-if="searchQuery" :class="{'no-match': searchResults.length === 0}">
+            {{ searchResults.length > 0 ? currentMatchIndex + 1 : 0 }} / {{ searchResults.length }}
+          </span>
+          <div class="btn-group" style="gap: 0.25rem;">
+            <button class="btn btn-sm btn-icon-only" @click="prevMatch" :disabled="!searchResults.length" title="上一个匹配项">
+              <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 15l7-7 7 7" /></svg>
+            </button>
+            <button class="btn btn-sm btn-icon-only" @click="nextMatch" :disabled="!searchResults.length" title="下一个匹配项">
+              <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" /></svg>
+            </button>
+          </div>
           </div>
         </div>
         
@@ -375,6 +403,11 @@
               <!-- IDE Single Textarea Content -->
               <div class="editor-with-lines" style="flex: 1; min-height: 0;">
                 <div class="line-numbers" ref="lineNumbersRef" aria-hidden="true">{{ lineNumbersText }}</div>
+                <div 
+                  v-if="activeSearchHighlight" 
+                  class="search-highlight-bar" 
+                  :style="{ top: `calc(1rem + (Math.max(1, activeSearchHighlight.line) - 1) * 1.44rem - ${editorScrollTop}px)` }"
+                ></div>
                 <textarea 
                   class="editor-textarea" 
                   :value="displayValue"

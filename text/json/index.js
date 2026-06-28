@@ -39,11 +39,16 @@
         const isDragging = ref(false);
         const themePreference = ref('system');
         const lineNumbersRef = ref(null);
+        const editorScrollTop = ref(0);
         const collapsedNodes = ref([]);
         const activeTab = ref('preview'); // IDE Tab state
         const jsonStats = ref({});
         const jsonSchemaText = ref('');
         const jsonPathsList = ref([]);
+        const searchQuery = ref('');
+        const searchResults = ref([]);
+        const currentMatchIndex = ref(-1);
+        const activeSearchHighlight = ref(null);
         const advancedOptions = ref({ ...DEFAULT_ADVANCED_OPTIONS });
         const parseProgress = ref({
           active: false,
@@ -707,6 +712,7 @@ Null数量:    ${s.nullCount}${s.skipped && s.skipped.length ? `\n\n已跳过: $
           if (lineNumbersRef.value) {
             lineNumbersRef.value.scrollTop = e.target.scrollTop;
           }
+          editorScrollTop.value = e.target.scrollTop;
         };
 
         const breadcrumbSegments = computed(() => {
@@ -1259,6 +1265,158 @@ Null数量:    ${s.nullCount}${s.skipped && s.skipped.length ? `\n\n已跳过: $
           jsonPathsList.value = res.jsonPathsList || [];
           jsonPathsList.value.isTruncated = res.pathsTruncated || false;
           jsonSchemaText.value = formatSchemaText(res.jsonSchemaObject);
+        };
+
+        let searchDebounce = null;
+        
+        watch(searchQuery, (newVal) => {
+          if (searchDebounce) clearTimeout(searchDebounce);
+          searchDebounce = setTimeout(() => {
+            executeSearch(newVal);
+          }, 300);
+        });
+
+        const executeSearch = (query) => {
+          if (!query || !query.trim()) {
+            clearSearch();
+            return;
+          }
+          query = query.toLowerCase();
+          const results = [];
+          
+          for (let i = 0; i < nodes.value.length; i++) {
+            const node = nodes.value[i];
+            if (!node.val || typeof node.val !== 'object' || Array.isArray(node.val)) {
+              if (Array.isArray(node.val)) {
+                for(let j = 0; j < node.val.length; j++) {
+                  const item = node.val[j];
+                  if (item !== null && typeof item !== 'object') {
+                    const strVal = String(item);
+                    if (strVal.toLowerCase().includes(query)) {
+                      results.push({ nodeId: node.id, key: j, matchText: query, originalText: strVal });
+                    }
+                  }
+                }
+              }
+              continue;
+            }
+            
+            for(let k in node.val) {
+              const item = node.val[k];
+              if (item !== null && typeof item !== 'object') {
+                const strVal = String(item);
+                if (strVal.toLowerCase().includes(query)) {
+                  results.push({ nodeId: node.id, key: k, matchText: query, originalText: strVal });
+                }
+              }
+            }
+          }
+          
+          searchResults.value = results;
+          if (results.length > 0) {
+            jumpToMatch(0);
+          } else {
+            currentMatchIndex.value = -1;
+            activeSearchHighlight.value = null;
+          }
+        };
+
+        const clearSearch = () => {
+          searchQuery.value = '';
+          searchResults.value = [];
+          currentMatchIndex.value = -1;
+          activeSearchHighlight.value = null;
+        };
+
+        const nextMatch = () => {
+          if (searchResults.value.length === 0) return;
+          let nextIdx = currentMatchIndex.value + 1;
+          if (nextIdx >= searchResults.value.length) nextIdx = 0;
+          jumpToMatch(nextIdx);
+        };
+
+        const prevMatch = () => {
+          if (searchResults.value.length === 0) return;
+          let prevIdx = currentMatchIndex.value - 1;
+          if (prevIdx < 0) prevIdx = searchResults.value.length - 1;
+          jumpToMatch(prevIdx);
+        };
+
+        const jumpToMatch = (index) => {
+          currentMatchIndex.value = index;
+          const match = searchResults.value[index];
+          if (!match) return;
+          
+          const pathIds = match.nodeId.split('.');
+          let buildId = pathIds[0];
+          for(let i=1; i<pathIds.length; i++) {
+             const idx = collapsedNodes.value.indexOf(buildId);
+             if (idx !== -1) collapsedNodes.value.splice(idx, 1);
+             buildId += '.' + pathIds[i];
+          }
+          
+          selectNode(match.nodeId);
+          
+          nextTick(() => {
+            const treeEl = document.querySelector(`.node-item[title="${match.nodeId}"]`);
+            if (treeEl) treeEl.scrollIntoView({ block: 'center', behavior: 'smooth' });
+            
+            setTimeout(() => {
+               highlightMatchInEditor(match);
+            }, 60);
+          });
+        };
+
+        const highlightMatchInEditor = (match) => {
+          const text = displayValue.value;
+          if (!text) return;
+          
+          let lineIndex = -1;
+          let exactStart = -1;
+          const lines = text.split('\n');
+          
+          for(let i = 0; i < lines.length; i++) {
+             const lineStr = lines[i];
+             let isTargetLine = false;
+             
+             if (typeof match.key === 'string' && isNaN(Number(match.key))) {
+                if (lineStr.includes(`"${match.key}":`) && lineStr.includes(match.originalText)) {
+                   isTargetLine = true;
+                }
+             } else {
+                if (lineStr.includes(match.originalText)) {
+                   isTargetLine = true;
+                }
+             }
+             
+             if (isTargetLine) {
+                lineIndex = i + 1;
+                const matchLower = match.matchText;
+                const lineLower = lineStr.toLowerCase();
+                const wordIdx = lineLower.indexOf(matchLower, lineLower.indexOf(match.originalText.toLowerCase()));
+                if (wordIdx !== -1) {
+                   const textBefore = lines.slice(0, i).join('\n') + (i > 0 ? '\n' : '');
+                   exactStart = textBefore.length + wordIdx;
+                }
+                break;
+             }
+          }
+          
+          if (lineIndex !== -1) {
+             activeSearchHighlight.value = { line: lineIndex };
+             const textarea = document.getElementById('nodeJSONTextarea');
+             if (textarea) {
+                if (exactStart !== -1) {
+                   textarea.focus();
+                   textarea.setSelectionRange(exactStart, exactStart + match.matchText.length);
+                }
+                const rem = parseFloat(getComputedStyle(document.documentElement).fontSize) || 16;
+                const lineHeight = 1.44 * rem; 
+                textarea.scrollTop = Math.max(0, (lineIndex - 1) * lineHeight - textarea.clientHeight / 2);
+             }
+          } else {
+             activeSearchHighlight.value = null;
+          }
         };
 
         const selectNode = (nodeId) => {
@@ -1816,6 +1974,15 @@ Null数量:    ${s.nullCount}${s.skipped && s.skipped.length ? `\n\n已跳过: $
           jsonStats,
           jsonSchemaText,
           jsonPathsList,
+          searchQuery,
+          searchResults,
+          currentMatchIndex,
+          activeSearchHighlight,
+          editorScrollTop,
+          executeSearch,
+          clearSearch,
+          nextMatch,
+          prevMatch,
           advancedOptions,
           parseProgress,
           parseProgressText,
