@@ -314,11 +314,11 @@
               </div>
 
               <div class="btn-group" v-if="selectedNode" @dblclick.stop>
+                &nbsp;
                 <select 
                   v-model="advancedOptions.previewLimit" 
                   @change="onPreviewLimitChange"
                   class="input-field input-sm"
-                  style="width: 90px;"
                   title="预览截断限制：当节点数据超出此大小时自动截断，避免浏览器卡死"
                 >
                   <option :value="1048576">1M</option>
@@ -331,7 +331,6 @@
                   v-model="indentSpaces" 
                   @change="applyFormatting"
                   class="input-field input-sm"
-                  style="width: 90px;"
                 >
                   <option value="2">2 空格</option>
                   <option value="4">4 空格</option>
