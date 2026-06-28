@@ -410,11 +410,7 @@ function formatPreview(val, options, isRoot) {
 
   let text = '';
   try {
-    if (isRoot && options.mode !== 'normal') {
-      text = JSON.stringify(val, null, options.mode === 'ultra' ? 0 : 2);
-    } else {
-      text = JSON.stringify(val, null, space);
-    }
+    text = JSON.stringify(val, null, space);
   } catch (e) {
     text = String(val);
   }
