@@ -1265,14 +1265,24 @@ Null数量:    ${s.nullCount}${s.skipped && s.skipped.length ? `\n\n已跳过: $
           jsonSchemaText.value = formatSchemaText(res.jsonSchemaObject);
         };
 
-        let searchDebounce = null;
+        const lastSearchedQuery = ref('');
+
+        const handleSearchSubmit = () => {
+          if (searchQuery.value === lastSearchedQuery.value && searchResults.value.length > 0) {
+            nextMatch();
+          } else {
+            lastSearchedQuery.value = searchQuery.value;
+            executeSearch(searchQuery.value);
+          }
+        };
         
-        watch(searchQuery, (newVal) => {
-          if (searchDebounce) clearTimeout(searchDebounce);
-          searchDebounce = setTimeout(() => {
-            executeSearch(newVal);
-          }, 300);
-        });
+        const handleShiftEnter = () => {
+          if (searchQuery.value === lastSearchedQuery.value && searchResults.value.length > 0) {
+            prevMatch();
+          } else {
+            handleSearchSubmit();
+          }
+        };
 
         const executeSearch = (query) => {
           if (!query || !query.trim()) {
@@ -1320,6 +1330,7 @@ Null数量:    ${s.nullCount}${s.skipped && s.skipped.length ? `\n\n已跳过: $
 
         const clearSearch = () => {
           searchQuery.value = '';
+          lastSearchedQuery.value = '';
           searchResults.value = [];
           currentMatchIndex.value = -1;
         };
@@ -1968,8 +1979,11 @@ Null数量:    ${s.nullCount}${s.skipped && s.skipped.length ? `\n\n已跳过: $
           jsonSchemaText,
           jsonPathsList,
           searchQuery,
+          lastSearchedQuery,
           searchResults,
           currentMatchIndex,
+          handleSearchSubmit,
+          handleShiftEnter,
           executeSearch,
           clearSearch,
           nextMatch,

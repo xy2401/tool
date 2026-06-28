@@ -177,17 +177,20 @@
         <!-- Search Bar -->
         <div class="search-bar-row" v-if="nodes.length > 0">
           <div class="search-input-wrapper">
+            <span class="search-icon" @click="handleSearchSubmit" title="点击搜索 (或回车)">
+              <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
+            </span>
             <input 
               type="text" 
               v-model="searchQuery" 
-              @keydown.enter.exact="nextMatch" 
-              @keydown.shift.enter="prevMatch" 
-              placeholder="搜索局部值 (Enter找下一个)..." 
+              @keydown.enter.exact="handleSearchSubmit" 
+              @keydown.shift.enter="handleShiftEnter" 
+              placeholder="搜索局部值 (Enter)" 
               class="input-field input-sm search-input" 
             />
             <span class="search-clear-btn" v-if="searchQuery" @click="clearSearch" title="清空搜索">×</span>
           </div>
-          <span class="search-count" v-if="searchQuery" :class="{'no-match': searchResults.length === 0}">
+          <span class="search-count" v-if="lastSearchedQuery && searchQuery === lastSearchedQuery" :class="{'no-match': searchResults.length === 0}">
             {{ searchResults.length > 0 ? currentMatchIndex + 1 : 0 }} / {{ searchResults.length }}
           </span>
           <div class="btn-group" style="gap: 0.25rem;">

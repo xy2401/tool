@@ -1473,7 +1473,23 @@
 
     .search-input {
       width: 100%;
+      padding-left: 2rem;
       padding-right: 1.5rem;
+    }
+    
+    .search-icon {
+      position: absolute;
+      left: 0.5rem;
+      color: var(--text-muted);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 1;
+    }
+    
+    .search-icon:hover {
+      color: var(--accent-cyan);
     }
 
     .search-clear-btn {
