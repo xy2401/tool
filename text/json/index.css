@@ -692,9 +692,7 @@
       align-items: center;
       justify-content: space-between;
       padding: 0.75rem 1rem;
-      background: var(--surface-light);
-      border-bottom: 1px solid var(--panel-border);
-      border-radius: 0.75rem 0.75rem 0 0;
+      background: var(--surface-light); 
     }
 
     /* Form & Input Styles */
@@ -747,10 +745,8 @@
       bottom: 0;
       width: 3.5rem;
       overflow: hidden;
-      background: var(--line-num-bg);
-      border: 1px solid var(--line-num-border);
-      border-right: none;
-      border-radius: 0.75rem 0 0 0.75rem;
+      background: var(--line-num-bg); 
+      border-right: none; 
       color: var(--line-num-color);
       font-family: var(--font-mono);
       font-size: 0.9rem;
