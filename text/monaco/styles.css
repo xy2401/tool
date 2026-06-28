@@ -170,6 +170,16 @@ select:focus-visible {
   display: block;
 }
 
+#screenshot-toolbar:not([hidden]) {
+  display: flex;
+}
+
+#workspace.is-screenshot-mode #html-preview {
+  justify-self: center;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.5);
+  transition: width 0.3s ease, height 0.3s ease;
+}
+
 #editor.is-dragging::after {
   position: absolute;
   z-index: 10;

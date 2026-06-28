@@ -128,6 +128,33 @@
       <span id="conversion-status" class="conversion-status" aria-live="polite"></span>
     </div>
 
+    <div id="screenshot-toolbar" class="feature-bar" hidden aria-label="截图调整区域">
+      <label>
+        尺寸
+        <select id="screenshot-size">
+          <option id="screenshot-size-current" value="auto">当前设备</option>
+          <option value="auto">自适应 (当前预览宽度)</option>
+          <option value="393,852">iPhone 15/16 Pro (393 x 852)</option>
+          <option value="430,932">iPhone 15/16 Pro Max (430 x 932)</option>
+          <option value="834,1194">iPad Pro 11" (834 x 1194)</option>
+          <option value="1024,768">网页 (经典 1024 x 768)</option>
+        </select>
+      </label>
+
+      <label class="checkbox-label">
+        <input id="screenshot-truncate" type="checkbox">
+        长图截断 (按设备高度)
+      </label>
+
+      <button id="screenshot-confirm" type="button" title="确认生成图片并保存">
+        💾 生成并保存
+      </button>
+
+      <button id="screenshot-cancel" type="button" title="退出截图模式">
+        ❌ 退出
+      </button>
+    </div>
+
     <main id="workspace">
       <div id="editor">
         <p class="status">正在加载 Monaco Editor...</p>

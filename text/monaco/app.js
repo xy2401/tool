@@ -37,6 +37,12 @@ require(["vs/editor/editor.main"], async () => {
   const previewScreenshotButton = document.getElementById(
     "preview-screenshot"
   );
+  const screenshotToolbar = document.getElementById("screenshot-toolbar");
+  const screenshotSizeSelect = document.getElementById("screenshot-size");
+  const screenshotSizeCurrent = document.getElementById("screenshot-size-current");
+  const screenshotTruncate = document.getElementById("screenshot-truncate");
+  const screenshotConfirm = document.getElementById("screenshot-confirm");
+  const screenshotCancel = document.getElementById("screenshot-cancel");
   const javascriptPreviewControl = document.querySelector(
     ".javascript-preview-control"
   );
@@ -1695,27 +1701,121 @@ pre { overflow: auto; width: 100%; height: 100%; margin: 0; color: #1f2328; whit
     }
   }
 
-  previewScreenshotButton.addEventListener("click", async () => {
+  function updateScreenshotPreview() {
+    const sizeVal = screenshotSizeSelect.value;
+    const isTruncate = screenshotTruncate.checked;
+    
+    if (sizeVal === "auto") {
+      htmlPreviewFrame.style.width = "100%";
+      htmlPreviewFrame.style.height = "100%";
+    } else {
+      const [w, h] = sizeVal.split(",").map(Number);
+      htmlPreviewFrame.style.width = `${w}px`;
+      if (isTruncate) {
+        htmlPreviewFrame.style.height = `${h}px`;
+      } else {
+        htmlPreviewFrame.style.height = "100%";
+      }
+    }
+  }
+
+  screenshotSizeSelect.addEventListener("change", updateScreenshotPreview);
+  screenshotTruncate.addEventListener("change", updateScreenshotPreview);
+
+  previewScreenshotButton.addEventListener("click", () => {
+    const cw = window.innerWidth;
+    const ch = window.innerHeight;
+    screenshotSizeCurrent.value = `${cw},${ch}`;
+    screenshotSizeCurrent.textContent = `当前设备 (${cw} x ${ch})`;
+    
+    document.querySelector(".feature-bar").hidden = true;
+    screenshotToolbar.hidden = false;
+    workspaceNode.classList.add("is-screenshot-mode");
+    
+    screenshotSizeSelect.value = "auto";
+    screenshotTruncate.checked = false;
+    updateScreenshotPreview();
+  });
+
+  screenshotCancel.addEventListener("click", () => {
+    document.querySelector(".feature-bar").hidden = false;
+    screenshotToolbar.hidden = true;
+    workspaceNode.classList.remove("is-screenshot-mode");
+    htmlPreviewFrame.style.width = "";
+    htmlPreviewFrame.style.height = "";
+  });
+
+  screenshotConfirm.addEventListener("click", async () => {
     if (!window.htmlToImage) {
       alert("截图组件正在加载或加载失败，请稍后重试");
       return;
     }
     try {
       const iframeDoc = htmlPreviewFrame.contentDocument || htmlPreviewFrame.contentWindow.document;
-      const targetNode = iframeDoc.documentElement;
-      const dataUrl = await htmlToImage.toPng(targetNode, {
+      const html = iframeDoc.documentElement;
+      const body = iframeDoc.body;
+      
+      let targetWidth, targetHeight;
+      const sizeVal = screenshotSizeSelect.value;
+      const isTruncate = screenshotTruncate.checked;
+      
+      if (sizeVal === "auto") {
+        targetWidth = Math.max(
+          body.scrollWidth, body.offsetWidth,
+          html.clientWidth, html.scrollWidth, html.offsetWidth
+        );
+        targetHeight = Math.max(
+          body.scrollHeight, body.offsetHeight,
+          html.clientHeight, html.scrollHeight, html.offsetHeight
+        );
+      } else {
+        const [w, h] = sizeVal.split(",").map(Number);
+        targetWidth = w;
+        if (isTruncate) {
+          targetHeight = h;
+        } else {
+          targetHeight = Math.max(
+            body.scrollHeight, body.offsetHeight,
+            html.clientHeight, html.scrollHeight, html.offsetHeight
+          );
+        }
+      }
+
+      const dataUrl = await htmlToImage.toPng(html, {
         backgroundColor: "#ffffff",
-        width: Math.max(targetNode.scrollWidth, targetNode.clientWidth),
-        height: Math.max(targetNode.scrollHeight, targetNode.clientHeight),
+        width: targetWidth,
+        height: targetHeight,
         style: {
           margin: "0"
         }
       });
-      const link = document.createElement("a");
-      const prefix = languageSelect.value === "html" ? "html" : "markdown";
-      link.download = `${prefix}-preview-${Date.now()}.png`;
-      link.href = dataUrl;
-      link.click();
+      
+      const isWeChat = /MicroMessenger/i.test(navigator.userAgent);
+      
+      if (isWeChat) {
+        htmlPreviewFrame.srcdoc = `<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <style>
+    body { margin: 0; padding: 20px; background: #f6f8fa; display: flex; flex-direction: column; align-items: center; }
+    p { color: #0969da; font-family: system-ui, sans-serif; font-size: 15px; margin-top: 0; margin-bottom: 16px; font-weight: 500; }
+    img { max-width: 100%; height: auto; box-shadow: 0 4px 12px rgba(0,0,0,0.1); border-radius: 4px; }
+  </style>
+</head>
+<body>
+  <p>👇 微信内无法直接下载，请长按下方图片保存</p>
+  <img src="${dataUrl}" alt="长按保存图片">
+</body>
+</html>`;
+      } else {
+        const link = document.createElement("a");
+        const prefix = languageSelect.value === "html" ? "html" : "markdown";
+        link.download = `${prefix}-preview-${Date.now()}.png`;
+        link.href = dataUrl;
+        link.click();
+      }
     } catch (err) {
       console.error("截图失败:", err);
       alert("截图失败，请查看控制台日志");
