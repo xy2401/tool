@@ -11,62 +11,14 @@ const menuTranslations = {};
 const domTranslations = {};
 const domTooltipTranslations = {};
 
-// Try to parse string as JSON safely (Standard JSON parse, unescaped fallback)
-function tryParseJSONString(str) {
-  if (typeof str !== 'string') return null;
-  str = str.trim();
-  
-  // Must begin with { or [ and end with } or ] to be a JSON object/array candidates
-  if (!((str.startsWith('{') && str.endsWith('}')) || (str.startsWith('[') && str.endsWith(']')))) {
-    return null;
-  }
-
-  // 1. Direct JSON parse
-  try {
-    return JSON.parse(str);
-  } catch (e) {}
-
-  // 2. Safe JSON-specific double-escaping unescaper
-  try {
-    let unescaped = str
-      .replace(/\\"/g, '"')
-      .replace(/\\\\/g, '\\')
-      .replace(/\\\//g, '/')
-      .replace(/\\b/g, '\b')
-      .replace(/\\f/g, '\f')
-      .replace(/\\n/g, '\n')
-      .replace(/\\r/g, '\r')
-      .replace(/\\t/g, '\t');
-    return JSON.parse(unescaped);
-  } catch (e) {}
-
-  // 3. More aggressive character-by-character unescaper mimicking safe template unescaping
-  try {
-    let unescaped = str.replace(/\\(u[0-9a-fA-F]{4}|x[0-9a-fA-F]{2}|.)/g, (match, p1) => {
-      if (p1.startsWith('u')) {
-        return String.fromCharCode(parseInt(p1.slice(1), 16));
-      }
-      if (p1.startsWith('x')) {
-        return String.fromCharCode(parseInt(p1.slice(1), 16));
-      }
-      switch (p1) {
-        case 'n': return '\n';
-        case 'r': return '\r';
-        case 't': return '\t';
-        case 'b': return '\b';
-        case 'f': return '\f';
-        case '"': return '"';
-        case "'": return "'";
-        case '\\': return '\\';
-        case '/': return '/';
-        default: return p1;
-      }
-    });
-    return JSON.parse(unescaped);
-  } catch (e) {}
-
-  return null;
-}
+const LARGE_TEXT_BYTES = 1024 * 1024;
+const ULTRA_TEXT_BYTES = 10 * 1024 * 1024;
+const DEFAULT_ADVANCED_OPTIONS = {
+  parseStringifiedJson: true,
+  scanStringJsonSubstrings: true,
+  mergeLines: false,
+  previewLimit: 1048576
+};
 
 function translateText(text) {
   if (!text) return text;
@@ -164,7 +116,7 @@ i18nObserver.observe(document.body, {
 let editorLeft = null;
 let editorRight = null;
 
-const { createApp, ref, onMounted, nextTick, watch } = window.Vue;
+const { createApp, ref, computed, onMounted, nextTick, watch, onUnmounted } = window.Vue;
 
 createApp({
   setup() {
@@ -179,6 +131,19 @@ createApp({
     const toasts = ref([]);
     let toastIdCounter = 0;
     let skipHistoryRecord = false;
+    const isParsing = ref(false);
+    const inputMode = ref('normal');
+    const advancedOptions = ref({ ...DEFAULT_ADVANCED_OPTIONS });
+    const parseProgress = ref({ active: false, indeterminate: false, percent: 0, status: '空闲' });
+    const currentSourceName = ref('');
+    const sourceLoadedFromFile = ref(false);
+    
+    let autoExtractTimeout = null;
+    let historyDebounceTimeout = null;
+    let parseWorker = null;
+    let parseRequestId = 0;
+    let selectedFileForWorker = null;
+    let optionSnapshotBeforeUltra = null;
 
     // Toast
     const showToast = (title, message, type = 'info', duration = 3000) => {
@@ -245,15 +210,35 @@ createApp({
       const files = e.dataTransfer.files;
       if (files && files.length > 0) {
         const file = files[0];
-        const reader = new FileReader();
-        reader.onload = (event) => {
-          rawInput.value = event.target.result;
-          showToast('文件已载入', `成功读取文件：${file.name} (${(file.size / 1024).toFixed(1)} KB)`, 'success');
-        };
-        reader.onerror = () => {
-          showToast('载入失败', '读取文件时发生错误，请检查文件格式。', 'error');
-        };
-        reader.readAsText(file);
+        selectedFileForWorker = file;
+        currentSourceName.value = file.name || '';
+        sourceLoadedFromFile.value = true;
+        applyInputMode(file.size || 0);
+
+        if ((file.size || 0) <= LARGE_TEXT_BYTES) {
+          try {
+            skipHistoryRecord = true;
+            const reader = new FileReader();
+            reader.onload = (event) => {
+              rawInput.value = event.target.result;
+              showToast('文件已载入', `成功读取文件：${file.name} (${(file.size / 1024).toFixed(1)} KB)`, 'success');
+              nextTick(() => { skipHistoryRecord = false; });
+            };
+            reader.onerror = () => {
+              skipHistoryRecord = false;
+              showToast('载入失败', '读取文件时发生错误，请检查文件格式。', 'error');
+            };
+            reader.readAsText(file);
+          } catch (err) {
+            skipHistoryRecord = false;
+            showToast('载入失败', '读取文件时发生错误，请检查文件格式。', 'error');
+          }
+          return;
+        }
+
+        rawInput.value = '';
+        showToast('文件解析中', `已进入${inputMode.value === 'ultra' ? '超大文本' : '大文本'}模式：${file.name} (${(file.size / 1024).toFixed(1)} KB)`, 'info', 4500);
+        startWorkerParse({ file, silent: false, sourceName: file.name });
       }
     };
 
@@ -450,6 +435,203 @@ createApp({
       }
     };
 
+    const estimateTextBytes = (text) => {
+      if (!text) return 0;
+      try {
+        return new Blob([text]).size;
+      } catch (e) {
+        return text.length * 2;
+      }
+    };
+
+    const getModeBySize = (sizeBytes) => {
+      if (sizeBytes > ULTRA_TEXT_BYTES) return 'ultra';
+      if (sizeBytes > LARGE_TEXT_BYTES) return 'large';
+      return 'normal';
+    };
+
+    const applyInputMode = (sizeBytes) => {
+      const nextMode = getModeBySize(sizeBytes || 0);
+      if (inputMode.value === nextMode) return;
+      inputMode.value = nextMode;
+
+      if (nextMode === 'ultra') {
+        if (!optionSnapshotBeforeUltra) {
+          optionSnapshotBeforeUltra = { ...advancedOptions.value };
+        }
+        advancedOptions.value = {
+          ...advancedOptions.value,
+          parseStringifiedJson: false,
+          scanStringJsonSubstrings: false
+        };
+      } else if (optionSnapshotBeforeUltra) {
+        advancedOptions.value = { ...DEFAULT_ADVANCED_OPTIONS, ...optionSnapshotBeforeUltra };
+        optionSnapshotBeforeUltra = null;
+      }
+    };
+
+    const getEffectiveAdvancedOptions = (sizeBytes) => {
+      const mode = getModeBySize(sizeBytes || 0);
+      const options = {
+        ...advancedOptions.value,
+        generateStats: false,
+        generatePaths: false,
+        inferSchema: false,
+        mode,
+        sizeBytes
+      };
+      options.includeRootRaw = sizeBytes <= LARGE_TEXT_BYTES;
+      return options;
+    };
+
+    const setParseProgress = (status, percent = 0, indeterminate = false) => {
+      parseProgress.value = {
+        active: true,
+        indeterminate,
+        percent: Math.max(0, Math.min(100, percent || 0)),
+        status
+      };
+    };
+
+    const finishParseProgress = (status = '完成') => {
+      parseProgress.value = {
+        active: true,
+        indeterminate: false,
+        percent: 100,
+        status
+      };
+    };
+
+    const resetParseProgress = () => {
+      parseProgress.value = {
+        active: false,
+        indeterminate: false,
+        percent: 0,
+        status: '空闲'
+      };
+    };
+
+    const parseProgressText = computed(() => {
+      const progress = parseProgress.value;
+      const modeSuffix = inputMode.value === 'ultra' ? ' · 超大文本模式' : inputMode.value === 'large' ? ' · 大文本模式' : '';
+      if (!progress.active) return `进度：空闲${modeSuffix}`;
+      if (progress.indeterminate) return `进度：${progress.status || '处理中'}`;
+      return `进度：${progress.status || '处理中'} ${Math.round(progress.percent || 0)}%${modeSuffix}`;
+    });
+
+    const stopParseWorker = () => {
+      if (parseWorker) {
+        parseWorker.terminate();
+        parseWorker = null;
+      }
+    };
+
+    const debouncedAddToHistory = (text) => {
+      if (historyDebounceTimeout) clearTimeout(historyDebounceTimeout);
+      historyDebounceTimeout = setTimeout(() => {
+        addToHistory(text);
+      }, 1500);
+    };
+
+    const startWorkerParse = ({ text = '', file = null, silent = false, sourceName = '' } = {}) => {
+      stopParseWorker();
+      const requestId = ++parseRequestId;
+      const sizeBytes = file ? (file.size || 0) : estimateTextBytes(text);
+      applyInputMode(sizeBytes);
+      const options = getEffectiveAdvancedOptions(sizeBytes);
+
+      isParsing.value = true;
+      setParseProgress(file ? '读取文件' : '定位主 JSON', 0, false);
+
+      try {
+        parseWorker = new Worker('./json-worker.js');
+      } catch (err) {
+        isParsing.value = false;
+        parseProgress.value = { active: true, indeterminate: false, percent: 0, status: 'Worker 启动失败' };
+        if (!silent) showToast('解析失败', '当前环境无法启动 Worker，无法进行大文本解析。', 'error');
+        return;
+      }
+
+      parseWorker.onmessage = (event) => {
+        if (requestId !== parseRequestId) return;
+        const message = event.data || {};
+        if (message.type === 'progress') {
+          parseProgress.value = {
+            active: true,
+            indeterminate: !!message.indeterminate,
+            percent: message.percent || 0,
+            status: message.status || '处理中'
+          };
+          return;
+        }
+
+        if (message.type === 'error') {
+          isParsing.value = false;
+          parseProgress.value = {
+            active: true,
+            indeterminate: false,
+            percent: 0,
+            status: '解析失败'
+          };
+          if (!silent) showToast('解析失败', message.message || '未检测到合法 JSON。', 'error');
+          stopParseWorker();
+          return;
+        }
+
+        if (message.type !== 'result') return;
+        const payload = message.payload || {};
+
+        isParsing.value = false;
+        const parsedObj = payload.parsedRoot ? payload.parsedRoot.obj : null;
+        
+        if (parsedObj !== null && parsedObj !== undefined) {
+          const content = { json: parsedObj };
+          if (editorLeft && editorRight) {
+            editorLeft.set(content);
+            editorRight.set(content);
+            setTimeout(() => {
+              editorRight.expand([], () => true);
+            }, 50);
+          }
+        }
+        
+        inputMode.value = payload.mode || inputMode.value;
+        currentSourceName.value = payload.sourceName || sourceName || currentSourceName.value;
+        finishParseProgress('解析完成');
+
+        const modeLabel = inputMode.value === 'ultra' ? '超大文本模式' : inputMode.value === 'large' ? '大文本模式' : '普通模式';
+        if (!silent) {
+          const warningText = payload.warnings && payload.warnings.length ? ` ${payload.warnings[0]}` : '';
+          showToast('提取成功', `已完成解析（${modeLabel}）。${warningText}`, 'success', 4500);
+          if (!file && text && inputMode.value === 'normal') {
+            if (historyDebounceTimeout) clearTimeout(historyDebounceTimeout);
+            addToHistory(text);
+          }
+        } else if (!file && text && inputMode.value === 'normal') {
+          debouncedAddToHistory(text);
+        }
+      };
+
+      parseWorker.onerror = (error) => {
+        if (requestId !== parseRequestId) return;
+        isParsing.value = false;
+        parseProgress.value = {
+          active: true,
+          indeterminate: false,
+          percent: 0,
+          status: '解析失败'
+        };
+        if (!silent) showToast('解析失败', error.message || 'Worker 执行失败。', 'error');
+        stopParseWorker();
+      };
+
+      if (file) {
+        parseWorker.postMessage({ type: 'parse-file', file, options, sourceName });
+      } else {
+        parseWorker.postMessage({ type: 'parse-text', text, options, sourceName });
+      }
+    };
+
     const extractRootJSON = (silent = false) => {
       const text = rawInput.value;
       if (!text || !text.trim()) {
@@ -458,54 +640,7 @@ createApp({
         }
         return;
       }
-
-      const opening = [];
-      const closing = [];
-      for (let i = 0; i < text.length; i++) {
-        const char = text.charAt(i);
-        if (char === '{' || char === '[') opening.push({ char, index: i });
-        if (char === '}' || char === ']') closing.push({ char, index: i });
-      }
-
-      let matchedRootObj = null;
-
-      // Search longest match
-      for (let o = 0; o < opening.length; o++) {
-        const op = opening[o];
-        for (let c = closing.length - 1; c >= 0; c--) {
-          const cl = closing[c];
-          if (cl.index > op.index) {
-            if ((op.char === '{' && cl.char === '}') || (op.char === '[' && cl.char === ']')) {
-              const substring = text.substring(op.index, cl.index + 1);
-              const parsed = tryParseJSONString(substring);
-              if (parsed !== null) {
-                matchedRootObj = parsed;
-                break;
-              }
-            }
-          }
-        }
-        if (matchedRootObj) break;
-      }
-
-      if (matchedRootObj) {
-        const content = { json: matchedRootObj };
-        if (editorLeft && editorRight) {
-          editorLeft.set(content);
-          editorRight.set(content);
-          setTimeout(() => {
-            editorRight.expand([], () => true);
-          }, 50);
-        }
-        if (!silent) {
-          showToast('提取成功', '成功提取 JSON 数据并载入双侧编辑器。', 'success');
-        }
-        addToHistory(text);
-      } else {
-        if (!silent) {
-          showToast('提取失败', '未在文本中检测到合法的 JSON 结构。', 'error');
-        }
-      }
+      startWorkerParse({ text, silent });
     };
 
     const copyToRight = () => {
@@ -710,7 +845,42 @@ createApp({
 
       // Watch rawInput to auto extract
       watch(rawInput, (newVal) => {
-        extractRootJSON(true);
+        if (sourceLoadedFromFile.value && selectedFileForWorker && !newVal) return;
+        if (autoExtractTimeout) clearTimeout(autoExtractTimeout);
+        if (parseWorker) {
+          stopParseWorker();
+          isParsing.value = false;
+        }
+
+        if (newVal !== loadedDemoText.value) {
+          loadedDemoText.value = '';
+        }
+
+        const sizeBytes = estimateTextBytes(newVal || '');
+        applyInputMode(sizeBytes);
+        sourceLoadedFromFile.value = false;
+        selectedFileForWorker = null;
+        currentSourceName.value = '';
+
+        if (!newVal || !newVal.trim()) {
+          resetParseProgress();
+          return;
+        }
+
+        if (sizeBytes > LARGE_TEXT_BYTES) {
+          setParseProgress(inputMode.value === 'ultra' ? '超大文本，等待手动提取' : '大文本，等待手动提取', 0, false);
+          return;
+        }
+
+        autoExtractTimeout = setTimeout(() => {
+          extractRootJSON(true);
+        }, 350);
+      });
+      
+      onUnmounted(() => {
+        if (historyDebounceTimeout) clearTimeout(historyDebounceTimeout);
+        if (autoExtractTimeout) clearTimeout(autoExtractTimeout);
+        stopParseWorker();
       });
 
       // Handle Escape to exit full screen
@@ -732,6 +902,10 @@ createApp({
 
     return {
       rawInput,
+      isParsing,
+      advancedOptions,
+      parseProgress,
+      parseProgressText,
       isDragging,
       isRawFullscreen,
       historyItems,

@@ -99,9 +99,30 @@
             <option value="clear-saved" v-if="savedItems.length > 0">清空保存数据</option>
             <option value="clear-history" v-if="historyItems.length > 0">清空历史记录</option>
           </select>
-          <button class="btn btn-primary" @click="extractRootJSON" id="extractBtn">
-            提取 JSON
+          <button class="btn btn-primary" @click="extractRootJSON" id="extractBtn" :disabled="isParsing">
+            {{ isParsing ? '解析中' : '提取 JSON' }}
           </button>
+        </div>
+        <div class="advanced-row" @dblclick.stop>
+          <div class="advanced-status-line">
+            <span class="advanced-title">高级功能</span>
+            <label class="advanced-option" title="自动解构并解析内容中经过多次转义的字符串 JSON">
+              <input type="checkbox" v-model="advancedOptions.parseStringifiedJson">
+              <span>字符串 JSON</span>
+            </label>
+            <label class="advanced-option" title="深度扫描常规文本或长字符串内部潜在的嵌套 JSON 子串">
+              <input type="checkbox" v-model="advancedOptions.scanStringJsonSubstrings">
+              <span>嵌套扫描</span>
+            </label>
+            <label class="advanced-option" title="提取前先剔除换行符将文本合并为单行，适用于处理因终端长度受限而被意外截断换行的日志">
+              <input type="checkbox" v-model="advancedOptions.mergeLines">
+              <span>多行合并</span>
+            </label>
+            <span class="parse-status" v-text="parseProgressText"></span>
+          </div>
+          <div :class="['parse-progress-line', { active: parseProgress.active, indeterminate: parseProgress.indeterminate }]">
+            <div class="parse-progress-fill" :style="{ width: parseProgress.indeterminate ? '38%' : parseProgress.percent + '%' }"></div>
+          </div>
         </div>
       </div>
     </div>
