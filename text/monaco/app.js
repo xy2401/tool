@@ -1809,7 +1809,15 @@ pre { overflow: auto; width: 100%; height: 100%; margin: 0; color: #1f2328; whit
         const scale = img.naturalWidth / targetWidth;
         const slicePixelHeight = Math.floor(presetHeight * scale);
         
-        const pages = Math.ceil(img.naturalHeight / slicePixelHeight);
+        // 增加 24px (约 1.5rem) 的重叠冗余，防止文字被拦腰截断而无法阅读
+        const overlapCSS = 24; 
+        const overlapPixel = Math.floor(overlapCSS * scale);
+        
+        let pages = 1;
+        if (img.naturalHeight > slicePixelHeight) {
+          pages = 1 + Math.ceil((img.naturalHeight - slicePixelHeight) / (slicePixelHeight - overlapPixel));
+        }
+
         for (let i = 0; i < pages; i++) {
           const canvas = document.createElement("canvas");
           canvas.width = img.naturalWidth;
@@ -1820,8 +1828,8 @@ pre { overflow: auto; width: 100%; height: 100%; margin: 0; color: #1f2328; whit
           ctx.fillStyle = "#ffffff";
           ctx.fillRect(0, 0, canvas.width, canvas.height);
           
-          // 抠取源图像区域
-          const sy = i * slicePixelHeight;
+          // 抠取源图像区域 (应用重叠冗余)
+          const sy = i * (slicePixelHeight - overlapPixel);
           const sh = Math.min(slicePixelHeight, img.naturalHeight - sy);
           
           ctx.drawImage(img, 0, sy, img.naturalWidth, sh, 0, 0, img.naturalWidth, sh);
