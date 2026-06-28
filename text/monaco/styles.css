@@ -416,9 +416,8 @@ body.theme-light #editor.is-dragging::after {
 
 #snapshot-card {
   display: inline-flex;
-  padding: 64px;
-  background: linear-gradient(140deg, rgb(207, 47, 152), rgb(106, 61, 236));
-  transition: padding 0.3s ease;
+  padding: 48px; /* Transparent padding is needed so the box-shadow isn't cropped in the export */
+  background: transparent;
   min-width: 400px;
   max-width: 100%;
   box-sizing: border-box;
@@ -464,26 +463,39 @@ body.theme-light #editor.is-dragging::after {
 
 .win-controls {
   display: flex;
-  gap: 16px;
+  margin-left: auto;
+  height: 100%;
+  margin-right: -14px;
+}
+
+.win-controls span {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 46px;
+  height: 100%;
   color: #8b949e;
-  font-size: 16px;
-  line-height: 1;
 }
 
 #snapshot-code-content {
-  padding: 20px;
+  padding: 20px 20px 24px 20px;
   font-family: Consolas, 'Courier New', monospace;
   font-size: 14px;
   line-height: 1.5;
   color: #d4d4d4;
   overflow: hidden;
   margin: 0;
+  border-bottom-left-radius: 8px;
+  border-bottom-right-radius: 8px;
 }
 
 /* Ensure Monaco HTML formatting looks good */
-#snapshot-code-content div {
+#snapshot-code-content > div {
   white-space: pre-wrap;
   word-break: break-all;
+  border-bottom-left-radius: 8px;
+  border-bottom-right-radius: 8px;
+  background: transparent !important; /* Prevent inner background from bleeding over border-radius */
 }
 
 /* Ensure Highlight.js formatting looks good */

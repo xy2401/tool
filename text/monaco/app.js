@@ -39,8 +39,6 @@ require(["vs/editor/editor.main"], async () => {
   const codeSnapshotToolbar = document.getElementById("code-snapshot-toolbar");
   const snapshotEngine = document.getElementById("snapshot-engine");
   const snapshotTheme = document.getElementById("snapshot-theme");
-  const snapshotBackground = document.getElementById("snapshot-background");
-  const snapshotPadding = document.getElementById("snapshot-padding");
   const snapshotWindowStyle = document.getElementById("snapshot-window-style");
   const codeSnapshotConfirm = document.getElementById("code-snapshot-confirm");
   const codeSnapshotCancel = document.getElementById("code-snapshot-cancel");
@@ -1944,9 +1942,6 @@ pre { overflow: auto; width: 100%; height: 100%; margin: 0; color: #1f2328; whit
     const engine = snapshotEngine.value;
     const theme = snapshotTheme.value;
     
-    snapshotCard.style.background = snapshotBackground.value;
-    snapshotCard.style.padding = snapshotPadding.value;
-    
     const wStyle = snapshotWindowStyle.value;
     snapshotWindowHeader.hidden = wStyle === "none";
     if (wStyle !== "none") {
@@ -2010,7 +2005,7 @@ pre { overflow: auto; width: 100%; height: 100%; margin: 0; color: #1f2328; whit
     renderCodeSnapshot();
   });
 
-  [snapshotTheme, snapshotBackground, snapshotPadding, snapshotWindowStyle].forEach(el => {
+  [snapshotTheme, snapshotWindowStyle].forEach(el => {
     el.addEventListener("change", renderCodeSnapshot);
   });
 
