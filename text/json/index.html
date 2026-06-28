@@ -202,7 +202,11 @@
               <span :class="['type-icon', 'type-icon-' + getTypeClass(node.type)]">
                 {{ getTypeIcon(node.type) }}
               </span>
-              <span class="node-name" @click.stop="selectNode(node.id)" v-text="node.name"></span>
+              <span class="node-name" @click.stop="selectNode(node.id)">
+                {{ node.name }}
+                <span v-if="node.type === 'String(JSON)'" class="special-type-tag">JSON</span>
+                <span v-if="node.type === 'String(Log)'" class="special-type-tag log">Log</span>
+              </span>
             </div>
 
             <!-- Primitive Properties of selected node -->

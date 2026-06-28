@@ -493,6 +493,27 @@
       text-overflow: ellipsis;
       white-space: nowrap;
       flex: 1;
+      display: flex;
+      align-items: center;
+    }
+
+    .special-type-tag {
+      font-size: 0.65rem;
+      padding: 0.1rem 0.35rem;
+      border-radius: 0.25rem;
+      margin-left: 0.45rem;
+      font-family: var(--font-mono);
+      background: rgba(16, 185, 129, 0.15);
+      color: var(--accent-emerald);
+      border: 1px solid rgba(16, 185, 129, 0.3);
+      font-weight: 600;
+      flex-shrink: 0;
+    }
+    
+    .special-type-tag.log {
+      background: rgba(245, 158, 11, 0.15);
+      color: #f59e0b;
+      border-color: rgba(245, 158, 11, 0.3);
     }
 
     .indent-guide {
@@ -529,10 +550,10 @@
       opacity: 0.9;
     }
     .type-icon-object { color: var(--accent-cyan); }
-    .type-icon-array { color: var(--accent-emerald); }
-    .type-icon-string { color: var(--accent-rose); }
-    .type-icon-number { color: #f59e0b; }
-    .type-icon-boolean { color: #8b5cf6; }
+    .type-icon-array { color: #8b5cf6; } /* 紫色 */
+    .type-icon-string { color: var(--accent-emerald); } /* 绿色，不再是警示的红色 */
+    .type-icon-number { color: #f59e0b; } /* 琥珀色 */
+    .type-icon-boolean { color: var(--accent-rose); } /* 玫瑰色/红色给布尔值 */
     .type-icon-null { color: var(--text-muted); }
 
 

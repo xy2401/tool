@@ -1735,8 +1735,8 @@ Null数量:    ${s.nullCount}${s.skipped && s.skipped.length ? `\n\n已跳过: $
           const t = type.toLowerCase();
           if (t.includes('object')) return '{}';
           if (t.includes('array')) return '[]';
-          if (t.includes('string')) return 'Aa';
-          if (t.includes('number')) return '#';
+          if (t.includes('string')) return '""';
+          if (t.includes('number')) return '12';
           if (t.includes('boolean')) return '☑';
           if (t.includes('null')) return '∅';
           return '·';
