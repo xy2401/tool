@@ -5,6 +5,7 @@
 
     const { createApp, ref, computed, watch, nextTick, onMounted, onUnmounted } = Vue;
     const JsonToolCore = window.JsonToolCore;
+    const JsonParseUtils = window.JsonParseUtils;
     const { LARGE_TEXT_BYTES, ULTRA_TEXT_BYTES, DEFAULT_ADVANCED_OPTIONS } = JsonToolCore.constants;
 
     createApp({
@@ -970,59 +971,11 @@ Null数量:    ${s.nullCount}${s.skipped && s.skipped.length ? `\n\n已跳过: $
 
         // Try to parse string as JSON safely (Standard JSON parse, unescaped fallback)
         const tryParseJSONString = (str) => {
-          if (typeof str !== 'string') return null;
-          str = str.trim();
-          
-          // Must begin with { or [ and end with } or ] to be a JSON object/array candidates
-          if (!((str.startsWith('{') && str.endsWith('}')) || (str.startsWith('[') && str.endsWith(']')))) {
-            return null;
-          }
-
-          // 1. Direct JSON parse
-          try {
-            return JSON.parse(str);
-          } catch (e) {}
-
-          // 2. Safe JSON-specific double-escaping unescaper
-          try {
-            let unescaped = str
-              .replace(/\\"/g, '"')
-              .replace(/\\\\/g, '\\')
-              .replace(/\\\//g, '/')
-              .replace(/\\b/g, '\b')
-              .replace(/\\f/g, '\f')
-              .replace(/\\n/g, '\n')
-              .replace(/\\r/g, '\r')
-              .replace(/\\t/g, '\t');
-            return JSON.parse(unescaped);
-          } catch (e) {}
-
-          // 3. More aggressive character-by-character unescaper mimicking safe template unescaping
-          try {
-            let unescaped = str.replace(/\\(u[0-9a-fA-F]{4}|x[0-9a-fA-F]{2}|.)/g, (match, p1) => {
-              if (p1.startsWith('u')) {
-                return String.fromCharCode(parseInt(p1.slice(1), 16));
-              }
-              if (p1.startsWith('x')) {
-                return String.fromCharCode(parseInt(p1.slice(1), 16));
-              }
-              switch (p1) {
-                case 'n': return '\n';
-                case 'r': return '\r';
-                case 't': return '\t';
-                case 'b': return '\b';
-                case 'f': return '\f';
-                case '"': return '"';
-                case "'": return "'";
-                case '\\': return '\\';
-                case '/': return '/';
-                default: return p1;
-              }
-            });
-            return JSON.parse(unescaped);
-          } catch (e) {}
-
-          return null;
+          return JsonParseUtils.tryParseJSONString(str, {
+            allowUnescape: true,
+            allowAggressiveUnescape: true,
+            maxUnescapeLength: Infinity
+          });
         };
 
         // Extraction of the initial root JSON in a messy string.
@@ -1059,58 +1012,14 @@ Null数量:    ${s.nullCount}${s.skipped && s.skipped.length ? `\n\n已跳过: $
         };
 
         const extractJSONSubstrings = (str) => {
-          const results = [];
-          let index = 0;
-          while (index < str.length) {
-            const nextBrace = str.indexOf('{', index);
-            const nextBracket = str.indexOf('[', index);
-            let startIdx = -1;
-            let openChar = '';
-            let closeChar = '';
-            
-            if (nextBrace !== -1 && (nextBracket === -1 || nextBrace < nextBracket)) {
-              startIdx = nextBrace;
-              openChar = '{';
-              closeChar = '}';
-            } else if (nextBracket !== -1) {
-              startIdx = nextBracket;
-              openChar = '[';
-              closeChar = ']';
-            } else {
-              break;
+          return JsonParseUtils.extractJSONSubstrings(str, {
+            maxResults: Infinity,
+            parseOptions: {
+              allowUnescape: true,
+              allowAggressiveUnescape: true,
+              maxUnescapeLength: Infinity
             }
-
-            let foundJSON = null;
-            let searchStart = startIdx + 1;
-            let closingIndices = [];
-            let cIdx = str.indexOf(closeChar, searchStart);
-            while (cIdx !== -1) {
-              closingIndices.push(cIdx);
-              cIdx = str.indexOf(closeChar, cIdx + 1);
-            }
-
-            for (let i = closingIndices.length - 1; i >= 0; i--) {
-              const endIdx = closingIndices[i];
-              const substring = str.substring(startIdx, endIdx + 1);
-              const parsed = tryParseJSONString(substring);
-              if (parsed !== null) {
-                foundJSON = {
-                  obj: parsed,
-                  start: startIdx,
-                  end: endIdx + 1
-                };
-                break;
-              }
-            }
-
-            if (foundJSON) {
-              results.push(foundJSON);
-              index = foundJSON.end;
-            } else {
-              index = startIdx + 1;
-            }
-          }
-          return results;
+          });
         };
 
         // Recursive tree node extractor

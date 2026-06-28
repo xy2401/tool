@@ -1,4 +1,7 @@
+importScripts('./json-parse-utils.js');
+
 let globalParsedObj = null;
+const JsonParseUtils = self.JsonParseUtils;
 
 self.onmessage = async (event) => {
   const message = event.data || {};
@@ -238,74 +241,15 @@ function estimateBytes(text) {
 }
 
 function findAndParseRootJSON(text, onProgress) {
-  let startAt = 0;
-  while (startAt < text.length) {
-    const found = findRootJSON(text, startAt, onProgress);
-    if (!found) return null;
-    const rootText = text.slice(found.startIndex, found.endIndex);
-    progress('解析 JSON', null, true);
-    try {
-      return { found, rootText, parsed: JSON.parse(rootText) };
-    } catch (firstError) {
-      const fallback = tryParseJSONString(rootText, { allowUnescape: true });
-      if (fallback !== null) return { found, rootText, parsed: fallback };
-      startAt = found.startIndex + 1;
-    }
-  }
-  return null;
+  return JsonParseUtils.findAndParseRootJSON(text, {
+    onProgress,
+    onBeforeParse: () => progress('解析 JSON', null, true),
+    parseOptions: { allowUnescape: true, allowAggressiveUnescape: false, maxUnescapeLength: 512 * 1024 }
+  });
 }
 
 function findRootJSON(text, startAt, onProgress) {
-  let rootStart = -1;
-  let depth = 0;
-  let rootOpen = '';
-  let inString = false;
-  let escapeNext = false;
-  let lastProgress = -1;
-  const total = text.length || 1;
-
-  for (let i = startAt || 0; i < text.length; i++) {
-    const ch = text.charCodeAt(i);
-
-    if (rootStart !== -1) {
-      if (escapeNext) {
-        escapeNext = false;
-      } else if (ch === 92) {
-        escapeNext = true;
-      } else if (ch === 34) {
-        inString = !inString;
-      } else if (!inString) {
-        if (ch === 123 || ch === 91) {
-          depth++;
-        } else if (ch === 125 || ch === 93) {
-          depth--;
-          if (depth === 0) {
-            if ((rootOpen === '{' && ch === 125) || (rootOpen === '[' && ch === 93)) {
-              return { startIndex: rootStart, endIndex: i + 1 };
-            }
-            rootStart = -1;
-            rootOpen = '';
-          }
-        }
-      }
-    } else if (ch === 123 || ch === 91) {
-      rootStart = i;
-      rootOpen = ch === 123 ? '{' : '[';
-      depth = 1;
-      inString = false;
-      escapeNext = false;
-    }
-
-    if (onProgress && i % 32768 === 0) {
-      const progressValue = Math.floor((i / total) * 100);
-      if (progressValue !== lastProgress) {
-        lastProgress = progressValue;
-        onProgress(progressValue);
-      }
-    }
-  }
-
-  return null;
+  return JsonParseUtils.findRootJSON(text, startAt, onProgress);
 }
 
 function buildTree(root, options, onProgress) {
@@ -406,64 +350,17 @@ function buildTree(root, options, onProgress) {
 }
 
 function tryParseJSONString(str, settings) {
-  if (typeof str !== 'string') return null;
-  const allowUnescape = settings && settings.allowUnescape;
-  const text = str.trim();
-  if (!((text.startsWith('{') && text.endsWith('}')) || (text.startsWith('[') && text.endsWith(']')))) {
-    return null;
-  }
-
-  try {
-    return JSON.parse(text);
-  } catch (e) {}
-
-  if (!allowUnescape || text.length > 512 * 1024) return null;
-
-  try {
-    const unescaped = text
-      .replace(/\\"/g, '"')
-      .replace(/\\\\/g, '\\')
-      .replace(/\\\//g, '/')
-      .replace(/\\b/g, '\b')
-      .replace(/\\f/g, '\f')
-      .replace(/\\n/g, '\n')
-      .replace(/\\r/g, '\r')
-      .replace(/\\t/g, '\t');
-    return JSON.parse(unescaped);
-  } catch (e) {}
-
-  return null;
+  return JsonParseUtils.tryParseJSONString(str, Object.assign({
+    allowAggressiveUnescape: false,
+    maxUnescapeLength: 512 * 1024
+  }, settings || {}));
 }
 
 function extractJSONSubstrings(str) {
-  const results = [];
-  let index = 0;
-  while (index < str.length && results.length < 20) {
-    const nextBrace = str.indexOf('{', index);
-    const nextBracket = str.indexOf('[', index);
-    let startIdx = -1;
-    if (nextBrace !== -1 && (nextBracket === -1 || nextBrace < nextBracket)) {
-      startIdx = nextBrace;
-    } else if (nextBracket !== -1) {
-      startIdx = nextBracket;
-    } else {
-      break;
-    }
-
-    const found = findRootJSON(str.slice(startIdx), 0);
-    if (found) {
-      const start = startIdx + found.startIndex;
-      const end = startIdx + found.endIndex;
-      const parsed = tryParseJSONString(str.slice(start, end), { allowUnescape: true });
-      if (parsed !== null) {
-        results.push({ obj: parsed, start, end });
-        index = end;
-        continue;
-      }
-    }
-    index = startIdx + 1;
-  }
-  return results;
+  return JsonParseUtils.extractJSONSubstrings(str, {
+    maxResults: 20,
+    parseOptions: { allowUnescape: true, allowAggressiveUnescape: false, maxUnescapeLength: 512 * 1024 }
+  });
 }
 
 function formatPreview(val, options, isRoot) {
