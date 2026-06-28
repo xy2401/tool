@@ -11,14 +11,8 @@ const menuTranslations = {};
 const domTranslations = {};
 const domTooltipTranslations = {};
 
-const LARGE_TEXT_BYTES = 1024 * 1024;
-const ULTRA_TEXT_BYTES = 10 * 1024 * 1024;
-const DEFAULT_ADVANCED_OPTIONS = {
-  parseStringifiedJson: true,
-  scanStringJsonSubstrings: true,
-  mergeLines: false,
-  previewLimit: 1048576
-};
+const JsonToolCore = window.JsonToolCore;
+const { LARGE_TEXT_BYTES, DEFAULT_ADVANCED_OPTIONS } = JsonToolCore.constants;
 
 function translateText(text) {
   if (!text) return text;
@@ -140,10 +134,14 @@ createApp({
     
     let autoExtractTimeout = null;
     let historyDebounceTimeout = null;
-    let parseWorker = null;
-    let parseRequestId = 0;
     let selectedFileForWorker = null;
-    let optionSnapshotBeforeUltra = null;
+    let parser = null;
+    const modeController = JsonToolCore.createInputModeController({
+      inputMode,
+      advancedOptions,
+      defaultAdvancedOptions: DEFAULT_ADVANCED_OPTIONS
+    });
+    const progressController = JsonToolCore.createProgressController(parseProgress);
 
     // Toast
     const showToast = (title, message, type = 'info', duration = 3000) => {
@@ -205,41 +203,27 @@ createApp({
     // Drag and drop
     const handleDragOver = () => { isDragging.value = true; };
     const handleDragLeave = () => { isDragging.value = false; };
+    const setSelectedFile = (file) => {
+      selectedFileForWorker = file;
+      currentSourceName.value = file ? (file.name || '') : '';
+      sourceLoadedFromFile.value = !!file;
+    };
+
+    const setSkipHistoryRecord = (value) => {
+      skipHistoryRecord = value;
+    };
+
     const handleDrop = (e) => {
-      isDragging.value = false;
-      const files = e.dataTransfer.files;
-      if (files && files.length > 0) {
-        const file = files[0];
-        selectedFileForWorker = file;
-        currentSourceName.value = file.name || '';
-        sourceLoadedFromFile.value = true;
-        applyInputMode(file.size || 0);
-
-        if ((file.size || 0) <= LARGE_TEXT_BYTES) {
-          try {
-            skipHistoryRecord = true;
-            const reader = new FileReader();
-            reader.onload = (event) => {
-              rawInput.value = event.target.result;
-              showToast('文件已载入', `成功读取文件：${file.name} (${(file.size / 1024).toFixed(1)} KB)`, 'success');
-              nextTick(() => { skipHistoryRecord = false; });
-            };
-            reader.onerror = () => {
-              skipHistoryRecord = false;
-              showToast('载入失败', '读取文件时发生错误，请检查文件格式。', 'error');
-            };
-            reader.readAsText(file);
-          } catch (err) {
-            skipHistoryRecord = false;
-            showToast('载入失败', '读取文件时发生错误，请检查文件格式。', 'error');
-          }
-          return;
-        }
-
-        rawInput.value = '';
-        showToast('文件解析中', `已进入${inputMode.value === 'ultra' ? '超大文本' : '大文本'}模式：${file.name} (${(file.size / 1024).toFixed(1)} KB)`, 'info', 4500);
-        startWorkerParse({ file, silent: false, sourceName: file.name });
-      }
+      JsonToolCore.handleFileDrop(e, {
+        rawInput,
+        setDragging: (value) => { isDragging.value = value; },
+        setSelectedFile,
+        setSkipHistoryRecord,
+        applyInputMode,
+        startWorkerParse,
+        showToast,
+        nextTick
+      });
     };
 
     const toggleRawFullscreen = () => {
@@ -249,77 +233,51 @@ createApp({
     // Localstorage lists
     const loadHistory = () => {
       try {
-        const stored = localStorage.getItem('json_viewer_history');
-        if (stored) historyItems.value = JSON.parse(stored);
+        JsonToolCore.loadLocalList('json_viewer_history', historyItems);
       } catch (e) {}
     };
 
     const saveHistory = () => {
       try {
-        localStorage.setItem('json_viewer_history', JSON.stringify(historyItems.value));
+        JsonToolCore.saveLocalList('json_viewer_history', historyItems);
       } catch (e) {}
     };
 
     const addToHistory = (text) => {
-      if (skipHistoryRecord) return;
-      if (!text || !text.trim()) return;
-      const trimmed = text.trim();
-      if (trimmed === loadedDemoText.value?.trim()) return;
-      const exists = historyItems.value.some(item => item.text.trim() === trimmed);
-      if (exists) return;
-
-      const now = new Date();
-      const timeStr = now.toTimeString().split(' ')[0].substring(0, 5);
-      const displayPrefix = trimmed.substring(0, 45).replace(/\s+/g, ' ');
-      const name = `${timeStr}: ${displayPrefix}${trimmed.length > 45 ? '...' : ''}`;
-
-      historyItems.value.unshift({ name, text: trimmed });
-      if (historyItems.value.length > 10) {
-        historyItems.value = historyItems.value.slice(0, 10);
-      }
-      saveHistory();
+      JsonToolCore.addToHistory({
+        text,
+        historyItems,
+        loadedDemoText,
+        saveHistory,
+        skipHistoryRecord: () => skipHistoryRecord
+      });
     };
 
     const loadSavedItems = () => {
       try {
-        const stored = localStorage.getItem('json_viewer_saved');
-        if (stored) savedItems.value = JSON.parse(stored);
+        JsonToolCore.loadLocalList('json_viewer_saved', savedItems);
       } catch (e) {}
     };
 
     const saveSavedItems = () => {
       try {
-        localStorage.setItem('json_viewer_saved', JSON.stringify(savedItems.value));
+        JsonToolCore.saveLocalList('json_viewer_saved', savedItems);
       } catch (e) {}
     };
 
     const saveCurrentData = () => {
-      const text = rawInput.value;
-      if (!text || !text.trim()) {
-        showToast('保存失败', '当前工作区无数据，请输入或提取后再保存。', 'warning');
-        return;
-      }
-
-      const now = new Date();
-      const timeStr = now.toLocaleDateString() + ' ' + now.toTimeString().split(' ')[0].substring(0, 5);
-      const defaultName = `保存于 ${timeStr}`;
-      
-      const name = prompt('请输入保存数据的名称：', defaultName);
-      if (name === null) return;
-      
-      const finalName = name.trim() || defaultName;
-
-      savedItems.value.unshift({ name: finalName, text: text.trim() });
-      saveSavedItems();
-      showToast('保存成功', `数据“${finalName}”已成功保存到本地。`, 'success');
+      JsonToolCore.saveCurrentData({
+        rawInput,
+        savedItems,
+        saveSavedItems,
+        showToast,
+        blockLargeText: true
+      });
     };
 
     const loadDemoList = async () => {
       try {
-        const response = await fetch('./data/data.json');
-        if (response.ok) {
-          demoFiles.value = await response.json();
-        }
+        demoFiles.value = await JsonToolCore.loadDemoList();
       } catch (e) {}
     };
 
@@ -352,122 +310,32 @@ createApp({
     };
 
     const handleDataSelect = async (event) => {
-      const val = event.target.value;
-      if (!val) return;
-
-      if (val === 'clear') {
-        rawInput.value = '';
-        showToast('已清空', '工作区内容已复位。', 'info');
-        event.target.value = '';
-        return;
-      }
-
-      if (val === 'clear-history') {
-        historyItems.value = [];
-        saveHistory();
-        showToast('已清空', '历史数据已清空。', 'info');
-        event.target.value = '';
-        return;
-      }
-
-      if (val === 'save-current') {
-        saveCurrentData();
-        event.target.value = '';
-        return;
-      }
-
-      if (val === 'clear-saved') {
-        if (confirm('确定要清空所有已保存的数据吗？')) {
-          savedItems.value = [];
-          saveSavedItems();
-          showToast('已清空', '已保存的数据已清空。', 'info');
-        }
-        event.target.value = '';
-        return;
-      }
-
-      if (val.startsWith('saved-')) {
-        const idx = parseInt(val.replace('saved-', ''), 10);
-        const savedItem = savedItems.value[idx];
-        if (savedItem) {
-          skipHistoryRecord = true;
-          rawInput.value = savedItem.text;
-          showToast('已加载', `已加载保存的数据“${savedItem.name}”`, 'info');
-          nextTick(() => { skipHistoryRecord = false; });
-        }
-        event.target.value = '';
-        return;
-      }
-
-      if (val.startsWith('hist-')) {
-        const idx = parseInt(val.replace('hist-', ''), 10);
-        const historyItem = historyItems.value[idx];
-        if (historyItem) {
-          skipHistoryRecord = true;
-          rawInput.value = historyItem.text;
-          showToast('已加载', '已从历史记录中加载输入数据。', 'info');
-          nextTick(() => { skipHistoryRecord = false; });
-        }
-        event.target.value = '';
-        return;
-      }
-
-      if (val.startsWith('demo-')) {
-        const key = val.replace('demo-', '');
-        const fileInfo = demoFiles.value.find(f => f.key === key);
-        if (!fileInfo) return;
-
-        try {
-          const response = await fetch(fileInfo.path);
-          if (response.ok) {
-            const text = await response.text();
-            skipHistoryRecord = true;
-            loadedDemoText.value = text;
-            rawInput.value = text;
-            showToast('已加载', `已加载示例：${fileInfo.name}`, 'info');
-            nextTick(() => { skipHistoryRecord = false; });
-          }
-        } catch (e) {
-          showToast('加载失败', '无法获取数据。', 'error');
-        }
-        event.target.value = '';
-        return;
-      }
+      await JsonToolCore.handleDataSelect(event, {
+        rawInput,
+        demoFiles,
+        historyItems,
+        savedItems,
+        loadedDemoText,
+        setSkipHistoryRecord,
+        setSelectedFile,
+        resetWorkspace,
+        resetForLoadedText,
+        saveHistory,
+        saveSavedItems,
+        saveCurrent: saveCurrentData,
+        startWorkerParse,
+        applyInputMode,
+        showToast,
+        nextTick
+      });
     };
 
-    const estimateTextBytes = (text) => {
-      if (!text) return 0;
-      try {
-        return new Blob([text]).size;
-      } catch (e) {
-        return text.length * 2;
-      }
-    };
+    const estimateTextBytes = JsonToolCore.estimateTextBytes;
 
-    const getModeBySize = (sizeBytes) => {
-      if (sizeBytes > ULTRA_TEXT_BYTES) return 'ultra';
-      if (sizeBytes > LARGE_TEXT_BYTES) return 'large';
-      return 'normal';
-    };
+    const getModeBySize = JsonToolCore.getModeBySize;
 
     const applyInputMode = (sizeBytes) => {
-      const nextMode = getModeBySize(sizeBytes || 0);
-      if (inputMode.value === nextMode) return;
-      inputMode.value = nextMode;
-
-      if (nextMode === 'ultra') {
-        if (!optionSnapshotBeforeUltra) {
-          optionSnapshotBeforeUltra = { ...advancedOptions.value };
-        }
-        advancedOptions.value = {
-          ...advancedOptions.value,
-          parseStringifiedJson: false,
-          scanStringJsonSubstrings: false
-        };
-      } else if (optionSnapshotBeforeUltra) {
-        advancedOptions.value = { ...DEFAULT_ADVANCED_OPTIONS, ...optionSnapshotBeforeUltra };
-        optionSnapshotBeforeUltra = null;
-      }
+      modeController.applyInputMode(sizeBytes);
     };
 
     const getEffectiveAdvancedOptions = (sizeBytes) => {
@@ -481,49 +349,28 @@ createApp({
         sizeBytes
       };
       options.includeRootRaw = sizeBytes <= LARGE_TEXT_BYTES;
+      options.includeParsedObj = sizeBytes <= LARGE_TEXT_BYTES;
       return options;
     };
 
     const setParseProgress = (status, percent = 0, indeterminate = false) => {
-      parseProgress.value = {
-        active: true,
-        indeterminate,
-        percent: Math.max(0, Math.min(100, percent || 0)),
-        status
-      };
+      progressController.set(status, percent, indeterminate);
     };
 
     const finishParseProgress = (status = '完成') => {
-      parseProgress.value = {
-        active: true,
-        indeterminate: false,
-        percent: 100,
-        status
-      };
+      progressController.finish(status);
     };
 
     const resetParseProgress = () => {
-      parseProgress.value = {
-        active: false,
-        indeterminate: false,
-        percent: 0,
-        status: '空闲'
-      };
+      progressController.reset();
     };
 
     const parseProgressText = computed(() => {
-      const progress = parseProgress.value;
-      const modeSuffix = inputMode.value === 'ultra' ? ' · 超大文本模式' : inputMode.value === 'large' ? ' · 大文本模式' : '';
-      if (!progress.active) return `进度：空闲${modeSuffix}`;
-      if (progress.indeterminate) return `进度：${progress.status || '处理中'}`;
-      return `进度：${progress.status || '处理中'} ${Math.round(progress.percent || 0)}%${modeSuffix}`;
+      return progressController.text(inputMode);
     });
 
     const stopParseWorker = () => {
-      if (parseWorker) {
-        parseWorker.terminate();
-        parseWorker = null;
-      }
+      if (parser) parser.stop();
     };
 
     const debouncedAddToHistory = (text) => {
@@ -533,103 +380,75 @@ createApp({
       }, 1500);
     };
 
-    const startWorkerParse = ({ text = '', file = null, silent = false, sourceName = '' } = {}) => {
+    const resetForLoadedText = () => {
+      resetParseProgress();
+    };
+
+    const resetWorkspace = () => {
       stopParseWorker();
-      const requestId = ++parseRequestId;
-      const sizeBytes = file ? (file.size || 0) : estimateTextBytes(text);
-      applyInputMode(sizeBytes);
-      const options = getEffectiveAdvancedOptions(sizeBytes);
+      isParsing.value = false;
+      rawInput.value = '';
+      setSelectedFile(null);
+      modeController.reset();
+      resetParseProgress();
+    };
 
-      isParsing.value = true;
-      setParseProgress(file ? '读取文件' : '定位主 JSON', 0, false);
+    const handleWorkerResult = (payload, context) => {
+      const parsedObj = payload.parsedRoot ? payload.parsedRoot.obj : null;
 
-      try {
-        parseWorker = new Worker('./json-worker.js');
-      } catch (err) {
-        isParsing.value = false;
-        parseProgress.value = { active: true, indeterminate: false, percent: 0, status: 'Worker 启动失败' };
-        if (!silent) showToast('解析失败', '当前环境无法启动 Worker，无法进行大文本解析。', 'error');
-        return;
-      }
-
-      parseWorker.onmessage = (event) => {
-        if (requestId !== parseRequestId) return;
-        const message = event.data || {};
-        if (message.type === 'progress') {
-          parseProgress.value = {
-            active: true,
-            indeterminate: !!message.indeterminate,
-            percent: message.percent || 0,
-            status: message.status || '处理中'
-          };
-          return;
-        }
-
-        if (message.type === 'error') {
-          isParsing.value = false;
-          parseProgress.value = {
-            active: true,
-            indeterminate: false,
-            percent: 0,
-            status: '解析失败'
-          };
-          if (!silent) showToast('解析失败', message.message || '未检测到合法 JSON。', 'error');
-          stopParseWorker();
-          return;
-        }
-
-        if (message.type !== 'result') return;
-        const payload = message.payload || {};
-
-        isParsing.value = false;
-        const parsedObj = payload.parsedRoot ? payload.parsedRoot.obj : null;
-        
-        if (parsedObj !== null && parsedObj !== undefined) {
-          const content = { json: parsedObj };
-          if (editorLeft && editorRight) {
-            editorLeft.set(content);
-            editorRight.set(content);
+      if (parsedObj !== null && parsedObj !== undefined) {
+        const content = { json: parsedObj };
+        if (editorLeft && editorRight) {
+          editorLeft.set(content);
+          editorRight.set(content);
+          if (inputMode.value !== 'ultra') {
             setTimeout(() => {
               editorRight.expand([], () => true);
             }, 50);
           }
         }
-        
-        inputMode.value = payload.mode || inputMode.value;
-        currentSourceName.value = payload.sourceName || sourceName || currentSourceName.value;
-        finishParseProgress('解析完成');
-
-        const modeLabel = inputMode.value === 'ultra' ? '超大文本模式' : inputMode.value === 'large' ? '大文本模式' : '普通模式';
-        if (!silent) {
-          const warningText = payload.warnings && payload.warnings.length ? ` ${payload.warnings[0]}` : '';
-          showToast('提取成功', `已完成解析（${modeLabel}）。${warningText}`, 'success', 4500);
-          if (!file && text && inputMode.value === 'normal') {
-            if (historyDebounceTimeout) clearTimeout(historyDebounceTimeout);
-            addToHistory(text);
+      } else if (editorLeft && editorRight) {
+        const previewText = payload.editText || '// 大文本已由 Worker 完成解析；为避免控件卡顿，此处仅显示截断预览。';
+        editorLeft.set({ text: previewText });
+        editorRight.set({
+          json: {
+            mode: payload.mode || inputMode.value,
+            sourceName: payload.sourceName || context.sourceName || '',
+            rawLength: payload.parsedRoot ? payload.parsedRoot.rawLength : 0,
+            preview: previewText
           }
-        } else if (!file && text && inputMode.value === 'normal') {
-          debouncedAddToHistory(text);
-        }
-      };
-
-      parseWorker.onerror = (error) => {
-        if (requestId !== parseRequestId) return;
-        isParsing.value = false;
-        parseProgress.value = {
-          active: true,
-          indeterminate: false,
-          percent: 0,
-          status: '解析失败'
-        };
-        if (!silent) showToast('解析失败', error.message || 'Worker 执行失败。', 'error');
-        stopParseWorker();
-      };
-
-      if (file) {
-        parseWorker.postMessage({ type: 'parse-file', file, options, sourceName });
-      } else {
-        parseWorker.postMessage({ type: 'parse-text', text, options, sourceName });
+        });
       }
+
+      inputMode.value = payload.mode || inputMode.value;
+      currentSourceName.value = payload.sourceName || context.sourceName || currentSourceName.value;
+      finishParseProgress('解析完成');
+
+      const modeLabel = inputMode.value === 'ultra' ? '超大文本模式' : inputMode.value === 'large' ? '大文本模式' : '普通模式';
+      if (!context.silent) {
+        const warningText = payload.warnings && payload.warnings.length ? ` ${payload.warnings[0]}` : '';
+        showToast('提取成功', `已完成解析（${modeLabel}）。${warningText}`, 'success', 4500);
+        if (!context.file && context.text && inputMode.value === 'normal') {
+          if (historyDebounceTimeout) clearTimeout(historyDebounceTimeout);
+          addToHistory(context.text);
+        }
+      } else if (!context.file && context.text && inputMode.value === 'normal') {
+        debouncedAddToHistory(context.text);
+      }
+    };
+
+    const startWorkerParse = ({ text = '', file = null, silent = false, sourceName = '' } = {}) => {
+      if (!parser) {
+        parser = JsonToolCore.createWorkerParser({
+          parseProgress,
+          isParsing,
+          applyInputMode,
+          getOptions: getEffectiveAdvancedOptions,
+          showToast,
+          onResult: handleWorkerResult
+        });
+      }
+      parser.parse({ text, file, silent, sourceName });
     };
 
     const extractRootJSON = (silent = false) => {
@@ -847,7 +666,7 @@ createApp({
       watch(rawInput, (newVal) => {
         if (sourceLoadedFromFile.value && selectedFileForWorker && !newVal) return;
         if (autoExtractTimeout) clearTimeout(autoExtractTimeout);
-        if (parseWorker) {
+        if (parser && parser.isActive()) {
           stopParseWorker();
           isParsing.value = false;
         }

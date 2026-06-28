@@ -4,14 +4,8 @@
     }
 
     const { createApp, ref, computed, watch, nextTick, onMounted, onUnmounted } = Vue;
-    const LARGE_TEXT_BYTES = 1024 * 1024;
-    const ULTRA_TEXT_BYTES = 10 * 1024 * 1024;
-    const DEFAULT_ADVANCED_OPTIONS = {
-      parseStringifiedJson: true,
-      scanStringJsonSubstrings: true,
-      mergeLines: false,
-      previewLimit: 1048576
-    };
+    const JsonToolCore = window.JsonToolCore;
+    const { LARGE_TEXT_BYTES, ULTRA_TEXT_BYTES, DEFAULT_ADVANCED_OPTIONS } = JsonToolCore.constants;
 
     createApp({
       setup() {
@@ -1680,12 +1674,24 @@ Null数量:    ${s.nullCount}${s.skipped && s.skipped.length ? `\n\n已跳过: $
           showToast('排序成功', '所有属性名已递归自然排序（尚未保存同步）。', 'success');
         };
 
-        // Load Data dynamically from select (Demo datasets or User history)
-        const handleDataSelect = async (event) => {
-          const val = event.target.value;
-          if (!val) return;
-          
-          if (val === 'clear') {
+        const setSelectedFile = (file) => {
+          selectedFileForWorker = file;
+          currentSourceName.value = file ? (file.name || '') : '';
+          sourceLoadedFromFile.value = !!file;
+        };
+
+        const setSkipHistoryRecord = (value) => {
+          skipHistoryRecord = value;
+        };
+
+        const resetForLoadedText = () => {
+          parsedRoot.value = null;
+          nodes.value = [];
+          selectedNodeId.value = '';
+          editText.value = '';
+        };
+
+        const resetWorkspace = () => {
             stopParseWorker();
             isParsing.value = false;
             rawInput.value = '';
@@ -1707,161 +1713,28 @@ Null数量:    ${s.nullCount}${s.skipped && s.skipped.length ? `\n\n已跳过: $
             excludedNodes.value = []; // Reset excluded nodes
             propertyBulkMode.value = 'selected';
             nodeBulkMode.value = 'selected';
-            showToast('已清空', '工作区和解析记录已成功复位。', 'info');
-            event.target.value = '';
-            return;
-          }
+        };
 
-          if (val === 'clear-history') {
-            historyItems.value = [];
-            saveHistory();
-            showToast('历史已清空', '已成功清空所有本地历史输入记录。', 'info');
-            event.target.value = '';
-            return;
-          }
-
-          if (val === 'generate-100m') {
-            event.target.value = '';
-            showToast('生成中', '正在动态生成 100M 多层次 JSON 数据，请稍候...', 'info');
-            setTimeout(() => {
-              try {
-                const generateNested = (depth) => {
-                  if (depth <= 0) return "value_" + Math.random();
-                  return {
-                    id: Math.random().toString(36).substring(2),
-                    level: depth,
-                    timestamp: Date.now(),
-                    metadata: { type: "test", active: true },
-                    tags: ["dynamic", "test", "performance"],
-                    children: [
-                      { sub: generateNested(depth - 1) },
-                      { sub: generateNested(depth - 1) }
-                    ]
-                  };
-                };
-                const itemStr = JSON.stringify(generateNested(7));
-                const itemSizeBytes = new Blob([itemStr]).size;
-                const targetSize = 100 * 1024 * 1024; // 100MB
-                const count = Math.ceil(targetSize / itemSizeBytes);
-                
-                const arrayStr = '[' + new Array(count).fill(itemStr).join(',') + ']';
-                const file = new File([arrayStr], "dynamic-100m.json", { type: "application/json" });
-                
-                selectedFileForWorker = file;
-                currentSourceName.value = file.name;
-                sourceLoadedFromFile.value = true;
-                applyInputMode(file.size);
-                rawInput.value = ''; 
-                
-                showToast('生成完毕', `100M 数据生成完毕，开始解析...`, 'success', 3000);
-                startWorkerParse({ file, silent: false, sourceName: file.name });
-              } catch (e) {
-                showToast('生成失败', '生成 100M 数据时发生错误：' + e.message, 'error');
-              }
-            }, 50);
-            return;
-          }
-
-          if (val === 'save-current') {
-            saveCurrentData();
-            event.target.value = '';
-            return;
-          }
-
-          if (val === 'clear-saved') {
-            if (confirm('确定要清空所有已保存的数据吗？')) {
-              savedItems.value = [];
-              saveSavedItems();
-              showToast('已清空', '已成功清空所有手动保存的数据。', 'info');
-            }
-            event.target.value = '';
-            return;
-          }
-
-          // User Saved data loading
-          if (val.startsWith('saved-')) {
-            const idx = parseInt(val.replace('saved-', ''), 10);
-            const savedItem = savedItems.value[idx];
-            if (savedItem) {
-              skipHistoryRecord = true;
-              sourceLoadedFromFile.value = false;
-              selectedFileForWorker = null;
-              rawInput.value = savedItem.text;
-              parsedRoot.value = null;
-              nodes.value = [];
-              selectedNodeId.value = '';
-              editText.value = '';
-              showToast('已加载保存数据', `已成功加载“${savedItem.name}”。`, 'info');
-              
-              nextTick(() => {
-                skipHistoryRecord = false;
-              });
-            }
-            event.target.value = '';
-            return;
-          }
-
-          // User History data loading
-          if (val.startsWith('hist-')) {
-            const idx = parseInt(val.replace('hist-', ''), 10);
-            const historyItem = historyItems.value[idx];
-            if (historyItem) {
-              skipHistoryRecord = true;
-              sourceLoadedFromFile.value = false;
-              selectedFileForWorker = null;
-              rawInput.value = historyItem.text;
-              parsedRoot.value = null;
-              nodes.value = [];
-              selectedNodeId.value = '';
-              editText.value = '';
-              showToast('已加载历史数据', '已从历史记录中加载输入数据。', 'info');
-              
-              nextTick(() => {
-                skipHistoryRecord = false;
-              });
-            }
-            event.target.value = '';
-            return;
-          }
-
-          // Demo data loading
-          if (val.startsWith('demo-')) {
-            const key = val.replace('demo-', '');
-            const fileInfo = demoFiles.value.find(f => f.key === key);
-            if (!fileInfo) {
-              showToast('加载失败', '未找到对应的测试数据配置。', 'error');
-              event.target.value = '';
-              return;
-            }
-
-            try {
-              const response = await fetch(fileInfo.path);
-              if (response.ok) {
-                const text = await response.text();
-                skipHistoryRecord = true;
-                sourceLoadedFromFile.value = false;
-                selectedFileForWorker = null;
-                loadedDemoText.value = text;
-                rawInput.value = text;
-                parsedRoot.value = null;
-                nodes.value = [];
-                selectedNodeId.value = '';
-                editText.value = '';
-                showToast('示例数据已加载', `已加载：${fileInfo.name}。已自动解析。`, 'info');
-                
-                nextTick(() => {
-                  skipHistoryRecord = false;
-                });
-              } else {
-                showToast('加载失败', `无法获取测试数据文件 (${response.status})。`, 'error');
-              }
-            } catch (e) {
-              showToast('加载失败', '网络请求失败，请稍后再试。', 'error');
-              console.error(e);
-            }
-            event.target.value = ''; // Reset select state
-            return;
-          }
+        // Load Data dynamically from select (Demo datasets or User history)
+        const handleDataSelect = async (event) => {
+          await JsonToolCore.handleDataSelect(event, {
+            rawInput,
+            demoFiles,
+            historyItems,
+            savedItems,
+            loadedDemoText,
+            setSkipHistoryRecord,
+            setSelectedFile,
+            resetWorkspace,
+            resetForLoadedText,
+            saveHistory,
+            saveSavedItems,
+            saveCurrent: saveCurrentData,
+            startWorkerParse,
+            applyInputMode,
+            showToast,
+            nextTick
+          });
         };
 
         const formatSize = (bytes) => {

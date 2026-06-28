@@ -92,7 +92,8 @@ function normalizeOptions(options) {
     inferSchema: true,
     mode: 'normal',
     sizeBytes: 0,
-    includeRootRaw: true
+    includeRootRaw: true,
+    includeParsedObj: true
   }, options || {});
 }
 
@@ -183,7 +184,7 @@ async function parseText(text, options, sourceName) {
       parsedRoot: {
         raw: effectiveOptions.includeRootRaw ? rootText : '',
         rawLength: rootText.length,
-        obj: parsed,
+        obj: effectiveOptions.includeParsedObj === false ? null : parsed,
         startIndex: found.startIndex,
         endIndex: found.endIndex
       },
