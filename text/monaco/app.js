@@ -44,7 +44,8 @@ require(["vs/editor/editor.main"], async () => {
   const screenshotConfirm = document.getElementById("screenshot-confirm");
   const screenshotCancel = document.getElementById("screenshot-cancel");
   const screenshotModal = document.getElementById("screenshot-modal");
-  const screenshotModalImg = document.getElementById("screenshot-modal-img");
+  const screenshotModalImages = document.getElementById("screenshot-modal-images");
+  const screenshotModalCounter = document.getElementById("screenshot-modal-counter");
   const screenshotModalDownload = document.getElementById("screenshot-modal-download");
   const screenshotModalClose = document.getElementById("screenshot-modal-close");
   const javascriptPreviewControl = document.querySelector(
@@ -1754,65 +1755,130 @@ pre { overflow: auto; width: 100%; height: 100%; margin: 0; color: #1f2328; whit
       alert("截图组件正在加载或加载失败，请稍后重试");
       return;
     }
+    
+    const originalText = screenshotConfirm.textContent;
+    screenshotConfirm.textContent = "⏳ 生成中...";
+    screenshotConfirm.disabled = true;
+
     try {
       const iframeDoc = htmlPreviewFrame.contentDocument || htmlPreviewFrame.contentWindow.document;
       const html = iframeDoc.documentElement;
       const body = iframeDoc.body;
       
-      let targetWidth, targetHeight;
+      let targetWidth, presetHeight = null;
       const sizeVal = screenshotSizeSelect.value;
       const isTruncate = screenshotTruncate.checked;
+      
+      let fullHeight = Math.max(
+        body.scrollHeight, body.offsetHeight,
+        html.clientHeight, html.scrollHeight, html.offsetHeight
+      );
       
       if (sizeVal === "auto") {
         targetWidth = Math.max(
           body.scrollWidth, body.offsetWidth,
           html.clientWidth, html.scrollWidth, html.offsetWidth
         );
-        targetHeight = Math.max(
-          body.scrollHeight, body.offsetHeight,
-          html.clientHeight, html.scrollHeight, html.offsetHeight
-        );
       } else {
         const [w, h] = sizeVal.split(",").map(Number);
         targetWidth = w;
         if (isTruncate) {
-          targetHeight = h;
-        } else {
-          targetHeight = Math.max(
-            body.scrollHeight, body.offsetHeight,
-            html.clientHeight, html.scrollHeight, html.offsetHeight
-          );
+          presetHeight = h;
         }
       }
 
-      const dataUrl = await htmlToImage.toPng(html, {
+      // 先渲染整图
+      const fullDataUrl = await htmlToImage.toPng(html, {
         backgroundColor: "#ffffff",
         width: targetWidth,
-        height: targetHeight,
+        height: fullHeight,
         style: {
           margin: "0"
         }
       });
       
-      screenshotModalImg.src = dataUrl;
+      const dataUrls = [];
+      
+      if (presetHeight) {
+        // 需要切片
+        const img = new Image();
+        img.src = fullDataUrl;
+        await new Promise(resolve => img.onload = resolve);
+        
+        // 考虑高分屏 devicePixelRatio 的缩放比例
+        const scale = img.naturalWidth / targetWidth;
+        const slicePixelHeight = Math.floor(presetHeight * scale);
+        
+        const pages = Math.ceil(img.naturalHeight / slicePixelHeight);
+        for (let i = 0; i < pages; i++) {
+          const canvas = document.createElement("canvas");
+          canvas.width = img.naturalWidth;
+          canvas.height = slicePixelHeight;
+          const ctx = canvas.getContext("2d");
+          
+          // 填充白底
+          ctx.fillStyle = "#ffffff";
+          ctx.fillRect(0, 0, canvas.width, canvas.height);
+          
+          // 抠取源图像区域
+          const sy = i * slicePixelHeight;
+          const sh = Math.min(slicePixelHeight, img.naturalHeight - sy);
+          
+          ctx.drawImage(img, 0, sy, img.naturalWidth, sh, 0, 0, img.naturalWidth, sh);
+          dataUrls.push(canvas.toDataURL("image/png"));
+        }
+      } else {
+        dataUrls.push(fullDataUrl);
+      }
+      
+      // 渲染到模态框
+      screenshotModalImages.innerHTML = "";
+      dataUrls.forEach(url => {
+        const imgNode = document.createElement("img");
+        imgNode.src = url;
+        screenshotModalImages.appendChild(imgNode);
+      });
+      
+      // 计数器逻辑
+      if (dataUrls.length > 1) {
+        screenshotModalCounter.hidden = false;
+        screenshotModalCounter.textContent = `1 / ${dataUrls.length}`;
+        screenshotModalImages.onscroll = () => {
+          const idx = Math.round(screenshotModalImages.scrollLeft / screenshotModalImages.clientWidth);
+          screenshotModalCounter.textContent = `${idx + 1} / ${dataUrls.length}`;
+        };
+      } else {
+        screenshotModalCounter.hidden = true;
+        screenshotModalImages.onscroll = null;
+      }
+      
       screenshotModal.hidden = false;
       
       screenshotModalDownload.onclick = () => {
-        const link = document.createElement("a");
         const prefix = languageSelect.value === "html" ? "html" : "markdown";
-        link.download = `${prefix}-preview-${Date.now()}.png`;
-        link.href = dataUrl;
-        link.click();
+        dataUrls.forEach((url, index) => {
+          setTimeout(() => {
+            const link = document.createElement("a");
+            link.download = dataUrls.length > 1 
+              ? `${prefix}-preview-${Date.now()}-${index + 1}.png`
+              : `${prefix}-preview-${Date.now()}.png`;
+            link.href = url;
+            link.click();
+          }, index * 250); // 错开 250ms 防止被拦截
+        });
       };
     } catch (err) {
       console.error("截图失败:", err);
       alert("截图失败，请查看控制台日志");
+    } finally {
+      screenshotConfirm.textContent = originalText;
+      screenshotConfirm.disabled = false;
     }
   });
 
   screenshotModalClose.addEventListener("click", () => {
     screenshotModal.hidden = true;
-    screenshotModalImg.src = "";
+    screenshotModalImages.innerHTML = "";
   });
 
   restoreState();
