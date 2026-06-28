@@ -1381,6 +1381,7 @@ pre { overflow: auto; width: 100%; height: 100%; margin: 0; color: #1f2328; whit
           input.checked = false;
         });
       workspaceNode.classList.add("is-previewing");
+      openExternalPreviewButton.hidden = false;
       renderPreview();
     } else {
       closePreview();
