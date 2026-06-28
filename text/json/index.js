@@ -658,14 +658,22 @@ Null数量:    ${s.nullCount}${s.skipped && s.skipped.length ? `\n\n已跳过: $
 
         const lineNumbersText = computed(() => {
           const text = displayValue.value || '';
-          if (text.length > 1024 * 1024) return '1';
-          const count = text.split('\n').length;
-          let result = '';
-          for (let i = 1; i <= count; i++) {
-            if (i > 1) result += '\n';
-            result += i;
+          if (!text) return '1';
+          
+          let count = 1;
+          let idx = text.indexOf('\n');
+          while (idx !== -1) {
+            count++;
+            idx = text.indexOf('\n', idx + 1);
           }
-          return result;
+          
+          if (count === 1) return '1';
+          
+          const nums = new Array(count);
+          for (let i = 0; i < count; i++) {
+            nums[i] = i + 1;
+          }
+          return nums.join('\n');
         });
 
         const syncLineNumberScroll = (e) => {
