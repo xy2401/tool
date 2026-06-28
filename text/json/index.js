@@ -969,7 +969,8 @@ Null数量:    ${s.nullCount}${s.skipped && s.skipped.length ? `\n\n已跳过: $
           }
         };
 
-        // Try to parse string as JSON safely (Standard JSON parse, unescaped fallback)
+        // 封装底层解析方法，注入适合 UI 主线程（前台小数据片段）的激进配置
+        // 开启深度解转义，且不限制长度，力求用户在界面局部操作时最大概率解析成功。
         const tryParseJSONString = (str) => {
           return JsonParseUtils.tryParseJSONString(str, {
             allowUnescape: true,
@@ -1011,6 +1012,7 @@ Null数量:    ${s.nullCount}${s.skipped && s.skipped.length ? `\n\n已跳过: $
           });
         };
 
+        // 封装底层提取方法，注入前台 UI 适用的激进配置
         const extractJSONSubstrings = (str) => {
           return JsonParseUtils.extractJSONSubstrings(str, {
             maxResults: Infinity,

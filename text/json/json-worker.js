@@ -349,6 +349,8 @@ function buildTree(root, options, onProgress) {
   return { nodes, truncated, warnings };
 }
 
+// 封装底层解析方法，注入适合 Web Worker（后台大文件）的保守配置
+// 关闭激进解转义，限制解转义最大长度（512KB），防止 Worker 处理畸形超长数据时卡死。
 function tryParseJSONString(str, settings) {
   return JsonParseUtils.tryParseJSONString(str, Object.assign({
     allowAggressiveUnescape: false,
@@ -356,6 +358,7 @@ function tryParseJSONString(str, settings) {
   }, settings || {}));
 }
 
+// 封装底层提取方法，同样注入 Worker 适用的保守配置
 function extractJSONSubstrings(str) {
   return JsonParseUtils.extractJSONSubstrings(str, {
     maxResults: 20,
