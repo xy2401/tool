@@ -559,36 +559,98 @@ function calculateDepthAndKeys(obj, visitLimit) {
 
 function generateJSONPaths(obj, visitLimit) {
   const pathCounts = {};
-  const stack = [{ node: obj, path: '$' }];
+  const pathSizes = {};
+  const stack = [{ node: obj, path: '$', keySize: 0 }];
   let visited = 0;
 
-  while (stack.length && visited < visitLimit) {
+  while (stack.length > 0 && visited < visitLimit) {
     const item = stack.pop();
-    visited++;
-    pathCounts[item.path] = (pathCounts[item.path] || 0) + 1;
-
     const node = item.node;
-    if (node === null || typeof node !== 'object') continue;
-    if (Array.isArray(node)) {
-      const arrayPath = `${item.path}[*]`;
+    const currentPath = item.path;
+    const keySize = item.keySize || 0;
+    
+    visited++;
+    if (!pathCounts[currentPath]) {
+      pathCounts[currentPath] = 0;
+      pathSizes[currentPath] = 0;
+    }
+    pathCounts[currentPath]++;
+    
+    let nodeSize = keySize; 
+    
+    if (node === null) {
+      nodeSize += 4;
+    } else if (typeof node === 'string') {
+      nodeSize += node.length + 2;
+    } else if (typeof node === 'number' || typeof node === 'boolean') {
+      nodeSize += String(node).length;
+    } else if (Array.isArray(node)) {
+      nodeSize += 2 + (node.length > 0 ? node.length - 1 : 0);
       for (let i = node.length - 1; i >= 0; i--) {
-        const child = node[i];
-        if (child !== null && typeof child === 'object') stack.push({ node: child, path: arrayPath });
-        else pathCounts[arrayPath] = (pathCounts[arrayPath] || 0) + 1;
+        let child = node[i];
+        if (child !== null && typeof child === 'object') {
+          stack.push({ node: child, path: `${currentPath}[*]`, keySize: 0 });
+        } else {
+          let p = `${currentPath}[*]`;
+          if (!pathCounts[p]) { pathCounts[p] = 0; pathSizes[p] = 0; }
+          pathCounts[p]++;
+          let childSize = 0;
+          if (child === null) childSize = 4;
+          else if (typeof child === 'string') childSize = child.length + 2;
+          else childSize = String(child).length;
+          pathSizes[p] += childSize;
+        }
       }
-    } else {
+    } else if (typeof node === 'object') {
       const keys = Object.keys(node);
+      nodeSize += 2 + (keys.length > 0 ? keys.length - 1 : 0);
       for (let i = keys.length - 1; i >= 0; i--) {
         const key = keys[i];
-        const child = node[key];
+        let child = node[key];
+        let currentKeySize = key.length + 3;
+        let nextPath = /^[a-zA-Z_][a-zA-Z0-9_]*$/.test(key) ? `${currentPath}.${key}` : `${currentPath}['${key}']`;
+        
         if (child !== null && typeof child === 'object') {
-          stack.push({ node: child, path: /^[a-zA-Z_][a-zA-Z0-9_]*$/.test(key) ? `${item.path}.${key}` : `${item.path}['${key}']` });
+          stack.push({ node: child, path: nextPath, keySize: currentKeySize });
+        } else {
+          if (!pathCounts[nextPath]) { pathCounts[nextPath] = 0; pathSizes[nextPath] = 0; }
+          pathCounts[nextPath]++;
+          let childSize = currentKeySize;
+          if (child === null) childSize += 4;
+          else if (typeof child === 'string') childSize += child.length + 2;
+          else childSize += String(child).length;
+          pathSizes[nextPath] += childSize;
         }
       }
     }
+    pathSizes[currentPath] += nodeSize;
   }
-
-  return Object.keys(pathCounts).map((path) => ({ path, count: pathCounts[path] }));
+  
+  const pathsInOrder = Object.keys(pathCounts);
+  const pathsForSize = [...pathsInOrder].sort((a, b) => b.length - a.length);
+  for (const path of pathsForSize) {
+    let parentPath = null;
+    if (path.endsWith('[*]')) {
+      parentPath = path.slice(0, -3);
+    } else {
+      const dotIdx = path.lastIndexOf('.');
+      const bracketIdx = path.lastIndexOf("['");
+      if (dotIdx > bracketIdx && dotIdx > 0) {
+        parentPath = path.slice(0, dotIdx);
+      } else if (bracketIdx > 0) {
+        parentPath = path.slice(0, bracketIdx);
+      }
+    }
+    if (parentPath && pathSizes[parentPath] !== undefined) {
+      pathSizes[parentPath] += pathSizes[path];
+    }
+  }
+  
+  return pathsInOrder.map(path => ({ 
+    path, 
+    count: pathCounts[path],
+    size: pathSizes[path]
+  }));
 }
 
 function inferSchema(obj, visitLimit) {

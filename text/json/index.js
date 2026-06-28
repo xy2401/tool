@@ -388,6 +388,7 @@
             }
             jsonStats.value = payload.jsonStats || {};
             jsonPathsList.value = payload.jsonPathsList || [];
+            jsonPathsList.value.isTruncated = payload.pathsTruncated || false;
             jsonSchemaText.value = formatSchemaText(payload.jsonSchemaObject, payload.jsonSchemaText || '');
             inputMode.value = payload.mode || inputMode.value;
             currentSourceName.value = payload.sourceName || sourceName || currentSourceName.value;
@@ -628,7 +629,9 @@ Null数量:    ${s.nullCount}${s.skipped && s.skipped.length ? `\n\n已跳过: $
 
         const pathsText = computed(() => {
           if (!jsonPathsList.value || jsonPathsList.value.length === 0) return '暂无路径';
-          return jsonPathsList.value.map(item => `${item.path}  (数量: ${item.count})`).join('\n');
+          const isTrunc = jsonPathsList.value.isTruncated;
+          const warning = isTrunc ? '⚠️ 数据超大，为保证浏览器不卡顿，已提前停止深度扫描。以下仅为部分已扫描数据的统计：\n\n' : '';
+          return warning + jsonPathsList.value.map(item => `${item.path}  (数量: ${item.count}${isTrunc ? '+' : ''}  估算大小: ${item.size !== undefined ? formatSize(item.size) : '0 B'}${isTrunc ? '+' : ''})`).join('\n');
         });
 
         const parseProgressText = computed(() => {
@@ -1364,7 +1367,9 @@ Null数量:    ${s.nullCount}${s.skipped && s.skipped.length ? `\n\n已跳过: $
           };
 
           const prefixPath = selectedNode.value.path.length > 0 ? selectedNode.value.path.join('.') : '$';
-          jsonPathsList.value = generateJSONPaths(val, prefixPath, pathsVisitLimit);
+          const pathsRes = generateJSONPaths(val, prefixPath, pathsVisitLimit);
+          jsonPathsList.value = pathsRes.items;
+          jsonPathsList.value.isTruncated = pathsRes.isTruncated;
 
           const schemaObj = inferSchema(val, schemaVisitLimit);
           const finalSchema = {
@@ -1868,43 +1873,99 @@ Null数量:    ${s.nullCount}${s.skipped && s.skipped.length ? `\n\n已跳过: $
 
         const generateJSONPaths = (obj, prefix = '$', visitLimit = Infinity) => {
           const pathCounts = {};
-          const stack = [{ node: obj, path: prefix }];
+          const pathSizes = {};
+          const stack = [{ node: obj, path: prefix, keySize: 0 }];
           let visited = 0;
 
           while (stack.length > 0 && visited < visitLimit) {
             const item = stack.pop();
             const node = item.node;
             const currentPath = item.path;
-            visited++;
-            pathCounts[currentPath] = (pathCounts[currentPath] || 0) + 1;
+            const keySize = item.keySize || 0;
             
-            if (node !== null && typeof node === 'object') {
-              if (Array.isArray(node)) {
-                for (let i = node.length - 1; i >= 0; i--) {
-                  let child = node[i];
-                  if (child !== null && typeof child === 'object') {
-                    stack.push({ node: child, path: `${currentPath}[*]` });
-                  } else {
-                    let p = `${currentPath}[*]`;
-                    if (!pathCounts[p]) pathCounts[p] = 0;
-                    pathCounts[p]++;
-                  }
+            visited++;
+            if (!pathCounts[currentPath]) {
+              pathCounts[currentPath] = 0;
+              pathSizes[currentPath] = 0;
+            }
+            pathCounts[currentPath]++;
+            
+            let nodeSize = keySize; 
+            
+            if (node === null) {
+              nodeSize += 4;
+            } else if (typeof node === 'string') {
+              nodeSize += node.length + 2;
+            } else if (typeof node === 'number' || typeof node === 'boolean') {
+              nodeSize += String(node).length;
+            } else if (Array.isArray(node)) {
+              nodeSize += 2 + (node.length > 0 ? node.length - 1 : 0);
+              for (let i = node.length - 1; i >= 0; i--) {
+                let child = node[i];
+                if (child !== null && typeof child === 'object') {
+                  stack.push({ node: child, path: `${currentPath}[*]`, keySize: 0 });
+                } else {
+                  let p = `${currentPath}[*]`;
+                  if (!pathCounts[p]) { pathCounts[p] = 0; pathSizes[p] = 0; }
+                  pathCounts[p]++;
+                  let childSize = 0;
+                  if (child === null) childSize = 4;
+                  else if (typeof child === 'string') childSize = child.length + 2;
+                  else childSize = String(child).length;
+                  pathSizes[p] += childSize;
                 }
-              } else {
-                const keys = Object.keys(node);
-                for (let i = keys.length - 1; i >= 0; i--) {
-                  const key = keys[i];
-                  let child = node[key];
-                  if (child !== null && typeof child === 'object') {
-                    let nextPath = /^[a-zA-Z_][a-zA-Z0-9_]*$/.test(key) ? `${currentPath}.${key}` : `${currentPath}['${key}']`;
-                    stack.push({ node: child, path: nextPath });
-                  }
+              }
+            } else if (typeof node === 'object') {
+              const keys = Object.keys(node);
+              nodeSize += 2 + (keys.length > 0 ? keys.length - 1 : 0);
+              for (let i = keys.length - 1; i >= 0; i--) {
+                const key = keys[i];
+                let child = node[key];
+                let currentKeySize = key.length + 3;
+                let nextPath = /^[a-zA-Z_][a-zA-Z0-9_]*$/.test(key) ? `${currentPath}.${key}` : `${currentPath}['${key}']`;
+                
+                if (child !== null && typeof child === 'object') {
+                  stack.push({ node: child, path: nextPath, keySize: currentKeySize });
+                } else {
+                  if (!pathCounts[nextPath]) { pathCounts[nextPath] = 0; pathSizes[nextPath] = 0; }
+                  pathCounts[nextPath]++;
+                  let childSize = currentKeySize;
+                  if (child === null) childSize += 4;
+                  else if (typeof child === 'string') childSize += child.length + 2;
+                  else childSize += String(child).length;
+                  pathSizes[nextPath] += childSize;
                 }
               }
             }
+            pathSizes[currentPath] += nodeSize;
           }
           
-          return Object.keys(pathCounts).map(path => ({ path, count: pathCounts[path] }));
+          const pathsInOrder = Object.keys(pathCounts);
+          const pathsForSize = [...pathsInOrder].sort((a, b) => b.length - a.length);
+          for (const path of pathsForSize) {
+            let parentPath = null;
+            if (path.endsWith('[*]')) {
+              parentPath = path.slice(0, -3);
+            } else {
+              const dotIdx = path.lastIndexOf('.');
+              const bracketIdx = path.lastIndexOf("['");
+              if (dotIdx > bracketIdx && dotIdx > 0) {
+                parentPath = path.slice(0, dotIdx);
+              } else if (bracketIdx > 0) {
+                parentPath = path.slice(0, bracketIdx);
+              }
+            }
+            if (parentPath && pathSizes[parentPath] !== undefined) {
+              pathSizes[parentPath] += pathSizes[path];
+            }
+          }
+          
+          const result = pathsInOrder.map(path => ({ 
+            path, 
+            count: pathCounts[path],
+            size: pathSizes[path]
+          }));
+          return { items: result, isTruncated: visited >= visitLimit };
         };
 
         const inferSchema = (obj, visitLimit = Infinity) => {
@@ -1965,7 +2026,9 @@ Null数量:    ${s.nullCount}${s.skipped && s.skipped.length ? `\n\n已跳过: $
 
         const copyPaths = () => {
           if (!jsonPathsList.value.length) return;
-          const textToCopy = jsonPathsList.value.map(p => `${p.path} (数量: ${p.count})`).join('\n');
+          const isTrunc = jsonPathsList.value.isTruncated;
+          const warning = isTrunc ? '⚠️ 数据超大，为保证浏览器不卡顿，已提前停止深度扫描。以下仅为部分已扫描数据的统计：\n\n' : '';
+          const textToCopy = warning + jsonPathsList.value.map(p => `${p.path} (数量: ${p.count}${isTrunc ? '+' : ''}  估算大小: ${p.size !== undefined ? formatSize(p.size) : '0 B'}${isTrunc ? '+' : ''})`).join('\n');
           navigator.clipboard.writeText(textToCopy).then(() => {
             showToast('已复制', 'JSONPaths 已复制到剪贴板', 'success');
           }).catch(err => {
