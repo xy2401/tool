@@ -1160,31 +1160,37 @@ Null数量:    ${s.nullCount}${s.skipped && s.skipped.length ? `\n\n已跳过: $
           }
         };
 
+        const requestAnalyzeNode = (customVal = undefined) => {
+          if (!parseWorker || !selectedNode.value) {
+            return Promise.resolve(null);
+          }
 
-        
-        const analyzeNodeAsync = () => {
-           return new Promise(resolve => {
-               const reqId = Date.now() + Math.random();
-               const handler = (e) => {
-                   if ((e.data.type === 'analyze_result' || e.data.action === 'analyze_result') && e.data.reqId === reqId) {
-                       parseWorker.removeEventListener('message', handler);
-                       resolve(e.data.payload);
-                   }
-               };
-               parseWorker.addEventListener('message', handler);
-               parseWorker.postMessage({
-                   action: 'analyze_node',
-                   reqId,
-                   path: JSON.parse(JSON.stringify(selectedNode.value.path)),
-                   advancedOptions: JSON.parse(JSON.stringify(advancedOptions.value)),
-                   options: {
-                       excludedNodes: JSON.parse(JSON.stringify(excludedNodes.value)),
-                       excludedProperties: JSON.parse(JSON.stringify(excludedProperties.value)),
-                       basePath: JSON.parse(JSON.stringify(selectedNode.value.path))
-                   },
-                   mode: inputMode.value
-               });
-           });
+          const reqId = Date.now() + Math.random();
+          const path = JSON.parse(JSON.stringify(selectedNode.value.path));
+          const worker = parseWorker;
+
+          return new Promise(resolve => {
+            const handler = (e) => {
+              if ((e.data.type === 'analyze_result' || e.data.action === 'analyze_result') && e.data.reqId === reqId) {
+                worker.removeEventListener('message', handler);
+                resolve(e.data.payload);
+              }
+            };
+            worker.addEventListener('message', handler);
+            worker.postMessage({
+              action: 'analyze_node',
+              reqId,
+              path: customVal !== undefined ? null : path,
+              val: customVal,
+              advancedOptions: JSON.parse(JSON.stringify(advancedOptions.value)),
+              options: {
+                excludedNodes: JSON.parse(JSON.stringify(excludedNodes.value)),
+                excludedProperties: JSON.parse(JSON.stringify(excludedProperties.value)),
+                basePath: path
+              },
+              mode: inputMode.value
+            });
+          });
         };
 
         const applyFormatting = () => {
@@ -1213,29 +1219,8 @@ Null数量:    ${s.nullCount}${s.skipped && s.skipped.length ? `\n\n已跳过: $
             return;
           }
           
-          const reqId = Date.now() + Math.random();
-          const res = await new Promise(resolve => {
-               const handler = (e) => {
-                   if ((e.data.type === 'analyze_result' || e.data.action === 'analyze_result') && e.data.reqId === reqId) {
-                       parseWorker.removeEventListener('message', handler);
-                       resolve(e.data.payload);
-                   }
-               };
-               parseWorker.addEventListener('message', handler);
-               parseWorker.postMessage({
-                   action: 'analyze_node',
-                   reqId,
-                   path: customVal !== undefined ? null : JSON.parse(JSON.stringify(selectedNode.value.path)),
-                   val: customVal,
-                   advancedOptions: JSON.parse(JSON.stringify(advancedOptions.value)),
-                   options: {
-                       excludedNodes: JSON.parse(JSON.stringify(excludedNodes.value)),
-                       excludedProperties: JSON.parse(JSON.stringify(excludedProperties.value)),
-                       basePath: JSON.parse(JSON.stringify(selectedNode.value.path))
-                   },
-                   mode: inputMode.value
-               });
-          });
+          const res = await requestAnalyzeNode(customVal);
+          if (!res) return;
 
           editText.value = res.editText;
           isPreviewTruncated.value = res.isPreviewTruncated;
