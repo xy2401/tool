@@ -167,6 +167,23 @@
       ></iframe>
     </main>
   </div>
+  
+  <div id="screenshot-modal" class="modal" hidden>
+    <div class="modal-backdrop"></div>
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3 class="title">图片生成预览</h3>
+        <button id="screenshot-modal-close" type="button" title="关闭并返回调整">❌</button>
+      </div>
+      <div class="modal-body">
+        <p id="screenshot-modal-tip" style="color:#8b949e;font-size:13px;margin:0 0 10px 0;text-align:center;">请预览生成的图片。如果在微信等 APP 内无法下载，请长按图片保存。</p>
+        <img id="screenshot-modal-img" src="" alt="生成的截图">
+      </div>
+      <div class="modal-footer">
+        <button id="screenshot-modal-download" type="button" style="background:#238636;border-color:#2ea043;">⬇️ 确认下载</button>
+      </div>
+    </div>
+  </div>
 
   <script src="./monaco-config.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/marked@18.0.5/lib/marked.umd.js"></script>

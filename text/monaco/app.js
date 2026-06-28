@@ -43,6 +43,10 @@ require(["vs/editor/editor.main"], async () => {
   const screenshotTruncate = document.getElementById("screenshot-truncate");
   const screenshotConfirm = document.getElementById("screenshot-confirm");
   const screenshotCancel = document.getElementById("screenshot-cancel");
+  const screenshotModal = document.getElementById("screenshot-modal");
+  const screenshotModalImg = document.getElementById("screenshot-modal-img");
+  const screenshotModalDownload = document.getElementById("screenshot-modal-download");
+  const screenshotModalClose = document.getElementById("screenshot-modal-close");
   const javascriptPreviewControl = document.querySelector(
     ".javascript-preview-control"
   );
@@ -1790,36 +1794,25 @@ pre { overflow: auto; width: 100%; height: 100%; margin: 0; color: #1f2328; whit
         }
       });
       
-      const isWeChat = /MicroMessenger/i.test(navigator.userAgent);
+      screenshotModalImg.src = dataUrl;
+      screenshotModal.hidden = false;
       
-      if (isWeChat) {
-        htmlPreviewFrame.srcdoc = `<!doctype html>
-<html lang="zh-CN">
-<head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <style>
-    body { margin: 0; padding: 20px; background: #f6f8fa; display: flex; flex-direction: column; align-items: center; }
-    p { color: #0969da; font-family: system-ui, sans-serif; font-size: 15px; margin-top: 0; margin-bottom: 16px; font-weight: 500; }
-    img { max-width: 100%; height: auto; box-shadow: 0 4px 12px rgba(0,0,0,0.1); border-radius: 4px; }
-  </style>
-</head>
-<body>
-  <p>👇 微信内无法直接下载，请长按下方图片保存</p>
-  <img src="${dataUrl}" alt="长按保存图片">
-</body>
-</html>`;
-      } else {
+      screenshotModalDownload.onclick = () => {
         const link = document.createElement("a");
         const prefix = languageSelect.value === "html" ? "html" : "markdown";
         link.download = `${prefix}-preview-${Date.now()}.png`;
         link.href = dataUrl;
         link.click();
-      }
+      };
     } catch (err) {
       console.error("截图失败:", err);
       alert("截图失败，请查看控制台日志");
     }
+  });
+
+  screenshotModalClose.addEventListener("click", () => {
+    screenshotModal.hidden = true;
+    screenshotModalImg.src = "";
   });
 
   restoreState();
