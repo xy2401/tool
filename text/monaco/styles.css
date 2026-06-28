@@ -395,38 +395,23 @@ body.theme-light #editor.is-dragging::after {
 }
 
 /* Code Snapshot Mode */
+#workspace.is-snapshot-mode {
+  grid-template-columns: minmax(0, 1fr) minmax(320px, 1fr);
+}
+
 #workspace.is-snapshot-mode #html-preview {
   display: none !important;
 }
 
-#workspace.is-snapshot-mode #code-snapshot-preview-container {
-  display: flex;
+#workspace.is-snapshot-mode #snapshot-card {
+  display: inline-flex;
+  align-self: flex-start;
+  justify-self: center;
+  margin: 32px;
 }
 
-#code-snapshot-preview-container {
-  display: none;
-  align-items: center;
-  justify-content: center;
-  width: 100%;
-  height: 100%;
-  overflow: auto;
-  background: #111; /* fallback wrapper background, though we might want it checkered */
-}
-
-/* Add checkered background for transparent mode */
-#code-snapshot-preview-container {
-  background-image: linear-gradient(45deg, #222 25%, transparent 25%), 
-                    linear-gradient(-45deg, #222 25%, transparent 25%), 
-                    linear-gradient(45deg, transparent 75%, #222 75%), 
-                    linear-gradient(-45deg, transparent 75%, #222 75%);
-  background-size: 20px 20px;
-  background-position: 0 0, 0 10px, 10px -10px, -10px 0px;
-}
-body.theme-light #code-snapshot-preview-container {
-  background-image: linear-gradient(45deg, #ddd 25%, transparent 25%), 
-                    linear-gradient(-45deg, #ddd 25%, transparent 25%), 
-                    linear-gradient(45deg, transparent 75%, #ddd 75%), 
-                    linear-gradient(-45deg, transparent 75%, #ddd 75%);
+#snapshot-card[hidden] {
+  display: none !important;
 }
 
 #snapshot-card {
@@ -461,6 +446,10 @@ body.theme-light #code-snapshot-preview-container {
 .mac-dots {
   display: flex;
   gap: 8px;
+}
+
+.mac-dots[hidden], .win-controls[hidden] {
+  display: none !important;
 }
 
 .mac-dots span {

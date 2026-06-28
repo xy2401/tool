@@ -44,7 +44,6 @@ require(["vs/editor/editor.main"], async () => {
   const snapshotWindowStyle = document.getElementById("snapshot-window-style");
   const codeSnapshotConfirm = document.getElementById("code-snapshot-confirm");
   const codeSnapshotCancel = document.getElementById("code-snapshot-cancel");
-  const codeSnapshotPreviewContainer = document.getElementById("code-snapshot-preview-container");
   const snapshotCard = document.getElementById("snapshot-card");
   const snapshotWindowHeader = document.getElementById("snapshot-window-header");
   const snapshotCodeContent = document.getElementById("snapshot-code-content");
@@ -1919,6 +1918,7 @@ pre { overflow: auto; width: 100%; height: 100%; margin: 0; color: #1f2328; whit
     document.querySelector(".feature-bar").hidden = true;
     codeSnapshotToolbar.hidden = false;
     workspaceNode.classList.add("is-snapshot-mode");
+    snapshotCard.hidden = false;
     
     if (workspaceLayoutSelect.value === "editor") {
       workspaceLayoutSelect.value = "split";
@@ -1933,6 +1933,7 @@ pre { overflow: auto; width: 100%; height: 100%; margin: 0; color: #1f2328; whit
     document.querySelector(".feature-bar").hidden = false;
     codeSnapshotToolbar.hidden = true;
     workspaceNode.classList.remove("is-snapshot-mode");
+    snapshotCard.hidden = true;
   });
 
   let currentHighlightThemeUrl = "";
