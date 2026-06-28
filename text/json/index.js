@@ -39,7 +39,6 @@
         const isDragging = ref(false);
         const themePreference = ref('system');
         const lineNumbersRef = ref(null);
-        const editorScrollTop = ref(0);
         const collapsedNodes = ref([]);
         const activeTab = ref('preview'); // IDE Tab state
         const jsonStats = ref({});
@@ -712,7 +711,6 @@ Null数量:    ${s.nullCount}${s.skipped && s.skipped.length ? `\n\n已跳过: $
           if (lineNumbersRef.value) {
             lineNumbersRef.value.scrollTop = e.target.scrollTop;
           }
-          editorScrollTop.value = e.target.scrollTop;
         };
 
         const breadcrumbSegments = computed(() => {
@@ -1317,7 +1315,6 @@ Null数量:    ${s.nullCount}${s.skipped && s.skipped.length ? `\n\n已跳过: $
             jumpToMatch(0);
           } else {
             currentMatchIndex.value = -1;
-            activeSearchHighlight.value = null;
           }
         };
 
@@ -1325,7 +1322,6 @@ Null数量:    ${s.nullCount}${s.skipped && s.skipped.length ? `\n\n已跳过: $
           searchQuery.value = '';
           searchResults.value = [];
           currentMatchIndex.value = -1;
-          activeSearchHighlight.value = null;
         };
 
         const nextMatch = () => {
@@ -1403,7 +1399,6 @@ Null数量:    ${s.nullCount}${s.skipped && s.skipped.length ? `\n\n已跳过: $
           }
           
           if (lineIndex !== -1) {
-             activeSearchHighlight.value = { line: lineIndex };
              const textarea = document.getElementById('nodeJSONTextarea');
              if (textarea) {
                 if (exactStart !== -1) {
@@ -1414,8 +1409,6 @@ Null数量:    ${s.nullCount}${s.skipped && s.skipped.length ? `\n\n已跳过: $
                 const lineHeight = 1.44 * rem; 
                 textarea.scrollTop = Math.max(0, (lineIndex - 1) * lineHeight - textarea.clientHeight / 2);
              }
-          } else {
-             activeSearchHighlight.value = null;
           }
         };
 
@@ -1977,8 +1970,6 @@ Null数量:    ${s.nullCount}${s.skipped && s.skipped.length ? `\n\n已跳过: $
           searchQuery,
           searchResults,
           currentMatchIndex,
-          activeSearchHighlight,
-          editorScrollTop,
           executeSearch,
           clearSearch,
           nextMatch,

@@ -403,11 +403,6 @@
               <!-- IDE Single Textarea Content -->
               <div class="editor-with-lines" style="flex: 1; min-height: 0;">
                 <div class="line-numbers" ref="lineNumbersRef" aria-hidden="true">{{ lineNumbersText }}</div>
-                <div 
-                  v-if="activeSearchHighlight" 
-                  class="search-highlight-bar" 
-                  :style="{ top: `calc(1rem + (Math.max(1, activeSearchHighlight.line) - 1) * 1.44rem - ${editorScrollTop}px)` }"
-                ></div>
                 <textarea 
                   class="editor-textarea" 
                   :value="displayValue"
