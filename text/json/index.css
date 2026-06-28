@@ -493,6 +493,14 @@
       font-weight: 500;
       box-shadow: 0 4px 12px rgba(6, 182, 212, 0.05);
     }
+    
+    .node-item.is-highlighted {
+      background: linear-gradient(135deg, rgba(16, 185, 129, 0.12) 0%, rgba(16, 185, 129, 0.08) 100%);
+      border-color: rgba(16, 185, 129, 0.3);
+      color: var(--node-active-color);
+      font-weight: 500;
+      box-shadow: 0 4px 12px rgba(16, 185, 129, 0.05);
+    }
 
     .node-name {
       overflow: hidden;

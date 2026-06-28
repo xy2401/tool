@@ -216,7 +216,7 @@
           <template v-for="node in filteredNodes" :key="node.id">
             <!-- Node Item -->
             <div 
-              :class="['node-item', { active: selectedNodeId === node.id }]"
+              :class="['node-item', { active: selectedNodeId === node.id, 'is-highlighted': highlightedTreeId === node.id }]"
               :title="node.id"
             >
               <!-- Indent Guides -->

@@ -39,6 +39,7 @@
         const isDragging = ref(false);
         const themePreference = ref('system');
         const lineNumbersRef = ref(null);
+        const highlightedTreeId = ref(null);
         const collapsedNodes = ref([]);
         const activeTab = ref('preview'); // IDE Tab state
         const jsonStats = ref({});
@@ -1333,6 +1334,7 @@ Null数量:    ${s.nullCount}${s.skipped && s.skipped.length ? `\n\n已跳过: $
           lastSearchedQuery.value = '';
           searchResults.value = [];
           currentMatchIndex.value = -1;
+          highlightedTreeId.value = null;
         };
 
         const nextMatch = () => {
@@ -1362,7 +1364,15 @@ Null数量:    ${s.nullCount}${s.skipped && s.skipped.length ? `\n\n已跳过: $
              buildId += '.' + pathIds[i];
           }
           
-          selectNode(match.nodeId);
+          const isAncestor = match.nodeId.startsWith(selectedNodeId.value);
+          const canShowInCurrentContext = isAncestor && !isPreviewTruncated.value;
+          
+          if (canShowInCurrentContext) {
+             highlightedTreeId.value = match.nodeId;
+          } else {
+             highlightedTreeId.value = match.nodeId;
+             selectNode(match.nodeId, true);
+          }
           
           nextTick(() => {
             const treeEl = document.querySelector(`.node-item[title="${match.nodeId}"]`);
@@ -1423,8 +1433,11 @@ Null数量:    ${s.nullCount}${s.skipped && s.skipped.length ? `\n\n已跳过: $
           }
         };
 
-        const selectNode = (nodeId) => {
+        const selectNode = (nodeId, fromSearch = false) => {
           selectedNodeId.value = nodeId;
+          if (!fromSearch) {
+             highlightedTreeId.value = null;
+          }
           editText.value = ''; // Clear current editText to force load from selectedNode.value.val
           isTextareaDirty.value = false; // Reset dirty state
           isPreviewTruncated.value = false;
@@ -1982,6 +1995,7 @@ Null数量:    ${s.nullCount}${s.skipped && s.skipped.length ? `\n\n已跳过: $
           lastSearchedQuery,
           searchResults,
           currentMatchIndex,
+          highlightedTreeId,
           handleSearchSubmit,
           handleShiftEnter,
           executeSearch,
