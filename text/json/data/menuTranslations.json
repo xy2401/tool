@@ -118,6 +118,13 @@
     "loading...": "正在加载..."
   },
   "domTooltipTranslations": {
+    "Edit the selected path": "编辑所选路径",
+    "Fold line": "折叠此行",
+    "Unfold line": "展开此行",
+    "Expand or collapse this object (Ctrl+Click to expand/collapse recursively)": "展开或折叠此对象（Ctrl+点击可递归展开/折叠）",
+    "Expand or collapse this array (Ctrl+Click to expand/collapse recursively)": "展开或折叠此数组（Ctrl+点击可递归展开/折叠）",
+    "Open context menu (Click here, right click on the selection, or use the context menu button or Ctrl+Q)": "打开右键菜单（可点击此处、右击所选内容，或使用菜单键/Ctrl+Q）",
+    "Click here, right click on the selection, or use the context menu button or Ctrl+Q": "可点击此处、右击所选内容，或使用菜单键/Ctrl+Q",
     "Toggle visibility of replace options (Ctrl+H)": "切换替换选项的显示状态 (Ctrl+H)",
     "Enter text to search": "输入要搜索的文本",
     "Go to next search result (Enter)": "跳转到下一个搜索结果 (Enter)",

@@ -10,6 +10,10 @@ const simplifiedChinese = {};
 const menuTranslations = {};
 const domTranslations = {};
 const domTooltipTranslations = {};
+let menuTranslationEntries = [];
+let domTranslationEntries = [];
+let translateFrameId = null;
+const pendingTranslationNodes = new Set();
 
 const JsonToolCore = window.JsonToolCore;
 const { LARGE_TEXT_BYTES, DEFAULT_ADVANCED_OPTIONS } = JsonToolCore.constants;
@@ -19,14 +23,57 @@ function translateText(text) {
   if (menuTranslations[text]) return menuTranslations[text];
   
   let translated = text;
-  // Sort keys of menuTranslations by length descending to replace longer phrases first
-  const keys = Object.keys(menuTranslations).sort((a, b) => b.length - a.length);
-  for (const key of keys) {
+  for (const [key, value] of menuTranslationEntries) {
     if (translated.includes(key)) {
-      translated = translated.split(key).join(menuTranslations[key]);
+      translated = translated.split(key).join(value);
     }
   }
-  return translated;
+  return normalizeTranslatedText(translated);
+}
+
+function rebuildTranslationCaches() {
+  menuTranslationEntries = Object.entries(menuTranslations)
+    .filter(([key]) => key.length >= 6)
+    .sort((a, b) => b[0].length - a[0].length);
+  domTranslationEntries = Object.entries({ ...domTranslations, ...domTooltipTranslations, ...menuTranslations })
+    .filter(([key]) => key.length >= 6)
+    .sort((a, b) => b[0].length - a[0].length);
+}
+
+function normalizeTranslatedText(text) {
+  if (!text) return text;
+  return text
+    .replace(/当前模式:\s*text/g, '当前模式: 代码')
+    .replace(/当前模式:\s*tree/g, '当前模式: 树形')
+    .replace(/当前模式:\s*table/g, '当前模式: 表格')
+    .replace(
+      /打开右键菜单 \(可点击此处、右击所选内容，或使用菜单键或 Ctrl\+Q\) \(可点击此处、右击所选内容，或使用菜单键\/Ctrl\+Q\)/g,
+      '打开右键菜单（可点击此处、右击所选内容，或使用菜单键/Ctrl+Q）'
+    );
+}
+
+function translateAttribute(node, attrName, dictionaries) {
+  if (!node.hasAttribute(attrName)) return;
+  const original = node.getAttribute(attrName);
+  if (!original) return;
+
+  for (const dictionary of dictionaries) {
+    if (dictionary[original]) {
+      node.setAttribute(attrName, dictionary[original]);
+      return;
+    }
+  }
+
+  let translated = original;
+  for (const [key, value] of domTranslationEntries) {
+    if (translated.includes(key)) {
+      translated = translated.split(key).join(value);
+    }
+  }
+  translated = normalizeTranslatedText(translated);
+  if (translated !== original) {
+    node.setAttribute(attrName, translated);
+  }
 }
 
 function translateMenuItem(item) {
@@ -53,17 +100,16 @@ function translateDOM(node) {
 
   // Skip translating actual JSON content (keys, values, and CodeMirror editor text)
   const element = node.nodeType === Node.ELEMENT_NODE ? node : node.parentElement;
-  if (element && (
+  const isJsonContent = element && (
     element.closest('.jse-contents') || 
     element.closest('.cm-editor') || 
     element.closest('.cm-content') ||
     element.closest('.jse-key') || 
     element.closest('.jse-value')
-  )) {
-    return;
-  }
+  );
 
   if (node.nodeType === Node.TEXT_NODE) {
+    if (isJsonContent) return;
     const text = node.nodeValue.trim();
     if (domTranslations[text]) {
       node.nodeValue = domTranslations[text];
@@ -71,39 +117,44 @@ function translateDOM(node) {
       node.nodeValue = '正在加载...';
     }
   } else if (node.nodeType === Node.ELEMENT_NODE) {
-    if (node.hasAttribute('placeholder')) {
-      const placeholder = node.getAttribute('placeholder');
-      if (domTranslations[placeholder]) {
-        node.setAttribute('placeholder', domTranslations[placeholder]);
-      }
-    }
-    if (node.hasAttribute('title')) {
-      const title = node.getAttribute('title');
-      if (domTooltipTranslations[title]) {
-        node.setAttribute('title', domTooltipTranslations[title]);
-      } else if (domTranslations[title]) {
-        node.setAttribute('title', domTranslations[title]);
-      }
-    }
+    translateAttribute(node, 'placeholder', [domTranslations]);
+    translateAttribute(node, 'title', [domTooltipTranslations, domTranslations, menuTranslations]);
+    translateAttribute(node, 'aria-label', [domTooltipTranslations, domTranslations, menuTranslations]);
     node.childNodes.forEach(translateDOM);
   }
+}
+
+function queueTranslateDOM(node) {
+  if (!node) return;
+  pendingTranslationNodes.add(node);
+  if (translateFrameId) return;
+  translateFrameId = requestAnimationFrame(() => {
+    translateFrameId = null;
+    const nodes = Array.from(pendingTranslationNodes);
+    pendingTranslationNodes.clear();
+    nodes.forEach(translateDOM);
+  });
 }
 
 // Set up MutationObserver to translate dynamic popup elements
 const i18nObserver = new MutationObserver((mutations) => {
   mutations.forEach((mutation) => {
     mutation.addedNodes.forEach((node) => {
-      setTimeout(() => translateDOM(node), 0);
+      queueTranslateDOM(node);
     });
     if (mutation.type === 'characterData') {
-      setTimeout(() => translateDOM(mutation.target), 0);
+      queueTranslateDOM(mutation.target);
+    } else if (mutation.type === 'attributes') {
+      queueTranslateDOM(mutation.target);
     }
   });
 });
 i18nObserver.observe(document.body, {
   childList: true,
   subtree: true,
-  characterData: true
+  characterData: true,
+  attributes: true,
+  attributeFilter: ['title', 'aria-label', 'placeholder']
 });
 
 // State & Editors (Global scope inside module script)
@@ -750,6 +801,12 @@ createApp({
       stopParseWorker();
       destroyEditor('left');
       destroyEditor('right');
+      i18nObserver.disconnect();
+      pendingTranslationNodes.clear();
+      if (translateFrameId) {
+        cancelAnimationFrame(translateFrameId);
+        translateFrameId = null;
+      }
       window.removeEventListener('keydown', handleKeyDown);
       if (systemThemeMedia.removeEventListener) {
         systemThemeMedia.removeEventListener('change', handleSystemThemeChange);
@@ -779,6 +836,7 @@ createApp({
           Object.assign(menuTranslations, data.menuTranslations || {});
           Object.assign(domTranslations, data.domTranslations || {});
           Object.assign(domTooltipTranslations, data.domTooltipTranslations || {});
+          rebuildTranslationCaches();
         } else {
           console.error('Failed to load menuTranslations.json');
         }
@@ -791,7 +849,7 @@ createApp({
 
       // Run initial translation scan of DOM once editors are mounted
       initialTranslateTimeout = setTimeout(() => {
-        translateDOM(document.body);
+        queueTranslateDOM(document.body);
       }, 100);
 
       // Mount state lists
