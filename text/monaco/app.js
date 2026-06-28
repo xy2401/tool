@@ -34,6 +34,9 @@ require(["vs/editor/editor.main"], async () => {
   const markdownPreviewInput = document.getElementById(
     "markdown-preview-enabled"
   );
+  const previewScreenshotButton = document.getElementById(
+    "preview-screenshot"
+  );
   const javascriptPreviewControl = document.querySelector(
     ".javascript-preview-control"
   );
@@ -782,7 +785,7 @@ pre { overflow: auto; width: 100%; height: 100%; margin: 0; color: #1f2328; whit
         if (renderVersion === previewRenderVersion) {
           htmlPreviewFrame.setAttribute(
             "sandbox",
-            isJavaScriptPreview
+            isJavaScriptPreview || isMarkdownPreview || isHtmlPreview
               ? "allow-scripts allow-same-origin"
               : "allow-scripts"
           );
@@ -838,6 +841,7 @@ pre { overflow: auto; width: 100%; height: 100%; margin: 0; color: #1f2328; whit
     htmlPreviewControl.hidden = !isHtml;
     htmlToMarkdownButton.hidden = !isHtml;
     markdownPreviewControl.hidden = !isMarkdown;
+    previewScreenshotButton.hidden = !(isMarkdown || isHtml);
     javascriptPreviewControl.hidden = !isJavaScript;
     svgPreviewControl.hidden = !isSvg;
     base64PreviewControl.hidden = !isBase64;
@@ -1690,6 +1694,33 @@ pre { overflow: auto; width: 100%; height: 100%; margin: 0; color: #1f2328; whit
       }
     }
   }
+
+  previewScreenshotButton.addEventListener("click", async () => {
+    if (!window.htmlToImage) {
+      alert("截图组件正在加载或加载失败，请稍后重试");
+      return;
+    }
+    try {
+      const iframeDoc = htmlPreviewFrame.contentDocument || htmlPreviewFrame.contentWindow.document;
+      const targetNode = iframeDoc.documentElement;
+      const dataUrl = await htmlToImage.toPng(targetNode, {
+        backgroundColor: "#ffffff",
+        width: Math.max(targetNode.scrollWidth, targetNode.clientWidth),
+        height: Math.max(targetNode.scrollHeight, targetNode.clientHeight),
+        style: {
+          margin: "0"
+        }
+      });
+      const link = document.createElement("a");
+      const prefix = languageSelect.value === "html" ? "html" : "markdown";
+      link.download = `${prefix}-preview-${Date.now()}.png`;
+      link.href = dataUrl;
+      link.click();
+    } catch (err) {
+      console.error("截图失败:", err);
+      alert("截图失败，请查看控制台日志");
+    }
+  });
 
   restoreState();
   syncPreviewAvailability();
