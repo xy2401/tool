@@ -1316,6 +1316,7 @@ pre { overflow: auto; width: 100%; height: 100%; margin: 0; color: #1f2328; whit
 
   themeSelect.addEventListener("change", () => {
     monaco.editor.setTheme(themeSelect.value);
+    document.body.classList.toggle("theme-light", themeSelect.value === "vs");
     if (typeof saveState === "function") saveState();
   });
 
@@ -1606,6 +1607,7 @@ pre { overflow: auto; width: 100%; height: 100%; margin: 0; color: #1f2328; whit
     if (savedTheme) {
       themeSelect.value = savedTheme;
       monaco.editor.setTheme(savedTheme);
+      document.body.classList.toggle("theme-light", savedTheme === "vs");
     }
 
     if (!hash) {
@@ -1623,6 +1625,7 @@ pre { overflow: auto; width: 100%; height: 100%; margin: 0; color: #1f2328; whit
     if (hashTheme) {
       themeSelect.value = hashTheme;
       monaco.editor.setTheme(hashTheme);
+      document.body.classList.toggle("theme-light", hashTheme === "vs");
       localStorage.setItem("monaco-toolbox-theme", hashTheme);
     }
     

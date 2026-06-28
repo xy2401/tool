@@ -306,6 +306,66 @@ select:focus-visible {
   scroll-snap-type: x mandatory;
   padding-bottom: 10px;
 }
+#screenshot-modal-images img:last-child {
+  margin-bottom: 0;
+}
+
+/* Light Theme Overrides */
+body.theme-light {
+  color-scheme: light;
+  color: #24292f;
+  background: #ffffff;
+}
+body.theme-light .toolbar {
+  background: #f6f8fa;
+  border-bottom: 1px solid #d0d7de;
+}
+body.theme-light .feature-bar {
+  background: #ffffff;
+  border-bottom: 1px solid #d0d7de;
+}
+body.theme-light select,
+body.theme-light button {
+  color: #24292f;
+  background: #f6f8fa;
+  border: 1px solid #d0d7de;
+}
+body.theme-light select:hover,
+body.theme-light button:hover {
+  border-color: #0969da;
+}
+body.theme-light select:focus-visible,
+body.theme-light button:focus-visible {
+  outline-color: #0969da;
+}
+body.theme-light label {
+  color: #57606a;
+}
+body.theme-light .checkbox-label {
+  color: #24292f;
+}
+body.theme-light .title {
+  color: #24292f;
+}
+body.theme-light .subtitle,
+body.theme-light .version {
+  color: #57606a;
+}
+body.theme-light .conversion-status {
+  color: #57606a;
+}
+body.theme-light .conversion-status.is-error {
+  color: #cf222e;
+}
+body.theme-light #html-preview {
+  border-left-color: #d0d7de;
+}
+body.theme-light #editor.is-dragging::after {
+  border-color: #0969da;
+  color: #24292f;
+  background: rgba(255, 255, 255, 0.88);
+}
+
 #screenshot-modal-images img {
   flex-shrink: 0;
   scroll-snap-align: center;
