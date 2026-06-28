@@ -1,5 +1,33 @@
+let globalParsedObj = null;
+
 self.onmessage = async (event) => {
   const message = event.data || {};
+  if (message.type === 'analyze_node' || message.action === 'analyze_node') {
+    const { path, val: customVal, options, mode, reqId } = message;
+    let val = customVal !== undefined ? customVal : globalParsedObj;
+    if (customVal === undefined && path && path.length > 0) {
+      for (const p of path) {
+        if (val !== undefined && val !== null) val = val[p];
+      }
+    }
+    const previewResult = formatPreview(val, options, !path || path.length === 0);
+    const info = buildNodeInfo(val, options, mode, 0, false);
+    postMessage({
+      type: 'analyze_result',
+      reqId,
+      payload: {
+        editText: previewResult.text,
+        isPreviewTruncated: previewResult.truncated,
+        jsonStats: info.stats,
+        jsonPathsList: info.paths && info.paths.items ? info.paths.items : info.paths,
+        pathsTruncated: info.paths && info.paths.isTruncated ? info.paths.isTruncated : false,
+        jsonSchemaText: info.schemaText,
+        jsonSchemaObject: info.schemaObject
+      }
+    });
+    return;
+  }
+  
   if (message.type !== 'parse-text' && message.type !== 'parse-file') return;
 
   const options = normalizeOptions(message.options);
@@ -134,7 +162,8 @@ async function parseText(text, options, sourceName) {
       editText: previewResult.text,
       isPreviewTruncated: previewResult.truncated,
       jsonStats: info.stats,
-      jsonPathsList: info.paths,
+      jsonPathsList: info.paths && info.paths.items ? info.paths.items : info.paths,
+      pathsTruncated: info.paths && info.paths.isTruncated ? info.paths.isTruncated : false,
       jsonSchemaText: info.schemaText,
       jsonSchemaObject: info.schemaObject,
       mode,
@@ -144,6 +173,8 @@ async function parseText(text, options, sourceName) {
       warnings: info.warnings.concat(treeResult.warnings)
     }
   });
+  
+  globalParsedObj = parsed;
 }
 
 function getMode(sizeBytes) {
@@ -405,12 +436,93 @@ function extractJSONSubstrings(str) {
 }
 
 function formatPreview(val, options, isRoot) {
-  const space = options.mode === 'normal' ? '    ' : '  ';
+  let space = '';
+  if (options.indent === '2') {
+    space = '  ';
+  } else if (options.indent === '4' || options.mode === 'normal') {
+    space = '    ';
+  } else if (options.indent === 'tabs') {
+    space = '\t';
+  } else if (options.indent === 'compact') {
+    space = '';
+  } else if (!options.indent) {
+    space = options.mode === 'normal' ? '    ' : '  ';
+  }
+
   const limit = options.previewLimit;
+  const excludedNodes = options.excludedNodes || [];
+  const excludedProperties = options.excludedProperties || [];
+  const basePath = options.basePath || (isRoot ? ['$'] : []);
+
+  let targetVal = val;
+  const pathMap = new Map();
+  
+  if (Array.isArray(val)) {
+    targetVal = [];
+    val.forEach((item, idx) => {
+      const itemPath = [...basePath, String(idx)];
+      const itemId = itemPath.join('.');
+      if (!excludedNodes.includes(itemId)) {
+        targetVal.push(item);
+        if (item && typeof item === 'object') {
+          pathMap.set(item, itemPath);
+        }
+      }
+    });
+  }
+  
+  pathMap.set(targetVal, basePath);
+
+  const replacer = function(key, value) {
+    if (key === '') return value;
+
+    const parentPath = pathMap.get(this);
+    if (!parentPath) return value;
+
+    let currentPath;
+    if (value && typeof value === 'object' && pathMap.has(value)) {
+      currentPath = pathMap.get(value);
+    } else {
+      currentPath = [...parentPath, key];
+    }
+    
+    const currentId = currentPath.join('.');
+
+    if (value && typeof value === 'object') {
+      pathMap.set(value, currentPath);
+    }
+
+    if (!Array.isArray(this) && excludedNodes.includes(currentId)) {
+      return undefined;
+    }
+
+    const isDirectChild = parentPath.join('.') === basePath.join('.');
+    if (!Array.isArray(this) && isDirectChild && excludedProperties.includes(key)) {
+      return undefined;
+    }
+
+    if (Array.isArray(value)) {
+      const filteredArray = [];
+      value.forEach((item, idx) => {
+        const itemPath = [...currentPath, String(idx)];
+        const itemId = itemPath.join('.');
+        if (!excludedNodes.includes(itemId)) {
+          filteredArray.push(item);
+          if (item && typeof item === 'object') {
+            pathMap.set(item, itemPath);
+          }
+        }
+      });
+      pathMap.set(filteredArray, currentPath);
+      return filteredArray;
+    }
+
+    return value;
+  };
 
   let text = '';
   try {
-    text = JSON.stringify(val, null, space);
+    text = JSON.stringify(targetVal, replacer, space);
   } catch (e) {
     text = String(val);
   }

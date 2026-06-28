@@ -389,6 +389,7 @@
             jsonStats.value = payload.jsonStats || {};
             jsonPathsList.value = payload.jsonPathsList || [];
             jsonPathsList.value.isTruncated = payload.pathsTruncated || false;
+            jsonPathsList.value.isTruncated = payload.pathsTruncated || false;
             jsonSchemaText.value = formatSchemaText(payload.jsonSchemaObject, payload.jsonSchemaText || '');
             inputMode.value = payload.mode || inputMode.value;
             currentSourceName.value = payload.sourceName || sourceName || currentSourceName.value;
@@ -400,7 +401,6 @@
             collapsedNodes.value = [];
             activeTab.value = 'preview';
             finishParseProgress('解析完成');
-            stopParseWorker();
 
             const modeLabel = inputMode.value === 'ultra' ? '超大文本模式' : inputMode.value === 'large' ? '大文本模式' : '普通模式';
             if (!silent) {
@@ -1165,141 +1165,34 @@ Null数量:    ${s.nullCount}${s.skipped && s.skipped.length ? `\n\n已跳过: $
           return advancedOptions.value.previewLimit;
         };
 
-        const appendPreviewTruncationNote = (text, limit) => {
-          let topPart = text.slice(0, limit);
-          let totalLines = 1;
-          let idx = text.indexOf('\n');
-          while (idx !== -1) { totalLines++; idx = text.indexOf('\n', idx + 1); }
-          
-          let topLines = 1;
-          idx = topPart.indexOf('\n');
-          while (idx !== -1) { topLines++; idx = topPart.indexOf('\n', idx + 1); }
-          
-          let tailIdx = text.length - 1;
-          let tailNewlines = 0;
-          while (tailIdx >= limit && tailNewlines < 10) {
-            if (text[tailIdx] === '\n') tailNewlines++;
-            if (tailNewlines === 10) break;
-            tailIdx--;
-          }
-          let bottomPart = tailIdx < limit ? text.slice(limit) : text.slice(tailIdx + 1);
-          if (bottomPart.length > 10000) bottomPart = bottomPart.slice(-10000);
-          
-          let bottomLines = 1;
-          idx = bottomPart.indexOf('\n');
-          while (idx !== -1) { bottomLines++; idx = bottomPart.indexOf('\n', idx + 1); }
-          
-          let skippedLines = totalLines - topLines - bottomLines;
-          if (skippedLines < 0) skippedLines = 0;
-          
-          return topPart + `\n\n/* 预览已截断，仅显示前 ${formatSize(limit)}。隐藏了 ${skippedLines} 行。为避免保存半截 JSON，此视图已只读。 */\n\n` + bottomPart;
-        };
-
-        // Formatter implementation (JSON.stringify with selected parameters)
-        const formatJSON = (val) => {
-          if (selectedNode.value && excludedProperties.value.length === 0 && excludedNodes.value.length === 0 && !isTextareaDirty.value) {
-            const cachedPreview = previewCache.get(selectedNode.value.id);
-            if (cachedPreview) {
-              isPreviewTruncated.value = !!cachedPreview.truncated;
-              return cachedPreview.text;
-            }
-          }
-
-          let targetVal = val;
-          const pathMap = new Map();
-          
-          if (Array.isArray(val)) {
-            targetVal = [];
-            val.forEach((item, idx) => {
-              const itemPath = [...selectedNode.value.path, String(idx)];
-              const itemId = itemPath.join('.');
-              if (!excludedNodes.value.includes(itemId)) {
-                targetVal.push(item);
-                if (item && typeof item === 'object') {
-                  pathMap.set(item, itemPath);
-                }
-              }
-            });
-          }
-          
-          pathMap.set(targetVal, selectedNode.value.path);
-
-          const replacer = function(key, value) {
-            if (key === '') return value;
-
-            const parentPath = pathMap.get(this);
-            if (!parentPath) return value;
-
-            let currentPath;
-            if (value && typeof value === 'object' && pathMap.has(value)) {
-              currentPath = pathMap.get(value);
-            } else {
-              currentPath = [...parentPath, key];
-            }
-            
-            const currentId = currentPath.join('.');
-
-            if (value && typeof value === 'object') {
-              pathMap.set(value, currentPath);
-            }
-
-            // 1. Check if excluded by node tree checkbox (bypass if parent is an array)
-            if (!Array.isArray(this) && excludedNodes.value.includes(currentId)) {
-              return undefined;
-            }
-
-            // 2. Check if excluded by properties checklist under selected node
-            const isDirectChild = parentPath.join('.') === selectedNode.value.id;
-            if (!Array.isArray(this) && isDirectChild && excludedProperties.value.includes(key)) {
-              return undefined;
-            }
-
-            // If the value is a nested array, pre-filter it to completely omit excluded items instead of turning them to null
-            if (Array.isArray(value)) {
-              const filteredArray = [];
-              value.forEach((item, idx) => {
-                const itemPath = [...currentPath, String(idx)];
-                const itemId = itemPath.join('.');
-                if (!excludedNodes.value.includes(itemId)) {
-                  filteredArray.push(item);
-                  if (item && typeof item === 'object') {
-                    pathMap.set(item, itemPath);
-                  }
-                }
-              });
-              pathMap.set(filteredArray, currentPath);
-              return filteredArray;
-            }
-
-            return value;
-          };
-
-          let space = '';
-          if (indentSpaces.value === '2') {
-            space = '  ';
-          } else if (indentSpaces.value === '4') {
-            space = '    ';
-          } else if (indentSpaces.value === 'tabs') {
-            space = '\t';
-          } else if (indentSpaces.value === 'compact') {
-            space = '';
-          }
-
-          const formatted = JSON.stringify(targetVal, replacer, space);
-          const limit = getPreviewRenderLimit();
-          if (limit > 0 && formatted && formatted.length > limit) {
-            isPreviewTruncated.value = true;
-            const previewText = appendPreviewTruncationNote(formatted, limit);
-            if (selectedNode.value) {
-              previewCache.set(selectedNode.value.id, { text: previewText, truncated: true });
-            }
-            return previewText;
-          }
-          isPreviewTruncated.value = false;
-          if (selectedNode.value && inputMode.value !== 'normal') {
-            previewCache.set(selectedNode.value.id, { text: formatted, truncated: false });
-          }
-          return formatted;
+        
+        const analyzeNodeAsync = () => {
+           return new Promise(resolve => {
+               const reqId = Date.now() + Math.random();
+               const handler = (e) => {
+                   if ((e.data.type === 'analyze_result' || e.data.action === 'analyze_result') && e.data.reqId === reqId) {
+                       parseWorker.removeEventListener('message', handler);
+                       resolve(e.data.payload);
+                   }
+               };
+               parseWorker.addEventListener('message', handler);
+               parseWorker.postMessage({
+                   action: 'analyze_node',
+                   reqId,
+                   path: selectedNode.value.path,
+                   options: {
+                       generateStats: advancedOptions.value.generateStats,
+                       generatePaths: advancedOptions.value.generatePaths,
+                       inferSchema: advancedOptions.value.inferSchema,
+                       previewLimit: getPreviewRenderLimit(),
+                       indent: advancedOptions.value.indent,
+                       excludedNodes: JSON.parse(JSON.stringify(excludedNodes.value)),
+                       excludedProperties: JSON.parse(JSON.stringify(excludedProperties.value)),
+                       basePath: selectedNode.value.path
+                   },
+                   mode: inputMode.value
+               });
+           });
         };
 
         const applyFormatting = () => {
@@ -1310,77 +1203,75 @@ Null数量:    ${s.nullCount}${s.skipped && s.skipped.length ? `\n\n已跳过: $
             return;
           }
 
-          // If the user has edited the text AND no filter is active (no excludedProperties or excludedNodes), reformat the current edited text
           if (isTextareaDirty.value && excludedProperties.value.length === 0 && excludedNodes.value.length === 0 && editText.value && editText.value.trim()) {
             try {
               const parsed = JSON.parse(editText.value);
-              editText.value = formatJSON(parsed);
-              updateNodeInfo();
-              return;
             } catch (e) {
-              // Ignore invalid JSON to prevent losing user edits
               return;
             }
           }
-
-          editText.value = formatJSON(selectedNode.value.val);
-          updateNodeInfo();
+          
+          updateNodeInfo(isTextareaDirty.value ? JSON.parse(editText.value) : null);
         };
 
-        const updateNodeInfo = () => {
+        const updateNodeInfo = async (customVal = null) => {
           if (!selectedNode.value) return;
-          const val = selectedNode.value.val;
-
           const shouldReuseWorkerRootInfo = inputMode.value !== 'normal' && selectedNode.value.id === 'main' && jsonStats.value && jsonStats.value.mode;
-          if (shouldReuseWorkerRootInfo) {
+          if (shouldReuseWorkerRootInfo && !customVal) {
             return;
           }
-
-          const statsVisitLimit = inputMode.value === 'ultra' ? 80000 : inputMode.value === 'large' ? 120000 : Infinity;
-          const pathsVisitLimit = inputMode.value === 'ultra' ? 30000 : inputMode.value === 'large' ? 60000 : Infinity;
-          const schemaVisitLimit = inputMode.value === 'ultra' ? 20000 : inputMode.value === 'large' ? 40000 : Infinity;
-          const stats = calculateDepthAndKeys(val, statsVisitLimit);
           
+          const reqId = Date.now() + Math.random();
+          const res = await new Promise(resolve => {
+               const handler = (e) => {
+                   if ((e.data.type === 'analyze_result' || e.data.action === 'analyze_result') && e.data.reqId === reqId) {
+                       parseWorker.removeEventListener('message', handler);
+                       resolve(e.data.payload);
+                   }
+               };
+               parseWorker.addEventListener('message', handler);
+               parseWorker.postMessage({
+                   action: 'analyze_node',
+                   reqId,
+                   path: customVal ? null : selectedNode.value.path,
+                   val: customVal,
+                   options: {
+                       generateStats: advancedOptions.value.generateStats,
+                       generatePaths: advancedOptions.value.generatePaths,
+                       inferSchema: advancedOptions.value.inferSchema,
+                       previewLimit: getPreviewRenderLimit(),
+                       indent: advancedOptions.value.indent,
+                       excludedNodes: JSON.parse(JSON.stringify(excludedNodes.value)),
+                       excludedProperties: JSON.parse(JSON.stringify(excludedProperties.value)),
+                       basePath: selectedNode.value.path
+                   },
+                   mode: inputMode.value
+               });
+          });
+
+          editText.value = res.editText;
+          isPreviewTruncated.value = res.isPreviewTruncated;
+          
+          if (!isPreviewTruncated.value && inputMode.value !== 'normal') {
+            previewCache.set(selectedNode.value.id, { text: res.editText, truncated: false });
+          } else if (isPreviewTruncated.value) {
+            previewCache.set(selectedNode.value.id, { text: res.editText, truncated: true });
+          }
+
           let sizeStr = '0 B';
           try {
-            const str = JSON.stringify(val);
-            if (str) {
-              const bytes = new Blob([str]).size;
-              sizeStr = formatSize(bytes);
-            }
+            const bytes = new Blob([res.editText]).size;
+            sizeStr = formatSize(bytes);
           } catch(e) {}
 
-          let typeDisplay = getValueTypeLabel(val);
-
-          jsonStats.value = {
-            path: selectedNode.value.path.join('.') || 'Root',
-            type: typeDisplay,
-            keyCount: stats.keys,
-            maxDepth: stats.depth,
-            estimatedSize: sizeStr,
-            stringCount: stats.stringCount,
-            numberCount: stats.numberCount,
-            booleanCount: stats.booleanCount,
-            nullCount: stats.nullCount,
-            objectCount: stats.objectCount,
-            arrayCount: stats.arrayCount
-          };
-
-          const prefixPath = selectedNode.value.path.length > 0 ? selectedNode.value.path.join('.') : '$';
-          const pathsRes = generateJSONPaths(val, prefixPath, pathsVisitLimit);
-          jsonPathsList.value = pathsRes.items;
-          jsonPathsList.value.isTruncated = pathsRes.isTruncated;
-
-          const schemaObj = inferSchema(val, schemaVisitLimit);
-          const finalSchema = {
-            $schema: "http://json-schema.org/draft-07/schema#",
-            ...schemaObj
-          };
-
-          jsonSchemaText.value = formatSchemaText(finalSchema);
+          jsonStats.value = res.jsonStats;
+          if (jsonStats.value) jsonStats.value.estimatedSize = sizeStr;
+          
+          jsonPathsList.value = res.jsonPathsList || [];
+          jsonPathsList.value.isTruncated = res.pathsTruncated || false;
+          jsonSchemaText.value = formatSchemaText(res.jsonSchemaObject);
         };
 
-        // Handle Node Selection
         const selectNode = (nodeId) => {
           selectedNodeId.value = nodeId;
           editText.value = ''; // Clear current editText to force load from selectedNode.value.val
@@ -1822,197 +1713,6 @@ Null数量:    ${s.nullCount}${s.skipped && s.skipped.length ? `\n\n已跳过: $
           if (Array.isArray(val)) return 'Array';
           const type = typeof val;
           return type.charAt(0).toUpperCase() + type.slice(1);
-        };
-
-        const calculateDepthAndKeys = (obj, visitLimit = Infinity) => {
-          let maxChildDepth = 0;
-          let keys = 0;
-          let stringCount = 0;
-          let numberCount = 0;
-          let booleanCount = 0;
-          let nullCount = 0;
-          let objectCount = 0;
-          let arrayCount = 0;
-          let visited = 0;
-          const stack = [{ node: obj, depth: 1 }];
-
-          while (stack.length > 0 && visited < visitLimit) {
-            const item = stack.pop();
-            const node = item.node;
-            visited++;
-            if (item.depth > maxChildDepth) maxChildDepth = item.depth;
-            if (node === null) {
-              nullCount++;
-              continue;
-            }
-            const type = typeof node;
-            if (type === 'string') {
-              stringCount++;
-            } else if (type === 'number') {
-              numberCount++;
-            } else if (type === 'boolean') {
-              booleanCount++;
-            } else if (Array.isArray(node)) {
-              arrayCount++;
-              keys += node.length;
-              for (let i = node.length - 1; i >= 0; i--) {
-                stack.push({ node: node[i], depth: item.depth + 1 });
-              }
-            } else if (type === 'object') {
-              objectCount++;
-              const objKeys = Object.keys(node);
-              keys += objKeys.length;
-              for (let i = objKeys.length - 1; i >= 0; i--) {
-                stack.push({ node: node[objKeys[i]], depth: item.depth + 1 });
-              }
-            }
-          }
-
-          return { depth: maxChildDepth, keys, stringCount, numberCount, booleanCount, nullCount, objectCount, arrayCount };
-        };
-
-        const generateJSONPaths = (obj, prefix = '$', visitLimit = Infinity) => {
-          const pathCounts = {};
-          const pathSizes = {};
-          const stack = [{ node: obj, path: prefix, keySize: 0 }];
-          let visited = 0;
-
-          while (stack.length > 0 && visited < visitLimit) {
-            const item = stack.pop();
-            const node = item.node;
-            const currentPath = item.path;
-            const keySize = item.keySize || 0;
-            
-            visited++;
-            if (!pathCounts[currentPath]) {
-              pathCounts[currentPath] = 0;
-              pathSizes[currentPath] = 0;
-            }
-            pathCounts[currentPath]++;
-            
-            let nodeSize = keySize; 
-            
-            if (node === null) {
-              nodeSize += 4;
-            } else if (typeof node === 'string') {
-              nodeSize += node.length + 2;
-            } else if (typeof node === 'number' || typeof node === 'boolean') {
-              nodeSize += String(node).length;
-            } else if (Array.isArray(node)) {
-              nodeSize += 2 + (node.length > 0 ? node.length - 1 : 0);
-              for (let i = node.length - 1; i >= 0; i--) {
-                let child = node[i];
-                if (child !== null && typeof child === 'object') {
-                  stack.push({ node: child, path: `${currentPath}[*]`, keySize: 0 });
-                } else {
-                  let p = `${currentPath}[*]`;
-                  if (!pathCounts[p]) { pathCounts[p] = 0; pathSizes[p] = 0; }
-                  pathCounts[p]++;
-                  let childSize = 0;
-                  if (child === null) childSize = 4;
-                  else if (typeof child === 'string') childSize = child.length + 2;
-                  else childSize = String(child).length;
-                  pathSizes[p] += childSize;
-                }
-              }
-            } else if (typeof node === 'object') {
-              const keys = Object.keys(node);
-              nodeSize += 2 + (keys.length > 0 ? keys.length - 1 : 0);
-              for (let i = keys.length - 1; i >= 0; i--) {
-                const key = keys[i];
-                let child = node[key];
-                let currentKeySize = key.length + 3;
-                let nextPath = /^[a-zA-Z_][a-zA-Z0-9_]*$/.test(key) ? `${currentPath}.${key}` : `${currentPath}['${key}']`;
-                
-                if (child !== null && typeof child === 'object') {
-                  stack.push({ node: child, path: nextPath, keySize: currentKeySize });
-                } else {
-                  if (!pathCounts[nextPath]) { pathCounts[nextPath] = 0; pathSizes[nextPath] = 0; }
-                  pathCounts[nextPath]++;
-                  let childSize = currentKeySize;
-                  if (child === null) childSize += 4;
-                  else if (typeof child === 'string') childSize += child.length + 2;
-                  else childSize += String(child).length;
-                  pathSizes[nextPath] += childSize;
-                }
-              }
-            }
-            pathSizes[currentPath] += nodeSize;
-          }
-          
-          const pathsInOrder = Object.keys(pathCounts);
-          const pathsForSize = [...pathsInOrder].sort((a, b) => b.length - a.length);
-          for (const path of pathsForSize) {
-            let parentPath = null;
-            if (path.endsWith('[*]')) {
-              parentPath = path.slice(0, -3);
-            } else {
-              const dotIdx = path.lastIndexOf('.');
-              const bracketIdx = path.lastIndexOf("['");
-              if (dotIdx > bracketIdx && dotIdx > 0) {
-                parentPath = path.slice(0, dotIdx);
-              } else if (bracketIdx > 0) {
-                parentPath = path.slice(0, bracketIdx);
-              }
-            }
-            if (parentPath && pathSizes[parentPath] !== undefined) {
-              pathSizes[parentPath] += pathSizes[path];
-            }
-          }
-          
-          const result = pathsInOrder.map(path => ({ 
-            path, 
-            count: pathCounts[path],
-            size: pathSizes[path]
-          }));
-          return { items: result, isTruncated: visited >= visitLimit };
-        };
-
-        const inferSchema = (obj, visitLimit = Infinity) => {
-          let visited = 0;
-          const recurse = (value) => {
-            visited++;
-            if (visited > visitLimit) return { type: 'unknown' };
-            const type = value === null ? 'null' : Array.isArray(value) ? 'array' : typeof value;
-            const schema = { type };
-
-            if (type === 'object') {
-              schema.properties = {};
-              const keys = Object.keys(value);
-              if (keys.length > 0) {
-                schema.required = [];
-                for (const key of keys) {
-                  schema.properties[key] = recurse(value[key]);
-                  schema.required.push(key);
-                }
-              }
-            } else if (type === 'array') {
-              if (value.length > 0) {
-                const sample = value.slice(0, inputMode.value === 'large' ? 120 : 300);
-                const itemSchemas = sample.map(recurse);
-                const uniqueSchemas = [];
-                const seenTypes = new Set();
-                
-                for (const s of itemSchemas) {
-                  const typeKey = s.type === 'object' ? 'object:' + Object.keys(s.properties || {}).sort().join(',') : JSON.stringify(s);
-                  if (!seenTypes.has(typeKey)) {
-                    seenTypes.add(typeKey);
-                    uniqueSchemas.push(s);
-                  }
-                }
-
-                if (uniqueSchemas.length === 1) {
-                  schema.items = uniqueSchemas[0];
-                } else {
-                  schema.items = { anyOf: uniqueSchemas };
-                }
-              } else {
-                schema.items = {};
-              }
-            }
-            return schema;
-          };
-          return recurse(obj);
         };
 
         const copySchema = () => {
