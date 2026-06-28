@@ -28,6 +28,7 @@ function normalizeOptions(options) {
     parseStringifiedJson: true,
     scanStringJsonSubstrings: true,
     mergeLines: false,
+    previewLimit: 1048576,
     generateStats: true,
     generatePaths: true,
     inferSchema: true,
@@ -405,7 +406,7 @@ function extractJSONSubstrings(str) {
 
 function formatPreview(val, options, isRoot) {
   const space = options.mode === 'normal' ? '    ' : '  ';
-  const limit = MAX_PREVIEW_CHARS;
+  const limit = options.previewLimit;
 
   let text = '';
   try {
@@ -418,7 +419,7 @@ function formatPreview(val, options, isRoot) {
     text = String(val);
   }
 
-  if (text.length > limit) {
+  if (limit > 0 && text.length > limit) {
     return {
       text: text.slice(0, limit) + `\n\n/* 预览已截断，仅显示前 ${formatSize(limit)}。可下载或选择更小节点查看完整内容。 */`,
       truncated: true

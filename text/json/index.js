@@ -9,7 +9,8 @@
     const DEFAULT_ADVANCED_OPTIONS = {
       parseStringifiedJson: true,
       scanStringJsonSubstrings: true,
-      mergeLines: false
+      mergeLines: false,
+      previewLimit: 1048576
     };
 
     createApp({
@@ -1126,7 +1127,7 @@ Null数量:    ${s.nullCount}${s.skipped && s.skipped.length ? `\n\n已跳过: $
         };
 
         const getPreviewRenderLimit = () => {
-          return 1024 * 1024;
+          return advancedOptions.value.previewLimit;
         };
 
         const appendPreviewTruncationNote = (text, limit) => {
@@ -1225,7 +1226,7 @@ Null数量:    ${s.nullCount}${s.skipped && s.skipped.length ? `\n\n已跳过: $
 
           const formatted = JSON.stringify(targetVal, replacer, space);
           const limit = getPreviewRenderLimit();
-          if (formatted && formatted.length > limit) {
+          if (limit > 0 && formatted && formatted.length > limit) {
             isPreviewTruncated.value = true;
             const previewText = appendPreviewTruncationNote(formatted, limit);
             if (selectedNode.value) {
@@ -1914,6 +1915,11 @@ Null数量:    ${s.nullCount}${s.skipped && s.skipped.length ? `\n\n已跳过: $
           });
         };
 
+        const onPreviewLimitChange = () => {
+          previewCache.clear();
+          applyFormatting();
+        };
+
         return {
           rawInput,
           nodes,
@@ -1943,6 +1949,7 @@ Null数量:    ${s.nullCount}${s.skipped && s.skipped.length ? `\n\n已跳过: $
           toggleAllNodes,
           excludedNodes,
           toggleNodeCheckbox,
+          onPreviewLimitChange,
           
           toggleRawFullscreen,
           toggleEditFullscreen,
