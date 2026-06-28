@@ -1134,12 +1134,7 @@
       flex-direction: column;
     }
 
-    .viewer-header {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      margin-bottom: 0.75rem;
-    }
+
 
     /* Custom Toast Banner System */
     .toast-container {
