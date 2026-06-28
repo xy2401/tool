@@ -928,9 +928,14 @@
       cursor: pointer;
     }
 
-    .breadcrumb-child-select:hover,
-    .breadcrumb-child-select:focus {
+    .breadcrumb-child-select:hover {
       background-color: var(--node-hover-bg);
+      border-color: var(--panel-border-focus);
+    }
+    
+    .breadcrumb-child-select:focus,
+    .breadcrumb-child-select:active {
+      background-color: var(--input-option-bg);
       border-color: var(--panel-border-focus);
     }
 
