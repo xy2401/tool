@@ -685,10 +685,7 @@
       gap: 1.5rem;
     }
 
-    .viewer-panel {
-      display: flex;
-      flex-direction: column;
-    }
+
 
     .viewer-header {
       display: flex;
@@ -1132,6 +1129,8 @@
       position: relative;
       display: flex;
       flex-direction: column;
+      padding: 0;
+      overflow: hidden;
     }
 
 
