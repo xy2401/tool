@@ -151,14 +151,29 @@
     </div>
  
     <!-- Editor Layout workspace -->
-    <main class="editor-workspace">
-      <div class="glass-card editor-panel">
+    <main
+      class="editor-workspace"
+      :class="{
+        'left-collapsed': !renderLeftEditor,
+        'right-collapsed': !renderRightEditor,
+        'both-collapsed': !renderLeftEditor && !renderRightEditor
+      }"
+    >
+      <div class="glass-card editor-panel" :class="{ 'panel-collapsed': !renderLeftEditor }">
         <div class="panel-header">
           <label class="panel-render-toggle" title="取消勾选后不渲染左侧代码编辑器">
-            <input type="checkbox" v-model="renderLeftEditor">
             <span>代码编辑器 (Left)</span>
+            <input type="checkbox" v-model="renderLeftEditor">
           </label>
-          <div style="display: flex; gap: 0.35rem; align-items: center;">
+          <div v-if="renderLeftEditor" style="display: flex; gap: 0.35rem; align-items: center;">
+            <select
+              v-model="advancedOptions.previewLimit"
+              @change="onPreviewLimitChange"
+              class="input-field input-sm panel-preview-select"
+              title="左侧代码预览截断限制：超出后只显示预览，避免代码模式卡顿"
+            >
+              <option v-for="item in previewLimitOptions" :key="item.value" :value="item.value" v-text="item.label"></option>
+            </select>
             <button class="panel-header-btn" @click="copyEditor('left')" :disabled="!renderLeftEditor" title="复制左侧 JSON">
               <span>复制</span>
             </button>
@@ -173,15 +188,14 @@
             </button>
           </div>
         </div>
-        <div class="editor-container-shell" :class="{ disabled: !renderLeftEditor }">
+        <div v-if="renderLeftEditor" class="editor-container-shell">
           <div id="editor-left" class="editor-container"></div>
-          <div v-if="!renderLeftEditor" class="editor-disabled-state">代码编辑器已禁用</div>
         </div>
       </div>
       
-      <div class="glass-card editor-panel">
+      <div class="glass-card editor-panel" :class="{ 'panel-collapsed': !renderRightEditor }">
         <div class="panel-header">
-          <div style="display: flex; gap: 0.35rem; align-items: center;">
+          <div v-if="renderRightEditor" style="display: flex; gap: 0.35rem; align-items: center;">
             <button class="panel-header-btn" @click="copyToLeft" :disabled="!renderLeftEditor || !renderRightEditor" title="将右侧树形同步到左侧代码">
               <svg width="12" height="12" fill="none" viewBox="0 0 24 24" stroke="currentColor" style="stroke-width: 2.5px;">
                 <path stroke-linecap="round" stroke-linejoin="round" d="M11 19l-7-7 7-7M19 19l-7-7 7-7" />
@@ -200,9 +214,8 @@
             <span>树形编辑器 (Right)</span>
           </label>
         </div>
-        <div class="editor-container-shell" :class="{ disabled: !renderRightEditor }">
+        <div v-if="renderRightEditor" class="editor-container-shell">
           <div id="editor-right" class="editor-container"></div>
-          <div v-if="!renderRightEditor" class="editor-disabled-state">树形编辑器已禁用</div>
         </div>
       </div>
     </main>

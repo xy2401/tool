@@ -109,7 +109,8 @@ i18nObserver.observe(document.body, {
 // State & Editors (Global scope inside module script)
 let editorLeft = null;
 let editorRight = null;
-let lastEditorContent = null;
+let lastLeftContent = null;
+let lastRightContent = null;
 
 const { createApp, ref, computed, onMounted, nextTick, watch, onUnmounted } = window.Vue;
 
@@ -126,6 +127,13 @@ createApp({
     const toasts = ref([]);
     const renderLeftEditor = ref(true);
     const renderRightEditor = ref(true);
+    const previewLimitOptions = [
+      { label: '1M', value: 1048576 },
+      { label: '10M', value: 10485760 },
+      { label: '20M', value: 20971520 },
+      { label: '50M', value: 52428800 },
+      { label: '不限', value: -1 }
+    ];
     let toastIdCounter = 0;
     let skipHistoryRecord = false;
     const isParsing = ref(false);
@@ -339,9 +347,6 @@ createApp({
 
     const applyInputMode = (sizeBytes) => {
       modeController.applyInputMode(sizeBytes);
-      if (getModeBySize(sizeBytes || 0) === 'ultra' && renderRightEditor.value) {
-        renderRightEditor.value = false;
-      }
     };
 
     const getEffectiveAdvancedOptions = (sizeBytes) => {
@@ -396,21 +401,26 @@ createApp({
       rawInput.value = '';
       setSelectedFile(null);
       modeController.reset();
-      lastEditorContent = null;
+      lastLeftContent = null;
+      lastRightContent = null;
       resetParseProgress();
     };
 
     const handleWorkerResult = (payload, context) => {
       const parsedObj = payload.parsedRoot ? payload.parsedRoot.obj : null;
+      const previewText = payload.editText || '// 大文本已由 Worker 完成解析；为避免代码编辑器卡顿，此处仅显示截断预览。';
+      const shouldUsePreviewInLeft = context.sizeBytes > LARGE_TEXT_BYTES;
+      const leftContent = shouldUsePreviewInLeft ? { text: previewText } : (parsedObj !== null && parsedObj !== undefined ? { json: parsedObj } : { text: previewText });
 
       if (parsedObj !== null && parsedObj !== undefined) {
-        const content = { json: parsedObj };
-        lastEditorContent = content;
+        const rightContent = { json: parsedObj };
+        lastLeftContent = leftContent;
+        lastRightContent = rightContent;
         if (renderLeftEditor.value && editorLeft) {
-          editorLeft.set(content);
+          editorLeft.set(leftContent);
         }
         if (renderRightEditor.value && editorRight) {
-          editorRight.set(content);
+          editorRight.set(rightContent);
           if (inputMode.value !== 'ultra') {
             setTimeout(() => {
               if (editorRight) editorRight.expand([], () => true);
@@ -418,10 +428,10 @@ createApp({
           }
         }
       } else {
-        const previewText = payload.editText || '// 大文本已由 Worker 完成解析；为避免控件卡顿，此处仅显示截断预览。';
-        lastEditorContent = { text: previewText };
+        lastLeftContent = leftContent;
+        lastRightContent = null;
         if (renderLeftEditor.value && editorLeft) {
-          editorLeft.set({ text: previewText });
+          editorLeft.set(leftContent);
         }
       }
 
@@ -465,6 +475,30 @@ createApp({
         return;
       }
       startWorkerParse({ text, silent });
+    };
+
+    const onPreviewLimitChange = () => {
+      const limit = Number(advancedOptions.value.previewLimit);
+      if (!Number.isNaN(limit)) {
+        advancedOptions.value.previewLimit = limit;
+      }
+
+      if (sourceLoadedFromFile.value && selectedFileForWorker && !rawInput.value.trim()) {
+        startWorkerParse({
+          file: selectedFileForWorker,
+          silent: false,
+          sourceName: selectedFileForWorker.name || currentSourceName.value
+        });
+        return;
+      }
+
+      if (rawInput.value && rawInput.value.trim()) {
+        startWorkerParse({
+          text: rawInput.value,
+          silent: false,
+          sourceName: currentSourceName.value
+        });
+      }
     };
 
     const copyToRight = () => {
@@ -644,10 +678,13 @@ createApp({
         const target = document.getElementById(isLeft ? 'editor-left' : 'editor-right');
         if (!target) return;
         destroyEditor(side);
+        const content = isLeft
+          ? (lastLeftContent || { json: initialJson })
+          : (lastRightContent || { json: initialJson });
         const editor = createJSONEditor({
           target,
           props: {
-            content: lastEditorContent || { json: initialJson },
+            content,
             mode: isLeft ? 'text' : 'tree',
             mainMenuBar: true,
             navigationBar: true,
@@ -662,7 +699,7 @@ createApp({
           editorLeft = editor;
         } else {
           editorRight = editor;
-          if (lastEditorContent && lastEditorContent.json !== undefined && inputMode.value !== 'ultra') {
+          if (lastRightContent && lastRightContent.json !== undefined && inputMode.value !== 'ultra') {
             setTimeout(() => {
               if (editorRight) editorRight.expand([], () => true);
             }, 50);
@@ -696,13 +733,13 @@ createApp({
       });
 
       watch(renderLeftEditor, (enabled) => {
-        if (enabled) createEditor('left');
+        if (enabled) nextTick(() => createEditor('left'));
         else destroyEditor('left');
         applyTheme();
       });
 
       watch(renderRightEditor, (enabled) => {
-        if (enabled) createEditor('right');
+        if (enabled) nextTick(() => createEditor('right'));
         else destroyEditor('right');
         applyTheme();
       });
@@ -779,6 +816,7 @@ createApp({
       demoFiles,
       renderLeftEditor,
       renderRightEditor,
+      previewLimitOptions,
       themePreference,
       toasts,
       removeToast,
@@ -790,6 +828,7 @@ createApp({
       downloadRawInput,
       handleDataSelect,
       extractRootJSON,
+      onPreviewLimitChange,
       copyToRight,
       copyToLeft,
       copyEditor,

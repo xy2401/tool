@@ -334,12 +334,39 @@ main.editor-workspace {
   min-height: 480px;
 }
 
+main.editor-workspace.left-collapsed {
+  grid-template-columns: max-content minmax(0, 1fr);
+}
+
+main.editor-workspace.right-collapsed {
+  grid-template-columns: minmax(0, 1fr) max-content;
+}
+
+main.editor-workspace.both-collapsed {
+  grid-template-columns: max-content max-content;
+  justify-content: center;
+}
+
 .editor-panel {
   display: flex;
   flex-direction: column;
   height: 100%;
   padding: 1.25rem;
   overflow: hidden;
+}
+
+.editor-panel.panel-collapsed {
+  align-self: start;
+  height: auto;
+  min-width: 210px;
+  padding: 1rem;
+}
+
+.editor-panel.panel-collapsed .panel-header {
+  margin-bottom: 0;
+  padding-bottom: 0;
+  border-bottom: none;
+  justify-content: center;
 }
 
 .panel-header {
@@ -454,6 +481,13 @@ main.editor-workspace {
   height: 15px;
   accent-color: var(--accent-cyan);
   cursor: pointer;
+}
+
+.panel-preview-select {
+  width: 5.8rem;
+  height: 26px;
+  padding-top: 0;
+  padding-bottom: 0;
 }
 
 /* Instructions Bar styling */
