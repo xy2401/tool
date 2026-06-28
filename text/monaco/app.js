@@ -43,6 +43,7 @@ require(["vs/editor/editor.main"], async () => {
   const screenshotTruncate = document.getElementById("screenshot-truncate");
   const screenshotConfirm = document.getElementById("screenshot-confirm");
   const screenshotCancel = document.getElementById("screenshot-cancel");
+  const openExternalPreviewButton = document.getElementById("open-external-preview");
   const screenshotModal = document.getElementById("screenshot-modal");
   const screenshotModalImages = document.getElementById("screenshot-modal-images");
   const screenshotModalCounter = document.getElementById("screenshot-modal-counter");
@@ -836,6 +837,7 @@ pre { overflow: auto; width: 100%; height: 100%; margin: 0; color: #1f2328; whit
     htmlPreviewFrame.setAttribute("sandbox", "allow-scripts");
     workspaceNode.classList.remove("is-previewing");
     htmlPreviewFrame.srcdoc = "";
+    openExternalPreviewButton.hidden = true;
     if (typeof saveState === "function") saveState();
   }
 
@@ -853,6 +855,7 @@ pre { overflow: auto; width: 100%; height: 100%; margin: 0; color: #1f2328; whit
     htmlToMarkdownButton.hidden = !isHtml;
     markdownPreviewControl.hidden = !isMarkdown;
     previewScreenshotButton.hidden = !(isMarkdown || isHtml);
+    openExternalPreviewButton.hidden = !(htmlPreviewInput.checked || markdownPreviewInput.checked || javascriptPreviewInput.checked || svgPreviewInput.checked || base64PreviewInput.checked);
     javascriptPreviewControl.hidden = !isJavaScript;
     svgPreviewControl.hidden = !isSvg;
     base64PreviewControl.hidden = !isBase64;
@@ -1406,6 +1409,18 @@ pre { overflow: auto; width: 100%; height: 100%; margin: 0; color: #1f2328; whit
 
   base64PreviewInput.addEventListener("change", () => {
     handlePreviewChange(base64PreviewInput);
+  });
+
+  openExternalPreviewButton.addEventListener("click", () => {
+    const htmlContent = htmlPreviewFrame.srcdoc;
+    if (!htmlContent) return;
+    
+    const blob = new Blob([htmlContent], { type: "text/html;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const win = window.open(url, "_blank");
+    if (!win) {
+      alert("新窗口被浏览器拦截，请允许弹出窗口后重试");
+    }
   });
 
   jsonToYamlButton.addEventListener("click", () => {
