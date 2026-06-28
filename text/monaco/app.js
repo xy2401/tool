@@ -549,7 +549,31 @@ require(["vs/editor/editor.main"], async () => {
     return extensionMatches[0]?.language || null;
   }
   
-  const initialValue = await loadSample("markdown");
+  let hash = window.location.hash.slice(1);
+  if (!hash && window.location.hash !== "#") {
+    hash = localStorage.getItem("monaco-toolbox-state") || "";
+  }
+  const params = new URLSearchParams(hash);
+  if (params.has("language")) params.set("l", params.get("language"));
+  const initialLanguage = params.get("l") || "markdown";
+
+  let initialValue = localStorage.getItem("monaco-toolbox-content");
+  let loadedDemoName = "custom";
+  if (!initialValue) {
+    let demoToLoad = "markdown";
+    if (sampleFiles[initialLanguage]) {
+      demoToLoad = initialLanguage;
+    } else {
+      for (const [demoName, mappedLang] of Object.entries(demoLanguageMap)) {
+        if (mappedLang === initialLanguage && sampleFiles[demoName]) {
+          demoToLoad = demoName;
+          break;
+        }
+      }
+    }
+    initialValue = await loadSample(demoToLoad);
+    loadedDemoName = demoToLoad;
+  }
   let lastDetectionResult = {
     language: null,
     ranking: [],
@@ -570,7 +594,7 @@ require(["vs/editor/editor.main"], async () => {
   };
   const primaryModel = monaco.editor.createModel(
     initialValue,
-    "markdown"
+    initialLanguage
   );
   let editor = null;
   let diffEditor = null;
@@ -822,6 +846,7 @@ pre { overflow: auto; width: 100%; height: 100%; margin: 0; color: #1f2328; whit
       }, 0);
     });
     contentChangeDisposable = codeEditor.onDidChangeModelContent(() => {
+      localStorage.setItem("monaco-toolbox-content", codeEditor.getValue());
       syncPreviewAvailability();
       renderPreview();
     });
@@ -1124,15 +1149,21 @@ pre { overflow: auto; width: 100%; height: 100%; margin: 0; color: #1f2328; whit
     "javascript-run": "javascript",
     svg: "xml"
   };
+
+  const customOption = document.createElement("option");
+  customOption.value = "custom";
+  customOption.textContent = "上次保存的草稿";
+
   demoSelect.replaceChildren(
+    customOption,
     ...demos.map(language => {
       const option = document.createElement("option");
       option.value = language;
       option.textContent = language;
-      option.selected = language === "markdown";
       return option;
     })
   );
+  demoSelect.value = loadedDemoName;
   demoSelect.disabled = false;
 
   if (!window.hljs) {
@@ -1277,6 +1308,19 @@ pre { overflow: auto; width: 100%; height: 100%; margin: 0; color: #1f2328; whit
 
   demoSelect.addEventListener("change", async () => {
     const demo = demoSelect.value;
+    if (demo === "custom") {
+      const draft = localStorage.getItem("monaco-toolbox-content");
+      if (draft !== null) {
+        const activeEditor = getActiveEditor();
+        activeEditor.setValue(draft);
+        activeEditor.setPosition({ lineNumber: 1, column: 1 });
+        applyDetectedLanguage(draft);
+        focusEditor();
+        if (typeof saveState === "function") saveState();
+      }
+      return;
+    }
+
     const language = demoLanguageMap[demo] || demo;
     const value = await loadSample(demo);
     languageSelect.value = language;
