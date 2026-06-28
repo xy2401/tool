@@ -407,6 +407,8 @@ createApp({
       resetParseProgress();
     };
 
+    const shouldAutoExpandRightEditor = () => inputMode.value === 'normal';
+
     const handleWorkerResult = (payload, context) => {
       const parsedObj = payload.parsedRoot ? payload.parsedRoot.obj : null;
       const previewText = payload.editText || '// 大文本已由 Worker 完成解析；为避免代码编辑器卡顿，此处仅显示截断预览。';
@@ -422,7 +424,7 @@ createApp({
         }
         if (renderRightEditor.value && editorRight) {
           editorRight.set(rightContent);
-          if (inputMode.value !== 'ultra') {
+          if (shouldAutoExpandRightEditor()) {
             setTimeout(() => {
               if (editorRight) editorRight.expand([], () => true);
             }, 50);
@@ -510,9 +512,11 @@ createApp({
       try {
         const content = editorLeft.get();
         editorRight.set(content);
-        setTimeout(() => {
-          editorRight.expand([], () => true);
-        }, 50);
+        if (shouldAutoExpandRightEditor()) {
+          setTimeout(() => {
+            editorRight.expand([], () => true);
+          }, 50);
+        }
         showToast('同步成功', '已复制左侧代码到右侧树形。', 'success');
       } catch (e) {
         showToast('同步失败', '左侧编辑器内容格式有误。', 'error');
@@ -672,7 +676,7 @@ createApp({
         editorLeft = editor;
       } else {
         editorRight = editor;
-        if (lastRightContent && lastRightContent.json !== undefined && inputMode.value !== 'ultra') {
+        if (lastRightContent && lastRightContent.json !== undefined && shouldAutoExpandRightEditor()) {
           setTimeout(() => {
             if (editorRight) editorRight.expand([], () => true);
           }, 50);
