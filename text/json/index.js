@@ -55,6 +55,7 @@
         const isParsing = ref(false);
         const isPreviewTruncated = ref(false);
         const sourceLoadedFromFile = ref(false);
+        const ANALYZE_NODE_TIMEOUT_MS = 15000;
         let toastIdCounter = 0;
         let skipHistoryRecord = false;
         let historyDebounceTimeout = null;
@@ -64,6 +65,7 @@
         let selectedFileForWorker = null;
         let optionSnapshotBeforeUltra = null;
         let previewCache = new Map();
+        let pendingAnalyzeRequests = new Map();
 
         const estimateTextBytes = (text) => {
           if (!text) return 0;
@@ -316,7 +318,17 @@
           }, 1500);
         };
 
+        const clearPendingAnalyzeRequests = () => {
+          pendingAnalyzeRequests.forEach((request) => {
+            clearTimeout(request.timeoutId);
+            request.worker.removeEventListener('message', request.handler);
+            request.resolve(null);
+          });
+          pendingAnalyzeRequests.clear();
+        };
+
         const stopParseWorker = () => {
+          clearPendingAnalyzeRequests();
           if (parseWorker) {
             parseWorker.terminate();
             parseWorker = null;
@@ -1170,12 +1182,27 @@ Null数量:    ${s.nullCount}${s.skipped && s.skipped.length ? `\n\n已跳过: $
           const worker = parseWorker;
 
           return new Promise(resolve => {
+            const cleanup = () => {
+              const request = pendingAnalyzeRequests.get(reqId);
+              if (!request) return;
+              clearTimeout(request.timeoutId);
+              worker.removeEventListener('message', handler);
+              pendingAnalyzeRequests.delete(reqId);
+            };
+
             const handler = (e) => {
               if ((e.data.type === 'analyze_result' || e.data.action === 'analyze_result') && e.data.reqId === reqId) {
-                worker.removeEventListener('message', handler);
+                cleanup();
                 resolve(e.data.payload);
               }
             };
+
+            const timeoutId = setTimeout(() => {
+              cleanup();
+              resolve(null);
+            }, ANALYZE_NODE_TIMEOUT_MS);
+
+            pendingAnalyzeRequests.set(reqId, { worker, handler, timeoutId, resolve });
             worker.addEventListener('message', handler);
             worker.postMessage({
               action: 'analyze_node',
@@ -1214,12 +1241,14 @@ Null数量:    ${s.nullCount}${s.skipped && s.skipped.length ? `\n\n已跳过: $
 
         const updateNodeInfo = async (customVal = undefined) => {
           if (!selectedNode.value) return;
+          const nodeIdAtRequest = selectedNode.value.id;
           const shouldReuseWorkerRootInfo = inputMode.value !== 'normal' && selectedNode.value.id === 'main' && jsonStats.value && jsonStats.value.mode;
           if (shouldReuseWorkerRootInfo && customVal === undefined) {
             return;
           }
           
           const res = await requestAnalyzeNode(customVal);
+          if (selectedNode.value?.id !== nodeIdAtRequest) return;
           if (!res) return;
 
           editText.value = res.editText;
