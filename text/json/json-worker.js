@@ -3,13 +3,43 @@ let globalParsedObj = null;
 self.onmessage = async (event) => {
   const message = event.data || {};
   if (message.type === 'analyze_node' || message.action === 'analyze_node') {
-    const { path, val: customVal, options, mode, reqId } = message;
+    const { path, val: customVal, mode, reqId } = message;
+    const options = normalizeOptions(message.options);
     let val = customVal !== undefined ? customVal : globalParsedObj;
     if (customVal === undefined && path && path.length > 0) {
-      for (const p of path) {
-        if (val !== undefined && val !== null) val = val[p];
+      const actualPath = path[0] === 'main' ? path.slice(1) : path;
+      for (const p of actualPath) {
+        if (val === undefined || val === null) break;
+        if (typeof val === 'string') {
+          if (p.startsWith('json_')) {
+            const idx = parseInt(p.replace('json_', ''), 10);
+            const substrings = extractJSONSubstrings(val);
+            val = substrings[idx] ? substrings[idx].obj : undefined;
+            continue;
+          } else {
+            const parsed = tryParseJSONString(val, { allowUnescape: true });
+            if (parsed !== null) {
+              val = parsed;
+            } else {
+              val = undefined;
+              break;
+            }
+          }
+        }
+        if (val !== undefined && val !== null) {
+          val = val[p];
+        }
       }
     }
+    
+    // If the final evaluated node is itself a stringified JSON, parse it for preview and stats
+    if (typeof val === 'string' && options.parseStringifiedJson) {
+      const parsed = tryParseJSONString(val, { allowUnescape: true });
+      if (parsed !== null) {
+        val = parsed;
+      }
+    }
+
     const previewResult = formatPreview(val, options, !path || path.length === 0);
     const info = buildNodeInfo(val, options, mode, 0, false);
     postMessage({
@@ -522,9 +552,9 @@ function formatPreview(val, options, isRoot) {
 
   let text = '';
   try {
-    text = JSON.stringify(targetVal, replacer, space);
+    text = JSON.stringify(targetVal, replacer, space) ?? '';
   } catch (e) {
-    text = String(val);
+    text = String(val) ?? '';
   }
 
   if (limit > 0 && text.length > limit) {

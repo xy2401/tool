@@ -1179,16 +1179,18 @@ Null数量:    ${s.nullCount}${s.skipped && s.skipped.length ? `\n\n已跳过: $
                parseWorker.postMessage({
                    action: 'analyze_node',
                    reqId,
-                   path: selectedNode.value.path,
+                   path: JSON.parse(JSON.stringify(selectedNode.value.path)),
                    options: {
                        generateStats: advancedOptions.value.generateStats,
                        generatePaths: advancedOptions.value.generatePaths,
                        inferSchema: advancedOptions.value.inferSchema,
+                       parseStringifiedJson: advancedOptions.value.parseStringifiedJson,
+                       scanStringJsonSubstrings: advancedOptions.value.scanStringJsonSubstrings,
                        previewLimit: getPreviewRenderLimit(),
                        indent: advancedOptions.value.indent,
                        excludedNodes: JSON.parse(JSON.stringify(excludedNodes.value)),
                        excludedProperties: JSON.parse(JSON.stringify(excludedProperties.value)),
-                       basePath: selectedNode.value.path
+                       basePath: JSON.parse(JSON.stringify(selectedNode.value.path))
                    },
                    mode: inputMode.value
                });
@@ -1211,13 +1213,13 @@ Null数量:    ${s.nullCount}${s.skipped && s.skipped.length ? `\n\n已跳过: $
             }
           }
           
-          updateNodeInfo(isTextareaDirty.value ? JSON.parse(editText.value) : null);
+          updateNodeInfo(isTextareaDirty.value ? JSON.parse(editText.value) : undefined);
         };
 
-        const updateNodeInfo = async (customVal = null) => {
+        const updateNodeInfo = async (customVal = undefined) => {
           if (!selectedNode.value) return;
           const shouldReuseWorkerRootInfo = inputMode.value !== 'normal' && selectedNode.value.id === 'main' && jsonStats.value && jsonStats.value.mode;
-          if (shouldReuseWorkerRootInfo && !customVal) {
+          if (shouldReuseWorkerRootInfo && customVal === undefined) {
             return;
           }
           
@@ -1233,17 +1235,19 @@ Null数量:    ${s.nullCount}${s.skipped && s.skipped.length ? `\n\n已跳过: $
                parseWorker.postMessage({
                    action: 'analyze_node',
                    reqId,
-                   path: customVal ? null : selectedNode.value.path,
+                   path: customVal !== undefined ? null : JSON.parse(JSON.stringify(selectedNode.value.path)),
                    val: customVal,
                    options: {
                        generateStats: advancedOptions.value.generateStats,
                        generatePaths: advancedOptions.value.generatePaths,
                        inferSchema: advancedOptions.value.inferSchema,
+                       parseStringifiedJson: advancedOptions.value.parseStringifiedJson,
+                       scanStringJsonSubstrings: advancedOptions.value.scanStringJsonSubstrings,
                        previewLimit: getPreviewRenderLimit(),
                        indent: advancedOptions.value.indent,
                        excludedNodes: JSON.parse(JSON.stringify(excludedNodes.value)),
                        excludedProperties: JSON.parse(JSON.stringify(excludedProperties.value)),
-                       basePath: selectedNode.value.path
+                       basePath: JSON.parse(JSON.stringify(selectedNode.value.path))
                    },
                    mode: inputMode.value
                });
