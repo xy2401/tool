@@ -76,39 +76,20 @@
         JSON 属性自然排序
       </button>
 
-      <label class="checkbox-label preview-control html-preview-control" hidden>
-        <input id="html-preview-enabled" type="checkbox">
-        HTML 预览
+      <label id="workspace-layout-control" hidden>
+        布局
+        <select id="workspace-layout">
+          <option value="editor">仅代码</option>
+          <option value="split" selected>双栏预览</option>
+          <option value="preview">仅预览</option>
+        </select>
       </label>
+      <span id="preview-status" style="color: #58a6ff; font-size: 0.85rem;" hidden></span>
 
-      <button id="html-to-markdown" class="html-preview-control" type="button" hidden>
-        转为 Markdown
-      </button>
-
+      <button id="html-to-markdown" type="button" hidden>转为 Markdown</button>
       <button id="undo-html-to-markdown" type="button" hidden>撤销 Markdown 转换</button>
       <button id="preview-screenshot" type="button" title="进入截图配置模式" hidden>📷 截图</button>
-
-      <label class="checkbox-label preview-control markdown-preview-control" hidden>
-        <input id="markdown-preview-enabled" type="checkbox">
-        Markdown 预览
-      </label>
-
       <button id="open-external-preview" type="button" title="在新窗口独立打开预览" hidden>↗️ 新窗口</button>
-
-      <label class="checkbox-label preview-control javascript-preview-control" hidden>
-        <input id="javascript-preview-enabled" type="checkbox">
-        JS 运行
-      </label>
-
-      <label class="checkbox-label preview-control svg-preview-control" hidden>
-        <input id="svg-preview-enabled" type="checkbox">
-        SVG 预览
-      </label>
-
-      <label class="checkbox-label preview-control base64-preview-control" hidden>
-        <input id="base64-preview-enabled" type="checkbox">
-        Base64 预览
-      </label>
 
       <button id="json-to-yaml" type="button" hidden>
         JSON 转 YAML

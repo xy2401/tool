@@ -161,6 +161,14 @@ select:focus-visible {
   min-height: 0;
 }
 
+#workspace.layout-preview-only #editor {
+  display: none;
+}
+
+#workspace.layout-preview-only {
+  grid-template-columns: 1fr;
+}
+
 #html-preview {
   display: none;
   width: 100%;

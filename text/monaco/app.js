@@ -16,27 +16,12 @@ require(["vs/editor/editor.main"], async () => {
   const diffEnabledInput = document.getElementById("diff-enabled");
   const diffModeSelect = document.getElementById("diff-mode");
   const sortJsonDiffButton = document.getElementById("sort-json-diff");
-  const htmlPreviewControl = document.querySelector(
-    ".html-preview-control"
-  );
-  const htmlPreviewInput = document.getElementById(
-    "html-preview-enabled"
-  );
-  const htmlToMarkdownButton = document.getElementById(
-    "html-to-markdown"
-  );
-  const undoHtmlToMarkdownButton = document.getElementById(
-    "undo-html-to-markdown"
-  );
-  const markdownPreviewControl = document.querySelector(
-    ".markdown-preview-control"
-  );
-  const markdownPreviewInput = document.getElementById(
-    "markdown-preview-enabled"
-  );
-  const previewScreenshotButton = document.getElementById(
-    "preview-screenshot"
-  );
+  const workspaceLayoutControl = document.getElementById("workspace-layout-control");
+  const workspaceLayoutSelect = document.getElementById("workspace-layout");
+  const previewStatus = document.getElementById("preview-status");
+  const htmlToMarkdownButton = document.getElementById("html-to-markdown");
+  const undoHtmlToMarkdownButton = document.getElementById("undo-html-to-markdown");
+  const previewScreenshotButton = document.getElementById("preview-screenshot");
   const screenshotToolbar = document.getElementById("screenshot-toolbar");
   const screenshotSizeSelect = document.getElementById("screenshot-size");
   const screenshotSizeCurrent = document.getElementById("screenshot-size-current");
@@ -49,24 +34,6 @@ require(["vs/editor/editor.main"], async () => {
   const screenshotModalCounter = document.getElementById("screenshot-modal-counter");
   const screenshotModalDownload = document.getElementById("screenshot-modal-download");
   const screenshotModalClose = document.getElementById("screenshot-modal-close");
-  const javascriptPreviewControl = document.querySelector(
-    ".javascript-preview-control"
-  );
-  const javascriptPreviewInput = document.getElementById(
-    "javascript-preview-enabled"
-  );
-  const svgPreviewControl = document.querySelector(
-    ".svg-preview-control"
-  );
-  const svgPreviewInput = document.getElementById(
-    "svg-preview-enabled"
-  );
-  const base64PreviewControl = document.querySelector(
-    ".base64-preview-control"
-  );
-  const base64PreviewInput = document.getElementById(
-    "base64-preview-enabled"
-  );
   const jsonToYamlButton = document.getElementById("json-to-yaml");
   const yamlToJsonButton = document.getElementById("yaml-to-json");
   const minifyOneLineButton = document.getElementById("minify-one-line");
@@ -787,11 +754,12 @@ pre { overflow: auto; width: 100%; height: 100%; margin: 0; color: #1f2328; whit
   }
 
   function renderPreview() {
-    const isHtmlPreview = htmlPreviewInput.checked;
-    const isMarkdownPreview = markdownPreviewInput.checked;
-    const isJavaScriptPreview = javascriptPreviewInput.checked;
-    const isSvgPreview = svgPreviewInput.checked;
-    const isBase64Preview = base64PreviewInput.checked;
+    const value = getActiveEditor()?.getValue() || "";
+    const isHtmlPreview = languageSelect.value === "html";
+    const isMarkdownPreview = languageSelect.value === "markdown";
+    const isJavaScriptPreview = languageSelect.value === "javascript";
+    const isSvgPreview = isSvgContent(value);
+    const isBase64Preview = Boolean(parseBase64DataUrl(value));
 
     if (
       !isHtmlPreview &&
@@ -806,7 +774,6 @@ pre { overflow: auto; width: 100%; height: 100%; margin: 0; color: #1f2328; whit
     const renderVersion = ++previewRenderVersion;
     window.clearTimeout(previewTimer);
     previewTimer = window.setTimeout(async () => {
-      const value = getActiveEditor().getValue();
       try {
         const documentContent = isMarkdownPreview
           ? createMarkdownDocument(value)
@@ -853,16 +820,11 @@ pre { overflow: auto; width: 100%; height: 100%; margin: 0; color: #1f2328; whit
   }
 
   function closePreview() {
-    htmlPreviewInput.checked = false;
-    markdownPreviewInput.checked = false;
-    javascriptPreviewInput.checked = false;
-    svgPreviewInput.checked = false;
-    base64PreviewInput.checked = false;
     previewRenderVersion += 1;
     htmlPreviewFrame.setAttribute("sandbox", "allow-scripts");
     workspaceNode.classList.remove("is-previewing");
+    workspaceNode.classList.remove("layout-preview-only");
     htmlPreviewFrame.srcdoc = "";
-    openExternalPreviewButton.hidden = true;
     if (typeof saveState === "function") saveState();
   }
 
@@ -876,14 +838,8 @@ pre { overflow: auto; width: 100%; height: 100%; margin: 0; color: #1f2328; whit
     const value = getActiveEditor()?.getValue() || "";
     const isSvg = isSvgContent(value);
     const isBase64 = Boolean(parseBase64DataUrl(value));
-    htmlPreviewControl.hidden = !isHtml;
     htmlToMarkdownButton.hidden = !isHtml;
-    markdownPreviewControl.hidden = !isMarkdown;
     previewScreenshotButton.hidden = !(isMarkdown || isHtml);
-    openExternalPreviewButton.hidden = !(htmlPreviewInput.checked || markdownPreviewInput.checked || javascriptPreviewInput.checked || svgPreviewInput.checked || base64PreviewInput.checked);
-    javascriptPreviewControl.hidden = !isJavaScript;
-    svgPreviewControl.hidden = !isSvg;
-    base64PreviewControl.hidden = !isBase64;
     jsonToYamlButton.hidden = !isJson;
     yamlToJsonButton.hidden = !isYaml;
     minifyOneLineButton.hidden = !(isJson || isXml);
@@ -892,13 +848,34 @@ pre { overflow: auto; width: 100%; height: 100%; margin: 0; color: #1f2328; whit
       : "JSON 压缩为一行";
     sortJsonDiffButton.hidden = !(isJson && diffEditor);
 
-    if (
-      (!isHtml && htmlPreviewInput.checked) ||
-      (!isMarkdown && markdownPreviewInput.checked) ||
-      (!isJavaScript && javascriptPreviewInput.checked) ||
-      (!isSvg && svgPreviewInput.checked) ||
-      (!isBase64 && base64PreviewInput.checked)
-    ) {
+    const hasPreview = isHtml || isMarkdown || isJavaScript || isSvg || isBase64;
+    workspaceLayoutControl.hidden = !hasPreview;
+    previewStatus.hidden = !hasPreview;
+
+    if (hasPreview) {
+      if (isHtml) previewStatus.textContent = "HTML 预览";
+      if (isMarkdown) previewStatus.textContent = "Markdown 预览";
+      if (isJavaScript) previewStatus.textContent = "JS 运行";
+      if (isSvg) previewStatus.textContent = "SVG 预览";
+      if (isBase64) previewStatus.textContent = "Base64 预览";
+
+      openExternalPreviewButton.hidden = false;
+      const layout = workspaceLayoutSelect.value;
+      
+      if (layout === "editor") {
+        closePreview();
+      } else {
+        workspaceNode.classList.add("is-previewing");
+        workspaceNode.classList.toggle("layout-preview-only", layout === "preview");
+        if (diffEnabledInput.checked) {
+          diffEnabledInput.checked = false;
+          diffModeSelect.disabled = true;
+          closeDiffEditor();
+        }
+        renderPreview();
+      }
+    } else {
+      openExternalPreviewButton.hidden = true;
       closePreview();
     }
   }
@@ -1403,58 +1380,9 @@ pre { overflow: auto; width: 100%; height: 100%; margin: 0; color: #1f2328; whit
     }
   });
 
-  const previewInputs = [
-    htmlPreviewInput,
-    markdownPreviewInput,
-    javascriptPreviewInput,
-    svgPreviewInput,
-    base64PreviewInput
-  ];
 
-  function handlePreviewChange(activeInput) {
-    if (activeInput.checked) {
-      if (diffEnabledInput.checked) {
-        diffEnabledInput.checked = false;
-        diffModeSelect.disabled = true;
-        closeDiffEditor();
-      }
 
-      previewInputs
-        .filter(input => input !== activeInput)
-        .forEach(input => {
-          input.checked = false;
-        });
-      workspaceNode.classList.add("is-previewing");
-      openExternalPreviewButton.hidden = false;
-      renderPreview();
-    } else {
-      closePreview();
-    }
 
-    getActiveEditor().layout();
-    focusEditor();
-    if (typeof saveState === "function") saveState();
-  }
-
-  htmlPreviewInput.addEventListener("change", () => {
-    handlePreviewChange(htmlPreviewInput);
-  });
-
-  markdownPreviewInput.addEventListener("change", () => {
-    handlePreviewChange(markdownPreviewInput);
-  });
-
-  javascriptPreviewInput.addEventListener("change", () => {
-    handlePreviewChange(javascriptPreviewInput);
-  });
-
-  svgPreviewInput.addEventListener("change", () => {
-    handlePreviewChange(svgPreviewInput);
-  });
-
-  base64PreviewInput.addEventListener("change", () => {
-    handlePreviewChange(base64PreviewInput);
-  });
 
   openExternalPreviewButton.addEventListener("click", () => {
     const htmlContent = htmlPreviewFrame.srcdoc;
@@ -1545,7 +1473,7 @@ pre { overflow: auto; width: 100%; height: 100%; margin: 0; color: #1f2328; whit
     htmlConversionSnapshot = {
       value: model.getValue(),
       position: activeEditor.getPosition(),
-      previewEnabled: htmlPreviewInput.checked
+      layout: workspaceLayoutSelect.value
     };
     const turndown = new TurndownService({
       headingStyle: "atx",
@@ -1606,10 +1534,9 @@ pre { overflow: auto; width: 100%; height: 100%; margin: 0; color: #1f2328; whit
       column: 1
     });
 
-    if (snapshot.previewEnabled) {
-      htmlPreviewInput.checked = true;
-      workspaceNode.classList.add("is-previewing");
-      renderPreview();
+    if (snapshot.layout && snapshot.layout !== "editor") {
+      workspaceLayoutSelect.value = snapshot.layout;
+      syncPreviewAvailability();
       activeEditor.layout();
     }
 
@@ -1629,8 +1556,7 @@ pre { overflow: auto; width: 100%; height: 100%; margin: 0; color: #1f2328; whit
   });
 
   if (!window.marked || !window.DOMPurify) {
-    markdownPreviewInput.disabled = true;
-    markdownPreviewControl.title = "Markdown 预览组件加载失败";
+    console.warn("Markdown 预览组件加载失败");
   }
   if (!window.TurndownService) {
     htmlToMarkdownButton.disabled = true;
@@ -1650,15 +1576,9 @@ pre { overflow: auto; width: 100%; height: 100%; margin: 0; color: #1f2328; whit
     if (diffModeSelect.value === "inline") parts.push("dm=i");
     if (languageSelect.value !== "markdown") parts.push(`l=${encodeURIComponent(languageSelect.value)}`);
 
-    const activePreview = [
-      htmlPreviewInput,
-      markdownPreviewInput,
-      javascriptPreviewInput,
-      svgPreviewInput,
-      base64PreviewInput
-    ].find(i => i.checked);
-    if (activePreview) {
-      parts.push(`p=${encodeURIComponent(activePreview.id.replace("-preview-enabled", ""))}`);
+    const layout = workspaceLayoutSelect.value;
+    if (layout !== "split") {
+      parts.push(`lo=${encodeURIComponent(layout)}`);
     }
 
     const hash = parts.join("&");
@@ -1689,12 +1609,9 @@ pre { overflow: auto; width: 100%; height: 100%; margin: 0; color: #1f2328; whit
     }
 
     if (!hash) {
-      // First time visit or all defaults. Default to Markdown preview on.
-      const previewInput = document.getElementById("markdown-preview-enabled");
-      if (previewInput && !previewInput.disabled) {
-        previewInput.checked = true;
-        handlePreviewChange(previewInput);
-      }
+      // First time visit or all defaults. Default to split layout.
+      workspaceLayoutSelect.value = "split";
+      syncPreviewAvailability();
       return;
     }
 
@@ -1753,18 +1670,21 @@ pre { overflow: auto; width: 100%; height: 100%; margin: 0; color: #1f2328; whit
       }
     }
     
-    if (params.has("preview")) {
-      params.set("p", params.get("preview").replace("-preview-enabled", ""));
+    if (params.has("lo")) {
+      workspaceLayoutSelect.value = params.get("lo");
+    } else if (params.has("p") || params.has("preview")) {
+      workspaceLayoutSelect.value = "split"; // backward compatibility
+    } else {
+      workspaceLayoutSelect.value = "split"; // default to split if not specified
     }
-    const pVal = params.get("p");
-    if (pVal) {
-      const previewInput = document.getElementById(`${pVal}-preview-enabled`);
-      if (previewInput) {
-        previewInput.checked = true;
-        handlePreviewChange(previewInput);
-      }
-    }
+    syncPreviewAvailability();
   }
+
+  workspaceLayoutSelect.addEventListener("change", () => {
+    syncPreviewAvailability();
+    focusEditor();
+    if (typeof saveState === "function") saveState();
+  });
 
   function updateScreenshotPreview() {
     const sizeVal = screenshotSizeSelect.value;
