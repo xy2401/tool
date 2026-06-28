@@ -3,8 +3,8 @@ let globalParsedObj = null;
 self.onmessage = async (event) => {
   const message = event.data || {};
   if (message.type === 'analyze_node' || message.action === 'analyze_node') {
-    const { path, val: customVal, mode, reqId } = message;
-    const options = normalizeOptions(message.options);
+    const { path, val: customVal, mode, reqId, advancedOptions } = message;
+    const options = normalizeOptions({ ...(advancedOptions || {}), ...(message.options || {}) });
     let val = customVal !== undefined ? customVal : globalParsedObj;
     if (customVal === undefined && path && path.length > 0) {
       const actualPath = path[0] === 'main' ? path.slice(1) : path;

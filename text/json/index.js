@@ -1161,9 +1161,6 @@ Null数量:    ${s.nullCount}${s.skipped && s.skipped.length ? `\n\n已跳过: $
           }
         };
 
-        const getPreviewRenderLimit = () => {
-          return advancedOptions.value.previewLimit;
-        };
 
         
         const analyzeNodeAsync = () => {
@@ -1180,14 +1177,8 @@ Null数量:    ${s.nullCount}${s.skipped && s.skipped.length ? `\n\n已跳过: $
                    action: 'analyze_node',
                    reqId,
                    path: JSON.parse(JSON.stringify(selectedNode.value.path)),
+                   advancedOptions: JSON.parse(JSON.stringify(advancedOptions.value)),
                    options: {
-                       generateStats: advancedOptions.value.generateStats,
-                       generatePaths: advancedOptions.value.generatePaths,
-                       inferSchema: advancedOptions.value.inferSchema,
-                       parseStringifiedJson: advancedOptions.value.parseStringifiedJson,
-                       scanStringJsonSubstrings: advancedOptions.value.scanStringJsonSubstrings,
-                       previewLimit: getPreviewRenderLimit(),
-                       indent: advancedOptions.value.indent,
                        excludedNodes: JSON.parse(JSON.stringify(excludedNodes.value)),
                        excludedProperties: JSON.parse(JSON.stringify(excludedProperties.value)),
                        basePath: JSON.parse(JSON.stringify(selectedNode.value.path))
@@ -1237,14 +1228,8 @@ Null数量:    ${s.nullCount}${s.skipped && s.skipped.length ? `\n\n已跳过: $
                    reqId,
                    path: customVal !== undefined ? null : JSON.parse(JSON.stringify(selectedNode.value.path)),
                    val: customVal,
+                   advancedOptions: JSON.parse(JSON.stringify(advancedOptions.value)),
                    options: {
-                       generateStats: advancedOptions.value.generateStats,
-                       generatePaths: advancedOptions.value.generatePaths,
-                       inferSchema: advancedOptions.value.inferSchema,
-                       parseStringifiedJson: advancedOptions.value.parseStringifiedJson,
-                       scanStringJsonSubstrings: advancedOptions.value.scanStringJsonSubstrings,
-                       previewLimit: getPreviewRenderLimit(),
-                       indent: advancedOptions.value.indent,
                        excludedNodes: JSON.parse(JSON.stringify(excludedNodes.value)),
                        excludedProperties: JSON.parse(JSON.stringify(excludedProperties.value)),
                        basePath: JSON.parse(JSON.stringify(selectedNode.value.path))
