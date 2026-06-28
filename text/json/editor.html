@@ -30,13 +30,13 @@
     </div>
 
     <!-- Main Title Row -->
-    <div class="main-title-row" style="padding: 1rem 2rem 0.5rem;">
+    <div class="main-title-row">
       <div class="main-title-text">
         <h2>JSON 编辑 (Svelte-JSONEditor)</h2>
         <p>支持自适应主题，左侧代码，右侧树形，以及从日志等杂乱文本中提取 JSON 并双向传输同步。</p>
       </div>
       <div class="theme-selector-container" @dblclick.stop>
-        <select class="input-field input-sm" v-model="themePreference" @change="applyThemePreference" style="width: 10em;">
+        <select class="input-field input-sm theme-select" v-model="themePreference" @change="applyThemePreference">
           <option value="system">🌓 跟随系统</option>
           <option value="light">☀️ 浅色模式</option>
           <option value="dark">🌙 深色模式</option>
@@ -48,7 +48,6 @@
     <div 
       class="glass-card input-card" 
       :class="{ 'fullscreen-mode': isRawFullscreen, 'drag-active': isDragging }" 
-      style="margin: 0.5rem 2rem 0.5rem;"
       @dblclick.self="toggleRawFullscreen"
       @dragover.prevent="handleDragOver"
       @dragleave.prevent="handleDragLeave"
@@ -165,7 +164,7 @@
             <span>代码编辑器 (Left)</span>
             <input type="checkbox" v-model="renderLeftEditor">
           </label>
-          <div v-if="renderLeftEditor" style="display: flex; gap: 0.35rem; align-items: center;">
+          <div v-if="renderLeftEditor" class="panel-header-actions">
             <select
               v-model="advancedOptions.previewLimit"
               @change="onPreviewLimitChange"
@@ -195,7 +194,7 @@
       
       <div class="glass-card editor-panel" :class="{ 'panel-collapsed': !renderRightEditor }">
         <div class="panel-header">
-          <div v-if="renderRightEditor" style="display: flex; gap: 0.35rem; align-items: center;">
+          <div v-if="renderRightEditor" class="panel-header-actions">
             <button class="panel-header-btn" @click="copyToLeft" :disabled="!renderLeftEditor || !renderRightEditor" title="将右侧树形同步到左侧代码">
               <svg width="12" height="12" fill="none" viewBox="0 0 24 24" stroke="currentColor" style="stroke-width: 2.5px;">
                 <path stroke-linecap="round" stroke-linejoin="round" d="M11 19l-7-7 7-7M19 19l-7-7 7-7" />

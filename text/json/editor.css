@@ -93,7 +93,7 @@ body {
   margin-bottom: 0.25rem;
   gap: 1rem;
   border-bottom: 1px solid var(--panel-border);
-  padding-bottom: 0.5rem;
+  padding: 1rem 2rem 0.5rem;
 }
 
 .main-title-text {
@@ -135,6 +135,7 @@ body {
 
 .input-card {
   padding: 0.85rem 1.25rem;
+  margin: 0.5rem 2rem 0.5rem;
 }
 
 .input-row {
@@ -322,6 +323,10 @@ select.input-field {
   color: var(--input-option-color);
 }
 
+.theme-select {
+  width: 10em;
+}
+
 /* Workspace layout grid */
 main.editor-workspace {
   flex: 1;
@@ -380,6 +385,12 @@ main.editor-workspace.both-collapsed {
   justify-content: space-between;
   align-items: center;
   min-height: 36px;
+}
+
+.panel-header-actions {
+  display: flex;
+  gap: 0.35rem;
+  align-items: center;
 }
 
 .panel-header-btn {
@@ -819,25 +830,6 @@ main.editor-workspace.both-collapsed {
     grid-template-columns: 1fr;
     height: auto;
     min-height: auto;
-  }
-  
-  .center-menu {
-    flex-direction: row !important;
-    flex-wrap: wrap;
-    justify-content: center;
-    height: auto;
-    padding: 1.5rem;
-  }
-  
-  .center-menu .btn {
-    width: 45%;
-    max-width: 150px;
-  }
-
-  .instructions-details {
-    margin-top: 1rem;
-    border-top: none;
-    padding-top: 0;
   }
 }
 
