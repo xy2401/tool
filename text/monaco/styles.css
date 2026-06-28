@@ -404,7 +404,7 @@ body.theme-light #editor.is-dragging::after {
 }
 
 #workspace.is-snapshot-mode #snapshot-card {
-  display: inline-flex;
+  display: flex;
   align-self: flex-start;
   justify-self: center;
   margin: 32px;
@@ -416,20 +416,23 @@ body.theme-light #editor.is-dragging::after {
 
 #snapshot-card {
   display: inline-flex;
-  padding: 48px; /* Transparent padding is needed so the box-shadow isn't cropped in the export */
-  background: transparent;
+  background: linear-gradient(140deg, rgb(207, 47, 152), rgb(106, 61, 236));
+  padding: 8px;
   min-width: 400px;
   max-width: 100%;
   box-sizing: border-box;
+  transition: all 0.3s ease;
 }
 
 #snapshot-window {
   background: #1e1e1e;
   border-radius: 8px;
-  box-shadow: 0 20px 40px rgba(0,0,0,0.5);
+  box-shadow: 0 10px 30px rgba(0,0,0,0.4);
   overflow: hidden;
-  width: 100%;
-  display: flex;
+  width: auto;
+  min-width: 400px;
+  max-width: 100%;
+  box-sizing: border-box;
   flex-direction: column;
 }
 

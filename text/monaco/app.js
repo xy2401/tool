@@ -39,10 +39,13 @@ require(["vs/editor/editor.main"], async () => {
   const codeSnapshotToolbar = document.getElementById("code-snapshot-toolbar");
   const snapshotEngine = document.getElementById("snapshot-engine");
   const snapshotTheme = document.getElementById("snapshot-theme");
+  const snapshotBackground = document.getElementById("snapshot-background");
+  const snapshotPadding = document.getElementById("snapshot-padding");
   const snapshotWindowStyle = document.getElementById("snapshot-window-style");
   const codeSnapshotConfirm = document.getElementById("code-snapshot-confirm");
   const codeSnapshotCancel = document.getElementById("code-snapshot-cancel");
   const snapshotCard = document.getElementById("snapshot-card");
+  const snapshotWindow = document.getElementById("snapshot-window");
   const snapshotWindowHeader = document.getElementById("snapshot-window-header");
   const snapshotCodeContent = document.getElementById("snapshot-code-content");
   const macDots = document.querySelector(".mac-dots");
@@ -1942,6 +1945,9 @@ pre { overflow: auto; width: 100%; height: 100%; margin: 0; color: #1f2328; whit
     const engine = snapshotEngine.value;
     const theme = snapshotTheme.value;
     
+    snapshotCard.style.background = snapshotBackground.value;
+    snapshotCard.style.padding = snapshotPadding.value;
+    
     const wStyle = snapshotWindowStyle.value;
     snapshotWindowHeader.hidden = wStyle === "none";
     if (wStyle !== "none") {
@@ -2005,7 +2011,7 @@ pre { overflow: auto; width: 100%; height: 100%; margin: 0; color: #1f2328; whit
     renderCodeSnapshot();
   });
 
-  [snapshotTheme, snapshotWindowStyle].forEach(el => {
+  [snapshotTheme, snapshotBackground, snapshotPadding, snapshotWindowStyle].forEach(el => {
     el.addEventListener("change", renderCodeSnapshot);
   });
 
@@ -2020,9 +2026,17 @@ pre { overflow: auto; width: 100%; height: 100%; margin: 0; color: #1f2328; whit
     codeSnapshotConfirm.disabled = true;
     
     try {
+      const rect = snapshotCard.getBoundingClientRect();
       const dataUrl = await htmlToImage.toPng(snapshotCard, {
         pixelRatio: 2,
         backgroundColor: "transparent",
+        width: rect.width,
+        height: rect.height,
+        style: {
+          margin: "0",
+          alignSelf: "auto",
+          justifySelf: "auto"
+        }
       });
       
       const a = document.createElement("a");
