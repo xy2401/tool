@@ -109,6 +109,7 @@ i18nObserver.observe(document.body, {
 // State & Editors (Global scope inside module script)
 let editorLeft = null;
 let editorRight = null;
+let lastEditorContent = null;
 
 const { createApp, ref, computed, onMounted, nextTick, watch, onUnmounted } = window.Vue;
 
@@ -123,6 +124,8 @@ createApp({
     const themePreference = ref('system');
     const loadedDemoText = ref('');
     const toasts = ref([]);
+    const renderLeftEditor = ref(true);
+    const renderRightEditor = ref(true);
     let toastIdCounter = 0;
     let skipHistoryRecord = false;
     const isParsing = ref(false);
@@ -336,6 +339,9 @@ createApp({
 
     const applyInputMode = (sizeBytes) => {
       modeController.applyInputMode(sizeBytes);
+      if (getModeBySize(sizeBytes || 0) === 'ultra' && renderRightEditor.value) {
+        renderRightEditor.value = false;
+      }
     };
 
     const getEffectiveAdvancedOptions = (sizeBytes) => {
@@ -349,7 +355,7 @@ createApp({
         sizeBytes
       };
       options.includeRootRaw = sizeBytes <= LARGE_TEXT_BYTES;
-      options.includeParsedObj = sizeBytes <= LARGE_TEXT_BYTES;
+      options.includeParsedObj = sizeBytes <= LARGE_TEXT_BYTES || renderRightEditor.value;
       return options;
     };
 
@@ -390,6 +396,7 @@ createApp({
       rawInput.value = '';
       setSelectedFile(null);
       modeController.reset();
+      lastEditorContent = null;
       resetParseProgress();
     };
 
@@ -398,26 +405,24 @@ createApp({
 
       if (parsedObj !== null && parsedObj !== undefined) {
         const content = { json: parsedObj };
-        if (editorLeft && editorRight) {
+        lastEditorContent = content;
+        if (renderLeftEditor.value && editorLeft) {
           editorLeft.set(content);
+        }
+        if (renderRightEditor.value && editorRight) {
           editorRight.set(content);
           if (inputMode.value !== 'ultra') {
             setTimeout(() => {
-              editorRight.expand([], () => true);
+              if (editorRight) editorRight.expand([], () => true);
             }, 50);
           }
         }
-      } else if (editorLeft && editorRight) {
+      } else {
         const previewText = payload.editText || '// 大文本已由 Worker 完成解析；为避免控件卡顿，此处仅显示截断预览。';
-        editorLeft.set({ text: previewText });
-        editorRight.set({
-          json: {
-            mode: payload.mode || inputMode.value,
-            sourceName: payload.sourceName || context.sourceName || '',
-            rawLength: payload.parsedRoot ? payload.parsedRoot.rawLength : 0,
-            preview: previewText
-          }
-        });
+        lastEditorContent = { text: previewText };
+        if (renderLeftEditor.value && editorLeft) {
+          editorLeft.set({ text: previewText });
+        }
       }
 
       inputMode.value = payload.mode || inputMode.value;
@@ -463,6 +468,10 @@ createApp({
     };
 
     const copyToRight = () => {
+      if (!renderLeftEditor.value || !renderRightEditor.value || !editorLeft || !editorRight) {
+        showToast('同步失败', '请先启用左右两个编辑器。', 'warning');
+        return;
+      }
       try {
         const content = editorLeft.get();
         editorRight.set(content);
@@ -476,6 +485,10 @@ createApp({
     };
 
     const copyToLeft = () => {
+      if (!renderLeftEditor.value || !renderRightEditor.value || !editorLeft || !editorRight) {
+        showToast('同步失败', '请先启用左右两个编辑器。', 'warning');
+        return;
+      }
       try {
         const content = editorRight.get();
         editorLeft.set(content);
@@ -526,6 +539,10 @@ createApp({
     };
 
     const copyEditor = async (side) => {
+      if ((side === 'left' && !renderLeftEditor.value) || (side === 'right' && !renderRightEditor.value)) {
+        showToast('复制失败', '编辑器已禁用。', 'warning');
+        return;
+      }
       const editor = side === 'left' ? editorLeft : editorRight;
       const label = side === 'left' ? '左侧' : '右侧';
       const text = getContentText(editor);
@@ -542,6 +559,10 @@ createApp({
     };
 
     const downloadEditor = (side) => {
+      if ((side === 'left' && !renderLeftEditor.value) || (side === 'right' && !renderRightEditor.value)) {
+        showToast('下载失败', '编辑器已禁用。', 'warning');
+        return;
+      }
       const editor = side === 'left' ? editorLeft : editorRight;
       const label = side === 'left' ? '左侧' : '右侧';
       const filename = side === 'left' ? 'left_editor.json' : 'right_editor.json';
@@ -594,7 +615,6 @@ createApp({
         console.error('Error loading menuTranslations.json:', e);
       }
 
-      // Initialize Editors
       const initialJson = {
         "Array": [1, 2, 3],
         "Boolean": true,
@@ -610,35 +630,48 @@ createApp({
         javascriptQueryLanguage
       ];
 
-      editorLeft = createJSONEditor({
-        target: document.getElementById('editor-left'),
-        props: {
-          content: { json: initialJson },
-          mode: 'text',
-          mainMenuBar: true,
-          navigationBar: true,
-          statusBar: true,
-          queryLanguages,
-          language: simplifiedChinese,
-          onRenderMenu,
-          onRenderContextMenu
+      const destroyEditor = (side) => {
+        const editor = side === 'left' ? editorLeft : editorRight;
+        if (editor && typeof editor.destroy === 'function') {
+          editor.destroy();
         }
-      });
+        if (side === 'left') editorLeft = null;
+        else editorRight = null;
+      };
 
-      editorRight = createJSONEditor({
-        target: document.getElementById('editor-right'),
-        props: {
-          content: { json: initialJson },
-          mode: 'tree',
-          mainMenuBar: true,
-          navigationBar: true,
-          statusBar: true,
-          queryLanguages,
-          language: simplifiedChinese,
-          onRenderMenu,
-          onRenderContextMenu
+      const createEditor = (side) => {
+        const isLeft = side === 'left';
+        const target = document.getElementById(isLeft ? 'editor-left' : 'editor-right');
+        if (!target) return;
+        destroyEditor(side);
+        const editor = createJSONEditor({
+          target,
+          props: {
+            content: lastEditorContent || { json: initialJson },
+            mode: isLeft ? 'text' : 'tree',
+            mainMenuBar: true,
+            navigationBar: true,
+            statusBar: true,
+            queryLanguages,
+            language: simplifiedChinese,
+            onRenderMenu,
+            onRenderContextMenu
+          }
+        });
+        if (isLeft) {
+          editorLeft = editor;
+        } else {
+          editorRight = editor;
+          if (lastEditorContent && lastEditorContent.json !== undefined && inputMode.value !== 'ultra') {
+            setTimeout(() => {
+              if (editorRight) editorRight.expand([], () => true);
+            }, 50);
+          }
         }
-      });
+      };
+
+      if (renderLeftEditor.value) createEditor('left');
+      if (renderRightEditor.value) createEditor('right');
 
       // Run initial translation scan of DOM once editors are mounted
       setTimeout(() => {
@@ -660,6 +693,18 @@ createApp({
       // Watch theme change
       watch(themePreference, () => {
         applyThemePreference();
+      });
+
+      watch(renderLeftEditor, (enabled) => {
+        if (enabled) createEditor('left');
+        else destroyEditor('left');
+        applyTheme();
+      });
+
+      watch(renderRightEditor, (enabled) => {
+        if (enabled) createEditor('right');
+        else destroyEditor('right');
+        applyTheme();
       });
 
       // Watch rawInput to auto extract
@@ -700,6 +745,8 @@ createApp({
         if (historyDebounceTimeout) clearTimeout(historyDebounceTimeout);
         if (autoExtractTimeout) clearTimeout(autoExtractTimeout);
         stopParseWorker();
+        destroyEditor('left');
+        destroyEditor('right');
       });
 
       // Handle Escape to exit full screen
@@ -730,6 +777,8 @@ createApp({
       historyItems,
       savedItems,
       demoFiles,
+      renderLeftEditor,
+      renderRightEditor,
       themePreference,
       toasts,
       removeToast,

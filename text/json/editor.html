@@ -154,15 +154,18 @@
     <main class="editor-workspace">
       <div class="glass-card editor-panel">
         <div class="panel-header">
-          <span>代码编辑器 (Left)</span>
+          <label class="panel-render-toggle" title="取消勾选后不渲染左侧代码编辑器">
+            <input type="checkbox" v-model="renderLeftEditor">
+            <span>代码编辑器 (Left)</span>
+          </label>
           <div style="display: flex; gap: 0.35rem; align-items: center;">
-            <button class="panel-header-btn" @click="copyEditor('left')" title="复制左侧 JSON">
+            <button class="panel-header-btn" @click="copyEditor('left')" :disabled="!renderLeftEditor" title="复制左侧 JSON">
               <span>复制</span>
             </button>
-            <button class="panel-header-btn" @click="downloadEditor('left')" title="下载左侧 JSON">
+            <button class="panel-header-btn" @click="downloadEditor('left')" :disabled="!renderLeftEditor" title="下载左侧 JSON">
               <span>下载</span>
             </button>
-            <button class="panel-header-btn" @click="copyToRight" title="将左侧代码同步到右侧树形">
+            <button class="panel-header-btn" @click="copyToRight" :disabled="!renderLeftEditor || !renderRightEditor" title="将左侧代码同步到右侧树形">
               <span>同步到右侧</span>
               <svg width="12" height="12" fill="none" viewBox="0 0 24 24" stroke="currentColor" style="stroke-width: 2.5px;">
                 <path stroke-linecap="round" stroke-linejoin="round" d="M13 5l7 7-7 7M5 5l7 7-7 7" />
@@ -170,28 +173,37 @@
             </button>
           </div>
         </div>
-        <div id="editor-left" class="editor-container"></div>
+        <div class="editor-container-shell" :class="{ disabled: !renderLeftEditor }">
+          <div id="editor-left" class="editor-container"></div>
+          <div v-if="!renderLeftEditor" class="editor-disabled-state">代码编辑器已禁用</div>
+        </div>
       </div>
       
       <div class="glass-card editor-panel">
         <div class="panel-header">
           <div style="display: flex; gap: 0.35rem; align-items: center;">
-            <button class="panel-header-btn" @click="copyToLeft" title="将右侧树形同步到左侧代码">
+            <button class="panel-header-btn" @click="copyToLeft" :disabled="!renderLeftEditor || !renderRightEditor" title="将右侧树形同步到左侧代码">
               <svg width="12" height="12" fill="none" viewBox="0 0 24 24" stroke="currentColor" style="stroke-width: 2.5px;">
                 <path stroke-linecap="round" stroke-linejoin="round" d="M11 19l-7-7 7-7M19 19l-7-7 7-7" />
               </svg>
               <span>同步到左侧</span>
             </button>
-            <button class="panel-header-btn" @click="copyEditor('right')" title="复制右侧 JSON">
+            <button class="panel-header-btn" @click="copyEditor('right')" :disabled="!renderRightEditor" title="复制右侧 JSON">
               <span>复制</span>
             </button>
-            <button class="panel-header-btn" @click="downloadEditor('right')" title="下载右侧 JSON">
+            <button class="panel-header-btn" @click="downloadEditor('right')" :disabled="!renderRightEditor" title="下载右侧 JSON">
               <span>下载</span>
             </button>
           </div>
-          <span>树形编辑器 (Right)</span>
+          <label class="panel-render-toggle" title="取消勾选后不渲染右侧树形编辑器">
+            <input type="checkbox" v-model="renderRightEditor">
+            <span>树形编辑器 (Right)</span>
+          </label>
         </div>
-        <div id="editor-right" class="editor-container"></div>
+        <div class="editor-container-shell" :class="{ disabled: !renderRightEditor }">
+          <div id="editor-right" class="editor-container"></div>
+          <div v-if="!renderRightEditor" class="editor-disabled-state">树形编辑器已禁用</div>
+        </div>
       </div>
     </main>
   </div>

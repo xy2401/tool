@@ -380,6 +380,17 @@ main.editor-workspace {
   box-shadow: 0 0 8px var(--accent-cyan-glow);
 }
 
+.panel-header-btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+  box-shadow: none;
+}
+
+.panel-header-btn:disabled:hover {
+  background: rgba(6, 182, 212, 0.1);
+  color: var(--accent-cyan) !important;
+}
+
 .panel-header-btn:active {
   transform: translateY(1px);
 }
@@ -397,10 +408,52 @@ main.editor-workspace {
 
 .editor-container {
   flex: 1;
+  height: 100%;
   min-height: 0;
   border-radius: 0.5rem;
   overflow: hidden;
   border: 1px solid var(--panel-border);
+}
+
+.editor-container-shell {
+  position: relative;
+  flex: 1;
+  min-height: 0;
+}
+
+.editor-container-shell.disabled .editor-container {
+  display: none;
+}
+
+.editor-disabled-state {
+  height: 100%;
+  min-height: 0;
+  border-radius: 0.5rem;
+  border: 1px dashed var(--panel-border);
+  display: grid;
+  place-items: center;
+  color: var(--text-muted);
+  background: rgba(15, 23, 42, 0.28);
+  font-size: 0.9rem;
+}
+
+.theme-light .editor-disabled-state {
+  background: rgba(255, 255, 255, 0.48);
+}
+
+.panel-render-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  cursor: pointer;
+  user-select: none;
+}
+
+.panel-render-toggle input {
+  width: 15px;
+  height: 15px;
+  accent-color: var(--accent-cyan);
+  cursor: pointer;
 }
 
 /* Instructions Bar styling */
