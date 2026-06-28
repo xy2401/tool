@@ -1945,8 +1945,9 @@ pre { overflow: auto; width: 100%; height: 100%; margin: 0; color: #1f2328; whit
     const engine = snapshotEngine.value;
     const theme = snapshotTheme.value;
     
-    snapshotCard.style.background = snapshotBackground.value;
-    snapshotCard.style.padding = snapshotPadding.value;
+    const pValue = snapshotPadding.value;
+    snapshotCard.style.padding = pValue;
+    snapshotCard.style.background = (pValue === "0" || pValue === "0px") ? "transparent" : snapshotBackground.value;
     
     const wStyle = snapshotWindowStyle.value;
     snapshotWindowHeader.hidden = wStyle === "none";
@@ -2009,6 +2010,12 @@ pre { overflow: auto; width: 100%; height: 100%; margin: 0; color: #1f2328; whit
   snapshotEngine.addEventListener("change", () => {
     updateSnapshotThemes();
     renderCodeSnapshot();
+  });
+
+  snapshotPadding.addEventListener("change", (e) => {
+    if (e.target.value === "0" || e.target.value === "0px") {
+      snapshotBackground.value = "transparent";
+    }
   });
 
   [snapshotTheme, snapshotBackground, snapshotPadding, snapshotWindowStyle].forEach(el => {
