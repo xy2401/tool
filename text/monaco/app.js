@@ -34,6 +34,23 @@ require(["vs/editor/editor.main"], async () => {
   const screenshotModalCounter = document.getElementById("screenshot-modal-counter");
   const screenshotModalDownload = document.getElementById("screenshot-modal-download");
   const screenshotModalClose = document.getElementById("screenshot-modal-close");
+
+  const codeSnapshotButton = document.getElementById("code-snapshot-button");
+  const codeSnapshotToolbar = document.getElementById("code-snapshot-toolbar");
+  const snapshotEngine = document.getElementById("snapshot-engine");
+  const snapshotTheme = document.getElementById("snapshot-theme");
+  const snapshotBackground = document.getElementById("snapshot-background");
+  const snapshotPadding = document.getElementById("snapshot-padding");
+  const snapshotWindowStyle = document.getElementById("snapshot-window-style");
+  const codeSnapshotConfirm = document.getElementById("code-snapshot-confirm");
+  const codeSnapshotCancel = document.getElementById("code-snapshot-cancel");
+  const codeSnapshotPreviewContainer = document.getElementById("code-snapshot-preview-container");
+  const snapshotCard = document.getElementById("snapshot-card");
+  const snapshotWindowHeader = document.getElementById("snapshot-window-header");
+  const snapshotCodeContent = document.getElementById("snapshot-code-content");
+  const macDots = document.querySelector(".mac-dots");
+  const winControls = document.querySelector(".win-controls");
+
   const jsonToYamlButton = document.getElementById("json-to-yaml");
   const yamlToJsonButton = document.getElementById("yaml-to-json");
   const minifyOneLineButton = document.getElementById("minify-one-line");
@@ -840,6 +857,7 @@ pre { overflow: auto; width: 100%; height: 100%; margin: 0; color: #1f2328; whit
     const isBase64 = Boolean(parseBase64DataUrl(value));
     htmlToMarkdownButton.hidden = !isHtml;
     previewScreenshotButton.hidden = !(isMarkdown || isHtml);
+    codeSnapshotButton.hidden = (isMarkdown || isHtml || isSvg || isBase64); // Show only for plain code languages
     jsonToYamlButton.hidden = !isJson;
     yamlToJsonButton.hidden = !isYaml;
     minifyOneLineButton.hidden = !(isJson || isXml);
@@ -1870,6 +1888,157 @@ pre { overflow: auto; width: 100%; height: 100%; margin: 0; color: #1f2328; whit
   screenshotModalClose.addEventListener("click", () => {
     screenshotModal.hidden = true;
     screenshotModalImages.innerHTML = "";
+  });
+
+  // ========== CODE SNAPSHOT LOGIC ==========
+
+  function updateSnapshotThemes() {
+    const engine = snapshotEngine.value;
+    snapshotTheme.innerHTML = "";
+    if (engine === "monaco") {
+      snapshotTheme.innerHTML = `
+        <option value="vs-dark">深色 (VS Dark)</option>
+        <option value="vs">浅色 (VS Light)</option>
+        <option value="hc-black">高对比度</option>
+      `;
+      snapshotTheme.value = themeSelect.value;
+    } else {
+      snapshotTheme.innerHTML = `
+        <option value="github">GitHub</option>
+        <option value="github-dark">GitHub Dark</option>
+        <option value="monokai">Monokai</option>
+        <option value="dracula">Dracula</option>
+        <option value="atom-one-dark">Atom One Dark</option>
+        <option value="nord">Nord</option>
+        <option value="vs2015">VS 2015</option>
+      `;
+    }
+  }
+
+  codeSnapshotButton.addEventListener("click", () => {
+    document.querySelector(".feature-bar").hidden = true;
+    codeSnapshotToolbar.hidden = false;
+    workspaceNode.classList.add("is-snapshot-mode");
+    
+    if (workspaceLayoutSelect.value === "editor") {
+      workspaceLayoutSelect.value = "split";
+      syncPreviewAvailability();
+    }
+    
+    updateSnapshotThemes();
+    renderCodeSnapshot();
+  });
+
+  codeSnapshotCancel.addEventListener("click", () => {
+    document.querySelector(".feature-bar").hidden = false;
+    codeSnapshotToolbar.hidden = true;
+    workspaceNode.classList.remove("is-snapshot-mode");
+  });
+
+  let currentHighlightThemeUrl = "";
+
+  async function renderCodeSnapshot() {
+    const value = getActiveEditor()?.getValue() || "";
+    const lang = languageSelect.value;
+    const engine = snapshotEngine.value;
+    const theme = snapshotTheme.value;
+    
+    snapshotCard.style.background = snapshotBackground.value;
+    snapshotCard.style.padding = snapshotPadding.value;
+    
+    const wStyle = snapshotWindowStyle.value;
+    snapshotWindowHeader.hidden = wStyle === "none";
+    if (wStyle !== "none") {
+      macDots.hidden = wStyle !== "mac";
+      winControls.hidden = wStyle !== "windows";
+    }
+    
+    if (engine === "monaco") {
+      monaco.editor.setTheme(theme);
+      try {
+        const html = await monaco.editor.colorize(value, lang, {});
+        snapshotCodeContent.innerHTML = html;
+        const isLight = theme === "vs";
+        snapshotCodeContent.parentElement.style.background = isLight ? "#fffffe" : (theme === "hc-black" ? "#000000" : "#1e1e1e");
+        snapshotCodeContent.style.color = isLight ? "#000000" : "#d4d4d4";
+      } finally {
+        monaco.editor.setTheme(themeSelect.value);
+      }
+    } else {
+      if (window.hljs) {
+        let highlighted = value;
+        try {
+           highlighted = hljs.highlight(value, { language: lang, ignoreIllegals: true }).value;
+        } catch(e) {
+           highlighted = hljs.highlightAuto(value).value;
+        }
+        snapshotCodeContent.innerHTML = `<pre><code class="hljs">${highlighted}</code></pre>`;
+        
+        const themeUrl = `https://cdn.jsdelivr.net/npm/highlight.js@11.11.1/styles/${theme}.min.css`;
+        if (currentHighlightThemeUrl !== themeUrl) {
+          let link = document.getElementById("hljs-theme-link");
+          if (!link) {
+            link = document.createElement("link");
+            link.id = "hljs-theme-link";
+            link.rel = "stylesheet";
+            document.head.appendChild(link);
+          }
+          link.href = themeUrl;
+          currentHighlightThemeUrl = themeUrl;
+          
+          link.onload = () => {
+             const codeEl = snapshotCodeContent.querySelector("code.hljs");
+             if (codeEl) {
+                const bg = window.getComputedStyle(codeEl).backgroundColor;
+                snapshotCodeContent.parentElement.style.background = bg;
+             }
+          }
+        } else {
+             const codeEl = snapshotCodeContent.querySelector("code.hljs");
+             if (codeEl) {
+                const bg = window.getComputedStyle(codeEl).backgroundColor;
+                snapshotCodeContent.parentElement.style.background = bg;
+             }
+        }
+      }
+    }
+  }
+
+  snapshotEngine.addEventListener("change", () => {
+    updateSnapshotThemes();
+    renderCodeSnapshot();
+  });
+
+  [snapshotTheme, snapshotBackground, snapshotPadding, snapshotWindowStyle].forEach(el => {
+    el.addEventListener("change", renderCodeSnapshot);
+  });
+
+  codeSnapshotConfirm.addEventListener("click", async () => {
+    if (!window.htmlToImage) {
+      alert("截图组件正在加载，请稍候");
+      return;
+    }
+    
+    const originalText = codeSnapshotConfirm.textContent;
+    codeSnapshotConfirm.textContent = "⏳ 导出中...";
+    codeSnapshotConfirm.disabled = true;
+    
+    try {
+      const dataUrl = await htmlToImage.toPng(snapshotCard, {
+        pixelRatio: 2,
+        backgroundColor: "transparent",
+      });
+      
+      const a = document.createElement("a");
+      a.href = dataUrl;
+      a.download = `code-snapshot-${Date.now()}.png`;
+      a.click();
+    } catch (e) {
+      alert("导出快照失败：" + e.message);
+    } finally {
+      codeSnapshotConfirm.textContent = originalText;
+      codeSnapshotConfirm.disabled = false;
+    }
   });
 
   restoreState();
