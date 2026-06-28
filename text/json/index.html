@@ -176,15 +176,19 @@
             <!-- Node Item -->
             <div 
               :class="['node-item', { active: selectedNodeId === node.id }]"
-              :style="{ paddingLeft: `${Math.max(0.85, node.path.length * 0.6)}rem` }"
               :title="node.id"
             >
+              <!-- Indent Guides -->
+              <div v-for="i in (node.path.length - 1)" :key="'guide-'+i" class="indent-guide"></div>
+
               <!-- Collapse/Expand Toggle -->
               <span 
                 v-if="hasChildren(node.id)" 
-                class="node-toggle"
+                :class="['node-toggle', { collapsed: collapsedNodes.includes(node.id) }]"
                 @click.stop="toggleCollapse(node.id)"
-              >{{ collapsedNodes.includes(node.id) ? '▶' : '▼' }}</span>
+              >
+                <svg viewBox="0 0 24 24" class="chevron-icon" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>
+              </span>
               <span v-else class="node-toggle-spacer"></span>
               <!-- Node Checkbox -->
               <input 
@@ -193,10 +197,12 @@
                 :checked="!excludedNodes.includes(node.id)"
                 @click.stop="toggleNodeCheckbox(node.id)"
                 class="property-checkbox"
-                style="margin-right: 0.4rem;"
               >
+              <!-- Type Icon -->
+              <span :class="['type-icon', 'type-icon-' + getTypeClass(node.type)]">
+                {{ getTypeIcon(node.type) }}
+              </span>
               <span class="node-name" @click.stop="selectNode(node.id)" v-text="node.name"></span>
-              <span class="node-badge" @click.stop="selectNode(node.id)" v-text="node.type"></span>
             </div>
 
             <!-- Primitive Properties of selected node -->
@@ -205,17 +211,22 @@
                 v-for="prop in selectedNodeProperties" 
                 :key="prop.key"
                 class="node-item property-item"
-                :style="{ paddingLeft: `${Math.max(0.85, node.path.length * 0.6) + 1.2}rem` }"
                 @click.stop="toggleProperty(prop.key)"
               >
+                <!-- Indent Guides for properties (align with child depth) -->
+                <div v-for="i in node.path.length" :key="'pguide-'+i" class="indent-guide"></div>
+                <div class="indent-guide property-guide"></div>
+
                 <input 
                   type="checkbox" 
                   :checked="!excludedProperties.includes(prop.key)"
                   @click.stop="toggleProperty(prop.key)"
                   class="property-checkbox"
                 >
+                <span :class="['type-icon', 'type-icon-' + getTypeClass(prop.type)]">
+                  {{ getTypeIcon(prop.type) }}
+                </span>
                 <span class="node-name property-name" v-text="prop.key"></span>
-                <span class="node-badge property-badge" v-text="prop.type"></span>
               </div>
             </template>
           </template>

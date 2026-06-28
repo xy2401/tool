@@ -1730,6 +1730,30 @@ Null数量:    ${s.nullCount}${s.skipped && s.skipped.length ? `\n\n已跳过: $
           applyFormatting();
         };
 
+        const getTypeIcon = (type) => {
+          if (!type) return '';
+          const t = type.toLowerCase();
+          if (t.includes('object')) return '{}';
+          if (t.includes('array')) return '[]';
+          if (t.includes('string')) return 'Aa';
+          if (t.includes('number')) return '#';
+          if (t.includes('boolean')) return '☑';
+          if (t.includes('null')) return '∅';
+          return '·';
+        };
+
+        const getTypeClass = (type) => {
+          if (!type) return 'unknown';
+          const t = type.toLowerCase();
+          if (t.includes('object')) return 'object';
+          if (t.includes('array')) return 'array';
+          if (t.includes('string')) return 'string';
+          if (t.includes('number')) return 'number';
+          if (t.includes('boolean')) return 'boolean';
+          if (t.includes('null')) return 'null';
+          return 'unknown';
+        };
+
         return {
           rawInput,
           nodes,
@@ -1803,7 +1827,9 @@ Null数量:    ${s.nullCount}${s.skipped && s.skipped.length ? `\n\n已跳过: $
           copySchema,
           copyPaths,
           displayValue,
-          handleInput
+          handleInput,
+          getTypeIcon,
+          getTypeClass
         };
       }
     }).mount('#app');
