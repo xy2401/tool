@@ -145,6 +145,7 @@ createApp({
     
     let autoExtractTimeout = null;
     let historyDebounceTimeout = null;
+    let initialTranslateTimeout = null;
     let selectedFileForWorker = null;
     let parser = null;
     const modeController = JsonToolCore.createInputModeController({
@@ -621,6 +622,138 @@ createApp({
       }
     };
 
+    const initialJson = {
+      "Array": [1, 2, 3],
+      "Boolean": true,
+      "Null": null,
+      "Number": 123,
+      "Object": { "a": "b", "c": "d" },
+      "String": "Hello World"
+    };
+
+    const queryLanguages = [
+      jmespathQueryLanguage,
+      lodashQueryLanguage,
+      javascriptQueryLanguage
+    ];
+
+    const destroyEditor = (side) => {
+      const editor = side === 'left' ? editorLeft : editorRight;
+      if (editor && typeof editor.destroy === 'function') {
+        editor.destroy();
+      }
+      if (side === 'left') editorLeft = null;
+      else editorRight = null;
+    };
+
+    const createEditor = (side) => {
+      const isLeft = side === 'left';
+      const target = document.getElementById(isLeft ? 'editor-left' : 'editor-right');
+      if (!target) return;
+      destroyEditor(side);
+      const content = isLeft
+        ? (lastLeftContent || { json: initialJson })
+        : (lastRightContent || { json: initialJson });
+      const editor = createJSONEditor({
+        target,
+        props: {
+          content,
+          mode: isLeft ? 'text' : 'tree',
+          mainMenuBar: true,
+          navigationBar: true,
+          statusBar: true,
+          queryLanguages,
+          language: simplifiedChinese,
+          onRenderMenu,
+          onRenderContextMenu
+        }
+      });
+      if (isLeft) {
+        editorLeft = editor;
+      } else {
+        editorRight = editor;
+        if (lastRightContent && lastRightContent.json !== undefined && inputMode.value !== 'ultra') {
+          setTimeout(() => {
+            if (editorRight) editorRight.expand([], () => true);
+          }, 50);
+        }
+      }
+    };
+
+    const handleKeyDown = (e) => {
+      if (e.key === 'Escape') isRawFullscreen.value = false;
+    };
+
+    const systemThemeMedia = window.matchMedia('(prefers-color-scheme: dark)');
+    const handleSystemThemeChange = () => {
+      if (themePreference.value === 'system') applyTheme();
+    };
+
+    watch(themePreference, () => {
+      applyThemePreference();
+    });
+
+    watch(renderLeftEditor, (enabled) => {
+      if (enabled) nextTick(() => createEditor('left'));
+      else destroyEditor('left');
+      applyTheme();
+    });
+
+    watch(renderRightEditor, (enabled) => {
+      if (enabled) nextTick(() => createEditor('right'));
+      else destroyEditor('right');
+      applyTheme();
+    });
+
+    // Watch rawInput to auto extract
+    watch(rawInput, (newVal) => {
+      if (sourceLoadedFromFile.value && selectedFileForWorker && !newVal) return;
+      if (autoExtractTimeout) clearTimeout(autoExtractTimeout);
+      if (parser && parser.isActive()) {
+        stopParseWorker();
+        isParsing.value = false;
+      }
+
+      if (newVal !== loadedDemoText.value) {
+        loadedDemoText.value = '';
+      }
+
+      const sizeBytes = estimateTextBytes(newVal || '');
+      applyInputMode(sizeBytes);
+      sourceLoadedFromFile.value = false;
+      selectedFileForWorker = null;
+      currentSourceName.value = '';
+
+      if (!newVal || !newVal.trim()) {
+        resetParseProgress();
+        return;
+      }
+
+      if (sizeBytes > LARGE_TEXT_BYTES) {
+        setParseProgress(inputMode.value === 'ultra' ? '超大文本，等待手动提取' : '大文本，等待手动提取', 0, false);
+        return;
+      }
+
+      autoExtractTimeout = setTimeout(() => {
+        extractRootJSON(true);
+      }, 350);
+    });
+
+    onUnmounted(() => {
+      if (historyDebounceTimeout) clearTimeout(historyDebounceTimeout);
+      if (autoExtractTimeout) clearTimeout(autoExtractTimeout);
+      if (initialTranslateTimeout) clearTimeout(initialTranslateTimeout);
+      stopParseWorker();
+      destroyEditor('left');
+      destroyEditor('right');
+      window.removeEventListener('keydown', handleKeyDown);
+      if (systemThemeMedia.removeEventListener) {
+        systemThemeMedia.removeEventListener('change', handleSystemThemeChange);
+      } else if (systemThemeMedia.removeListener) {
+        systemThemeMedia.removeListener(handleSystemThemeChange);
+      }
+    });
+
     onMounted(async () => {
       // Load translations dynamically from data directory
       try {
@@ -649,69 +782,11 @@ createApp({
         console.error('Error loading menuTranslations.json:', e);
       }
 
-      const initialJson = {
-        "Array": [1, 2, 3],
-        "Boolean": true,
-        "Null": null,
-        "Number": 123,
-        "Object": { "a": "b", "c": "d" },
-        "String": "Hello World"
-      };
-
-      const queryLanguages = [
-        jmespathQueryLanguage,
-        lodashQueryLanguage,
-        javascriptQueryLanguage
-      ];
-
-      const destroyEditor = (side) => {
-        const editor = side === 'left' ? editorLeft : editorRight;
-        if (editor && typeof editor.destroy === 'function') {
-          editor.destroy();
-        }
-        if (side === 'left') editorLeft = null;
-        else editorRight = null;
-      };
-
-      const createEditor = (side) => {
-        const isLeft = side === 'left';
-        const target = document.getElementById(isLeft ? 'editor-left' : 'editor-right');
-        if (!target) return;
-        destroyEditor(side);
-        const content = isLeft
-          ? (lastLeftContent || { json: initialJson })
-          : (lastRightContent || { json: initialJson });
-        const editor = createJSONEditor({
-          target,
-          props: {
-            content,
-            mode: isLeft ? 'text' : 'tree',
-            mainMenuBar: true,
-            navigationBar: true,
-            statusBar: true,
-            queryLanguages,
-            language: simplifiedChinese,
-            onRenderMenu,
-            onRenderContextMenu
-          }
-        });
-        if (isLeft) {
-          editorLeft = editor;
-        } else {
-          editorRight = editor;
-          if (lastRightContent && lastRightContent.json !== undefined && inputMode.value !== 'ultra') {
-            setTimeout(() => {
-              if (editorRight) editorRight.expand([], () => true);
-            }, 50);
-          }
-        }
-      };
-
       if (renderLeftEditor.value) createEditor('left');
       if (renderRightEditor.value) createEditor('right');
 
       // Run initial translation scan of DOM once editors are mounted
-      setTimeout(() => {
+      initialTranslateTimeout = setTimeout(() => {
         translateDOM(document.body);
       }, 100);
 
@@ -727,75 +802,10 @@ createApp({
       } catch (e) {}
       applyTheme();
 
-      // Watch theme change
-      watch(themePreference, () => {
-        applyThemePreference();
-      });
-
-      watch(renderLeftEditor, (enabled) => {
-        if (enabled) nextTick(() => createEditor('left'));
-        else destroyEditor('left');
-        applyTheme();
-      });
-
-      watch(renderRightEditor, (enabled) => {
-        if (enabled) nextTick(() => createEditor('right'));
-        else destroyEditor('right');
-        applyTheme();
-      });
-
-      // Watch rawInput to auto extract
-      watch(rawInput, (newVal) => {
-        if (sourceLoadedFromFile.value && selectedFileForWorker && !newVal) return;
-        if (autoExtractTimeout) clearTimeout(autoExtractTimeout);
-        if (parser && parser.isActive()) {
-          stopParseWorker();
-          isParsing.value = false;
-        }
-
-        if (newVal !== loadedDemoText.value) {
-          loadedDemoText.value = '';
-        }
-
-        const sizeBytes = estimateTextBytes(newVal || '');
-        applyInputMode(sizeBytes);
-        sourceLoadedFromFile.value = false;
-        selectedFileForWorker = null;
-        currentSourceName.value = '';
-
-        if (!newVal || !newVal.trim()) {
-          resetParseProgress();
-          return;
-        }
-
-        if (sizeBytes > LARGE_TEXT_BYTES) {
-          setParseProgress(inputMode.value === 'ultra' ? '超大文本，等待手动提取' : '大文本，等待手动提取', 0, false);
-          return;
-        }
-
-        autoExtractTimeout = setTimeout(() => {
-          extractRootJSON(true);
-        }, 350);
-      });
-      
-      onUnmounted(() => {
-        if (historyDebounceTimeout) clearTimeout(historyDebounceTimeout);
-        if (autoExtractTimeout) clearTimeout(autoExtractTimeout);
-        stopParseWorker();
-        destroyEditor('left');
-        destroyEditor('right');
-      });
-
       // Handle Escape to exit full screen
-      window.addEventListener('keydown', (e) => {
-        if (e.key === 'Escape') isRawFullscreen.value = false;
-      });
+      window.addEventListener('keydown', handleKeyDown);
 
       // Load system theme listener
-      const systemThemeMedia = window.matchMedia('(prefers-color-scheme: dark)');
-      const handleSystemThemeChange = () => {
-        if (themePreference.value === 'system') applyTheme();
-      };
       if (systemThemeMedia.addEventListener) {
         systemThemeMedia.addEventListener('change', handleSystemThemeChange);
       } else if (systemThemeMedia.addListener) {
