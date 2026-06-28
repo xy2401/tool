@@ -439,6 +439,13 @@
       justify-content: space-between;
       align-items: center;
     }
+    
+    .sidebar-actions-row {
+      display: flex;
+      align-items: center;
+      gap: 0.35rem;
+      margin-top: 0.5rem;
+    }
 
     .node-list-container {
       flex: 1;

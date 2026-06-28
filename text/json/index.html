@@ -157,21 +157,25 @@
               <svg v-else viewBox="0 0 24 24" style="width: 12px; height: 12px;" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="7 11 12 6 17 11"></polyline><polyline points="7 18 12 13 17 18"></polyline></svg>
               {{ collapsedNodes.length > 0 ? '展开' : '折叠' }}
             </span>
-            <template v-if="selectedNode && selectedNodeProperties.length > 0">
-              <span 
-                :class="['badge-secondary', 'bulk-state-badge', `bulk-state-${propertyBulkMode}`]"
-                :title="'点击切换属性状态：' + bulkModeText(propertyBulkMode)"
-                @click="toggleAllProperties"
-              >属性 ({{ selectedNodeProperties.length }})</span>
-            </template>
-            <span 
-              v-if="nodes.length > 1"
-              :class="['badge-secondary', 'bulk-state-badge', `bulk-state-${nodeBulkMode}`]"
-              :title="'点击切换节点状态：' + bulkModeText(nodeBulkMode)"
-              @click="toggleAllNodes"
-            >节点 ({{ nodes.length - 1 }})</span>
-            <span v-else class="badge-secondary">节点 (0)</span>
           </div>
+        </div>
+        
+        <!-- Bulk Actions Row -->
+        <div class="sidebar-actions-row" v-if="nodes.length > 0">
+          <template v-if="selectedNode && selectedNodeProperties.length > 0">
+            <span 
+              :class="['badge-secondary', 'bulk-state-badge', `bulk-state-${propertyBulkMode}`]"
+              :title="'点击切换属性状态：' + bulkModeText(propertyBulkMode)"
+              @click="toggleAllProperties"
+            >属性 ({{ selectedNodeProperties.length }})</span>
+          </template>
+          <span 
+            v-if="nodes.length > 1"
+            :class="['badge-secondary', 'bulk-state-badge', `bulk-state-${nodeBulkMode}`]"
+            :title="'点击切换节点状态：' + bulkModeText(nodeBulkMode)"
+            @click="toggleAllNodes"
+          >节点 ({{ nodes.length - 1 }})</span>
+          <span v-else class="badge-secondary">节点 (0)</span>
         </div>
         
         <!-- Search Bar -->
