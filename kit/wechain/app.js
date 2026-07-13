@@ -898,6 +898,7 @@
           if (header) header.style.display = 'none';
           if (footer) footer.style.display = 'none';
           console.error('生成截图失败:', error);
+          alert('截图详细报错: ' + (error.message || (typeof error === 'object' ? JSON.stringify(error) : String(error))));
           this.showToast("截图生成失败");
         } finally {
           this.isGeneratingScreenshot = false;
