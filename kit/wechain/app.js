@@ -859,8 +859,7 @@
         await new Promise(resolve => setTimeout(resolve, 100));
         
         try {
-          const dataUrl = await window.htmlToImage.toJpeg(zone, {
-            quality: 0.8,
+          const canvas = await window.htmlToImage.toCanvas(zone, {
             backgroundColor: '#fffdf8',
             style: {
               padding: '12px',
@@ -872,8 +871,21 @@
           
           if (header) header.style.display = 'none';
           
-          this.screenshotUrl = dataUrl;
-          this.showToast("✓ 生成成功");
+          if (this.screenshotUrl && this.screenshotUrl.startsWith('blob:')) {
+            URL.revokeObjectURL(this.screenshotUrl);
+          }
+          
+          await new Promise((resolve, reject) => {
+            canvas.toBlob((blob) => {
+              if (blob) {
+                this.screenshotUrl = URL.createObjectURL(blob);
+                this.showToast("✓ 生成成功");
+                resolve();
+              } else {
+                reject(new Error("Canvas to Blob failed"));
+              }
+            }, 'image/jpeg', 0.8);
+          });
         } catch (error) {
           if (header) header.style.display = 'none';
           console.error('生成截图失败:', error);
