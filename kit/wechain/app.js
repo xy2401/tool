@@ -450,7 +450,7 @@
         const nameSet = new Set(names);
         this.ensureDate(this.pasteDate);
         this.activeList.members.forEach((member) => {
-          if (!member.deleted) this.activeList.marks[this.pasteDate][member.id] = nameSet.has(member.name);
+          this.activeList.marks[this.pasteDate][member.id] = nameSet.has(member.name);
         });
         this.dateModes[this.pasteDate] = "all";
         this.resetNoticeSelection();
