@@ -890,17 +890,13 @@
             URL.revokeObjectURL(this.screenshotUrl);
           }
           
-          await new Promise((resolve, reject) => {
-            canvas.toBlob((blob) => {
-              if (blob) {
-                this.screenshotUrl = URL.createObjectURL(blob);
-                this.showToast("✓ 生成成功");
-                resolve();
-              } else {
-                reject(new Error("Canvas to Blob failed"));
-              }
-            }, 'image/jpeg', 0.8);
-          });
+          const dataUrl = canvas.toDataURL('image/jpeg', 0.8);
+          if (dataUrl) {
+            this.screenshotUrl = dataUrl;
+            this.showToast("✓ 生成成功");
+          } else {
+            throw new Error("Canvas to DataURL failed");
+          }
         } catch (error) {
           if (header) header.style.display = 'none';
           if (footer) footer.style.display = 'none';
