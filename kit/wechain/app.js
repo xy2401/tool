@@ -180,6 +180,13 @@
         });
       },
 
+      renderedDates() {
+        if (this.modal === 'screenshot') {
+          return this.visibleDates.filter(date => this.exportDateKeys.includes(date.key));
+        }
+        return this.visibleDates;
+      },
+
       groupedMembers() {
         const groups = new Map();
         const normal = [...this.filteredMembers];

@@ -29,7 +29,7 @@
               <h2 style="margin: 0 0 6px; font-size: 20px; color: #21241f;">{{ activeList.name }}</h2>
               <p style="margin: 0; font-size: 14px; color: #71786d;">统计范围：{{ noticeStatusText }}</p>
             </div>
-            <div class="matrix" :style="{ '--date-count': modal === 'screenshot' ? exportDateKeys.length : visibleDates.length }">
+            <div class="matrix" :style="{ '--date-count': renderedDates.length }">
             <div class="corner cell head name-cell" @click="openAddMembers">
               <span>成员</span>
               <small>({{ activeMembers.length }})</small>
@@ -37,10 +37,9 @@
             </div>
 
             <div
-              v-for="date in visibleDates"
+              v-for="date in renderedDates"
               :key="'head-' + date.key"
               class="cell head date-head"
-              v-show="modal !== 'screenshot' || exportDateKeys.includes(date.key)"
               :class="{
                 today: date.key === todayKey,
                 selected: dateModes[date.key] && dateModes[date.key] !== 'none',
@@ -89,7 +88,7 @@
                 <span>{{ group.label }}</span>
                 <small>{{ group.count }}</small>
               </div>
-              <div class="group-fill" :style="{ gridColumn: '2 / span ' + (modal === 'screenshot' ? exportDateKeys.length : visibleDates.length) }"></div>
+              <div class="group-fill" :style="{ gridColumn: '2 / span ' + renderedDates.length }"></div>
 
               <template v-for="member in group.members" :key="member.id">
                 <div
@@ -103,9 +102,8 @@
                   <button class="person-more" type="button" title="人员操作" @click.stop="openMemberMenu(member.id)">…</button>
                 </div>
                 <button
-                  v-for="date in visibleDates"
+                  v-for="date in renderedDates"
                   :key="member.id + '-' + date.key"
-                  v-show="modal !== 'screenshot' || exportDateKeys.includes(date.key)"
                   class="cell mark"
                   :class="{ done: isDone(member.id, date.key), missing: !isDone(member.id, date.key), deleted: member.deleted }"
                   type="button"
