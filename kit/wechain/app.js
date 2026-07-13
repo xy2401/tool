@@ -847,6 +847,7 @@
       async updateScreenshot() {
         const zone = document.getElementById("screenshot-zone");
         const header = document.getElementById("export-header");
+        const footer = document.getElementById("export-footer");
         if (!zone) return;
         
         if (this.isGeneratingScreenshot) return;
@@ -854,6 +855,12 @@
         this.showToast("正在生成截图...");
         
         if (header) header.style.display = 'block';
+        if (footer) {
+          footer.style.display = 'block';
+          const now = new Date();
+          const pad = (n) => String(n).padStart(2, '0');
+          footer.textContent = `统计时间：${now.getFullYear()}-${pad(now.getMonth()+1)}-${pad(now.getDate())} ${pad(now.getHours())}:${pad(now.getMinutes())}`;
+        }
         
         // Wait for DOM to update
         await new Promise(resolve => setTimeout(resolve, 100));
@@ -870,6 +877,7 @@
           });
           
           if (header) header.style.display = 'none';
+          if (footer) footer.style.display = 'none';
           
           if (this.screenshotUrl && this.screenshotUrl.startsWith('blob:')) {
             URL.revokeObjectURL(this.screenshotUrl);
@@ -888,6 +896,7 @@
           });
         } catch (error) {
           if (header) header.style.display = 'none';
+          if (footer) footer.style.display = 'none';
           console.error('生成截图失败:', error);
           this.showToast("截图生成失败");
         } finally {
