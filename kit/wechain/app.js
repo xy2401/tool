@@ -859,7 +859,8 @@
         await new Promise(resolve => setTimeout(resolve, 100));
         
         try {
-          const dataUrl = await window.htmlToImage.toPng(zone, {
+          const dataUrl = await window.htmlToImage.toJpeg(zone, {
+            quality: 0.8,
             backgroundColor: '#fffdf8',
             style: {
               padding: '12px',
